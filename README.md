@@ -36,6 +36,7 @@ Our main focus is open improvements in time.
 The obvious benefit of such database comes from the recommendations that it provides.
 Users will spend less time examining all the available configurations for the task at hand and will use the recommended configuration to create a pipeline.
 We propose two other improvements that will reduce both the human latency and execution time.
+
 **Incremental processing of pipelines:** 
 Real world machine learning applications typically include a pipeline that is created over an initial dataset. 
 However, as the application is running, new data becomes available. 
@@ -44,7 +45,7 @@ Since the format of the newly available data is the same as the existing dataset
 However, many of these transformations have internal parameters that are dependent on the historical data.
 By using the information from the experiment database, we avoid the reprocessing of the entire historical data and can directly apply the latest versions of the transformations to the new batch of data.
 
-**Materialization of common transformations: **
+**Materialization of common transformations:**
 By tracking the usage of the users of different datasets and transformations, we can materialized the more common transformations and as a result speed up the execution time of the pipeline.
 
 ## Incremental Pipelines
