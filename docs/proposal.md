@@ -17,7 +17,7 @@ The benefit from such system is two-fold; incremental pipelines and warm startin
 ![Data Model](../images/datamodel-crop.png)
 
 ## Overview
-We define two dimensions for the research direction; use case and expected improvement.
+We define two dimensions for the research direction; use case and improvement.
 Table below shows dimensions and where related work stand.
 
 |	      | Recommendation   | Incremental Processing   | Continuous Deployment |
@@ -25,7 +25,7 @@ Table below shows dimensions and where related work stand.
 |Quality  |      [1]         |           X              |            X          |
 |Time     |      [1]         |			 X			    |			 X			|
 
-### Use Case Type
+### Use Case Types
 The experiment database can be used in three different use cases; recommendation (auto learning), continuous deployment, and incremental processing of pipelines.
 
 #### Recommendation
@@ -54,7 +54,7 @@ Similar to incremental processing use case, new training observations are fed th
 Therefore, by using the experiment database, we are able to use the latest statistics for the pipeline component.
 Moreover, in case of changes in the distribution of the incoming data, the experiment database can be analyzed to find the most suitable pipeline configuration.
 
-### Expected Improvement
+### Improvement Types
 The proposed database improves machine learning pipeline creation in two different ways.
 First, by gathering statistics from the history, we are able to recommend users what are the best set of transformations and models for specific datasets.
 Second, by defining each datasets by a set of properties we are able to extend this recommendation to new datasets.
@@ -85,6 +85,24 @@ By using the information from the experiment database, we avoid the reprocessing
 **Materialization of common transformations:**
 By tracking the usage of the users of different datasets and transformations, we can materialized the more common transformations and as a result speed up the execution time of the pipeline.
 
+## Plan
+As stated in [Overview](#overview), our primary focus will be on time (user latency and execution time) for incremental learning.
+Here's the list of initial tasks: 
+
+- Prototype of the Experiment Database
+- Start with classification datasets for UCI [4] and OpenML [2] and transformations and learning algorithms from scikit-learn [5]
+- Investigate the possible optimizations that can be applied
+- Design the initial experiments (Incremental Spam Filtering)
+
+Having these done, we able to explore other directions.
+At the moment, these are the secondary set of objectives that we can aim for as part of the same or subsequent publications.
+
+- Applications of Experiment Database to Continuous Deployment
+	- While the scientific contribution is similar to the incremental processing scenario, here we focus on different set of experiments
+- Materialized views 
+	- In multi-user environments, similar pipelines (or pipeline components) will be applied to the same set of datasets
+	- By analyzing the behavior of users, we can cache the result of common transformations 
+
 
 
 ## Designing the Experiments
@@ -97,3 +115,7 @@ By tracking the usage of the users of different datasets and transformations, we
 [2] Vanschoren, Joaquin, et al. "OpenML: networked science in machine learning." ACM SIGKDD Explorations Newsletter 15.2 (2014): 49-60.
 
 [3] Vanschoren, Joaquin, et al. "Experiment databases: A new way to share, organize and learn from experiments." Machine Learning 87.2 (2012): 127-158.
+
+[4] Lichman, M. (2013). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science.
+
+[5] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
