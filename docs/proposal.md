@@ -20,65 +20,59 @@ The benefit from such system is two-fold; incremental pipelines and warm startin
 We define two dimensions for the research direction; use case and improvement.
 Table below shows dimensions and where related work stand.
 
-|	      | Recommendation   | Incremental Processing   | Continuous Deployment |
-|:-------:|:----------------:|:------------------------:|:---------------------:|
-|Quality  |      [1]         |           X              |            X          |
-|Time     |      [1]         |			 X			    |			 X			|
+|	      | Recommendation | Incremental Processing   | Continuous Deployment |
+|:-------:|:--------------:|:------------------------:|:---------------------:|
+|Quality  |      [1]       |           X              |           X           |
+|Time     |      [1]       |		   X		      |			  X		      |
 
 ### Use Case Types
 The experiment database can be used in three different use cases; recommendation (auto learning), continuous deployment, and incremental processing of pipelines.
 
-#### Recommendation
-Recommending pipeline configurations or auto learning is a field of machine learning that tackles the problem automatic solving of machine learning problems.
-Typically, experiment databases are analyzed to find patterns (meta-learning) and based on recommendations can be made to create pipelines new datasets.
-This use case is the subject of on going research in machine learning community and is not a suitable path for us to follow.
+#### Recommendation (and Auto Learning)
+Recommending pipeline configurations or auto learning is a field of machine learning that tackles the problem of automatically solving machine learning problems.
+Typically, experiment databases are analyzed to find patterns (meta-learning) and based on these patterns, recommendations can be made to create pipelines on new datasets.
+This use case is the subject of on going research in machine learning community.
+However, combined with incremental processing use case, there are some open problems that we can investigate.
 
 #### Incremental Processing 
 Perhaps the most common use case in the industry is the incremental processing of pipelines.
-Users create an initial pipeline on an existing datasets.
-The pipeline results in a model that is used for making predictions.
+Users create an initial pipeline on an existing dataset.
+The pipeline results in a model that is used for providing predictions.
 Data is continuously collected from different sources and processed periodically (hourly, daily , ...) by the same pipeline to update the existing model.
-By using the data in the experiment database, we are able to keep the parameters of the pipeline updated and as a result provide higher quality data transformations.
+By using the data in the experiment databases, we are able to keep the parameters of the pipeline updated and as a result provide higher quality data transformations.
 More complex transformations such as dimensionality reduction benefit greatly from the experiment database as recomputing their statistics is very costly.
-This style incremental processing of the data is a common use case. 
-However, in certain scenarios, due to changes in distribution of the incoming data, the same pipeline configuration is not useful anymore.
+Moreover, in certain scenarios, due to changes in distribution of the incoming data, the same pipeline configuration is not useful anymore.
 Spam detection and Online Ads recommendation are two of the common use cases were changes in the data should be reflected in the pipeline as well.
-In these cases as well, experiment database is useful as it allows us to search the history to find similar patterns.
+In these cases, experiment database is useful as it enables us to search the history to find similar patterns.
 Once these patterns are recognized, suitable pipeline configurations can be used to further process the incoming data.
 
 #### Continuous Deployment 
 Continuous deployment can be viewed as a special case of incremental processing.
 Once a model is trained, it is deployed into an environment where it will answer prediction queries.
-Continuous deployment systems monitor this model in real-time and further train the model based on incoming training data.
+A deployment system will monitor this model in real-time and train the model further based on the incoming training data.
 Similar to incremental processing use case, new training observations are fed through the same pipeline that created the initial model.
 Therefore, by using the experiment database, we are able to use the latest statistics for the pipeline component.
 Moreover, in case of changes in the distribution of the incoming data, the experiment database can be analyzed to find the most suitable pipeline configuration.
 
 ### Improvement Types
-The proposed database improves machine learning pipeline creation in two different ways.
-First, by gathering statistics from the history, we are able to recommend users what are the best set of transformations and models for specific datasets.
-Second, by defining each datasets by a set of properties we are able to extend this recommendation to new datasets.
-New datasets are examined against the database and the most similar or set of similar datasets are chosen. 
-Based on the machine learning task at hand, different transformation and machine learning models are recommended to the user (or they are automatically employed).
-We expect an improvement both in the quality and time of the machine learning pipeline.
+Exploiting the experiment databases could result in both training of better machine learning models and reduced human latency as well as execution time.
 
 #### Improvement in prediction quality
 When encountered with new datasets and new machine learning tasks, users have limited budget to explore all the available options to create a pipeline.
 As a result, the search for the pipeline that provides the highest prediction quality ends before the desired pipeline is reached.
-By exploiting the information in the experiment database, the search space of the available options is drastically removed allowing the users to focus on more promising configurations for their pipeline, hence increasing the chance of attaining a pipeline that provides a higher quality.
+By exploiting the information in the experiment database, the search space can be drastically reduced, allowing the users to focus on more promising configurations for their pipeline.
+As a result, the chance of attaining a pipeline that provides a better model is increased.
 This has been the topic of many of the existing work in the machine learning community [1,2].
 
 #### Improvement in time
-Our main focus is open improvements in time.
+Our main focus is on the improvements in time.
 The obvious benefit of such database comes from the recommendations that it provides.
 Users will spend less time examining all the available configurations for the task at hand and will use the recommended configuration to create a pipeline.
 We propose two other improvements that will reduce both the human latency and execution time.
 
 **Incremental processing of pipelines:** 
-Real world machine learning applications typically include a pipeline that is created over an initial dataset. 
-However, as the application is running, new data becomes available. 
-The new data is processed periodically and the pipeline is improved based on the new data.
-Since the format of the newly available data is the same as the existing dataset, the same set of transformations can be applied without much manual intervention.
+In the incremental processing of the data, the format of the newly available data is the same as the existing dataset.
+As a result, the same set of transformations can be applied without much manual intervention.
 However, many of these transformations have internal parameters that are dependent on the historical data.
 By using the information from the experiment database, we avoid the reprocessing of the entire historical data and can directly apply the latest versions of the transformations to the new batch of data.
 
@@ -104,6 +98,12 @@ At the moment, these are the secondary set of objectives that we can aim for as 
 	- By analyzing the behavior of users, we can cache the result of common transformations 
 
 
+## Questions
+1. Does 'incremental update of the pipeline components' have any novelty on its own?
+2. What other database style optimizations are possible? I can only think of caching of dataset transformations.
+3. One use case that I'm looking into is changes in the incoming data distribution. How likely is it that:
+	a. This change requires different pipeline configuration?
+	b. How can we use the experiment database to provide such pipeline configuration?
 
 ## Designing the Experiments
 
