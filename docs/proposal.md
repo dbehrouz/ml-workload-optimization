@@ -102,8 +102,8 @@ At the moment, these are the secondary set of objectives that we can aim for as 
 1. Does 'incremental update of the pipeline components' have any novelty on its own?
 2. What other database style optimizations are possible? I can only think of caching of dataset transformations.
 3. One use case that I'm looking into is changes in the incoming data distribution. How likely is it that:
-	a. This change requires different pipeline configuration?
-	b. How can we use the experiment database to provide such pipeline configuration?
+	- This change requires different pipeline configuration?
+	- How can we use the experiment database to provide such pipeline configuration?
 
 ## Designing the Experiments
 
