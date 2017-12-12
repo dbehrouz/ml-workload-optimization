@@ -22,6 +22,10 @@ The main metrics they extracted from their query logs are:
 - Operator costs
 
 
+## Automatically Tracking Metadata and Provenance of Machine Learning Experiments
+-  Sebastian Schelter*, Amazon; Joos-Hendrik Boese, Amazon; Johannes Kirschnick, Amazon; Thoralf Klein, Amazon; Stephan Seufert, Amazon
+
+https://github.com/awslabs/ml-experiments-schema
 
 
 
