@@ -1,0 +1,262 @@
+% This is "sig-alternate.tex" V2.1 April 2013
+% This file should be compiled with V2.5 of "sig-alternate.cls" May 2012
+%
+% This example file demonstrates the use of the 'sig-alternate.cls'
+% V2.5 LaTeX2e document class file. It is for those submitting
+% articles to ACM Conference Proceedings WHO DO NOT WISH TO
+% STRICTLY ADHERE TO THE SIGS (PUBS-BOARD-ENDORSED) STYLE.
+% The 'sig-alternate.cls' file will produce a similar-looking,
+% albeit, 'tighter' paper resulting in, invariably, fewer pages.
+%
+% ----------------------------------------------------------------------------------------------------------------
+% This .tex file (and associated .cls V2.5) produces:
+%       1) The Permission Statement
+%       2) The Conference (location) Info information
+%       3) The Copyright Line with ACM data
+%       4) NO page numbers
+%
+% as against the acm_proc_article-sp.cls file which
+% DOES NOT produce 1) thru' 3) above.
+%
+% Using 'sig-alternate.cls' you have control, however, from within
+% the source .tex file, over both the CopyrightYear
+% (defaulted to 200X) and the ACM Copyright Data
+% (defaulted to X-XXXXX-XX-X/XX/XX).
+% e.g.
+% \CopyrightYear{2007} will cause 2007 to appear in the copyright line.
+% \crdata{0-12345-67-8/90/12} will cause 0-12345-67-8/90/12 to appear in the copyright line.
+%
+% ---------------------------------------------------------------------------------------------------------------
+% This .tex source is an example which *does* use
+% the .bib file (from which the .bbl file % is produced).
+% REMEMBER HOWEVER: After having produced the .bbl file,
+% and prior to final submission, you *NEED* to 'insert'
+% your .bbl file into your source .tex file so as to provide
+% ONE 'self-contained' source file.
+%
+% ================= IF YOU HAVE QUESTIONS =======================
+% Questions regarding the SIGS styles, SIGS policies and
+% procedures, Conferences etc. should be sent to
+% Adrienne Griscti (griscti@acm.org)
+%
+% Technical questions _only_ to
+% Gerald Murray (murray@hq.acm.org)
+% ===============================================================
+%
+% For tracking purposes - this is V2.0 - May 2012
+
+\documentclass{sig-alternate-05-2015}
+
+\usepackage{todonotes}
+\begin{document}
+
+
+% Copyright
+\setcopyright{acmcopyright}
+%\setcopyright{acmlicensed}
+%\setcopyright{rightsretained}
+%\setcopyright{usgov}
+%\setcopyright{usgovmixed}
+%\setcopyright{cagov}
+%\setcopyright{cagovmixed}
+\title{Optimization of Machine Learning Workloads with Experiment Databases}
+
+
+\author{Behrouz Derakhshan}
+
+
+
+\maketitle
+\begin{abstract}
+\end{abstract}
+
+\section{Introduction} \label{introduction}
+\todo[inline]{General intro, maybe a simple example of how in many real world use cases people re run experiments and how simple optimization can save a lot of resources. Then talk about the different workload categories, interactive, continuous, ... and quick intro to experiment databases and brief text about our solution (vision)}
+% What is the thesis (i.e., vision, key idea, goal) of the PhD work? 
+Our vision is to optimize the development and execution of machine learning workloads by utilizing experiment databases.
+Experiment databases provide a variety of meta-data about the past user-created pipelines and models, datasets, prediction results, and training logs.
+We can utilize this meta-data to reduce the development and execution time of machine learning pipelines.
+% What is the underlying database research problem that you intend to solve? 
+To define the research problem, we start by introducing the different categories of machine learning workloads. 
+Then we specify what are the benefits and challenges of optimizing each category of workload.
+
+Machine learning workloads typically contain a varying number of pipelines designed by different users on different datasets to solve different machine learning tasks.
+Each pipeline consists of an ordered list of transformations that are applied to the dataset, followed by a training algorithm for training the model.
+We categorize machine learning workloads into three groups.
+
+\textbf{1. Interactive batch workload. } 
+This type of workload typically consists of many users (thousands of) and focuses on repeated data preprocessing and transformation as well as aggressive hyper-parameter tuning and model evaluations. Common examples are in open and community-based science such as OpenML \cite{vanschoren2014openml},  interactive online education such as Coursera\footnote{https://www.coursera.org/}, and data science challenges such as Kaggle\footnote{https://www.kaggle.com/}. 
+
+\textbf{2. Incremental Training Workload. }
+This workload involves multiple users (typically tens of). 
+In this workload, a set of pipelines are initially created and they are enhanced and improved over time by making small adjustments to the existing pipeline based on the incoming data or availability of better machine learning algorithms.
+This is a common use case in industry, where a team of data scientists creates a machine learning pipeline to solve a task and gradually improve it based on the feedback and new data that are generated over time.
+
+\textbf{3. Continuous Training Workload. }
+This workload is a special case of the incremental training workload.
+In the continuous training workload, the adjustments and improvements are made in real time (or near real-time).
+The workload typically consists of online machine learning models where data arrives in real time and predictions have to be made in a very short time.
+
+Each of the mentioned workloads has specific characteristics that make optimizing their execution difficult.
+In the interactive training workload, there are thousands of users running different data processing and machine learning scripts on different datasets. 
+Typically, a central computing cluster is used for executing all the user scripts. In order to offer a fair amount of resources to every user, containers are used to execute these scripts\footnote{https://www.kaggle.com/kernels}.
+Using containers essentially eliminates the holistic view that may enable optimization across multiple different pipelines.
+Moreover, users are typically writing free from data analysis scripts, which makes finding optimization opportunities more difficult, even though, many of the data processing and model building steps are similar.
+
+The incremental training workload is easier to manage as they typically involve a fewer number of users.
+Moreover, these users are working on a smaller number of tasks.
+As a result, datasets, pipeline transformations, and machine learning models are more similar, which provides more opportunities for optimizations.
+However, even in this scenario, users tend to work in isolation as building machine learning pipelines involves trial and error.
+Users test their different hypothesis by executing different types of transformations and training different models with different hyper-parameters on the dataset.
+Since there is no easy way of automatically tracking what other users of the system have been doing, executing everything from scratch is sometimes easier.
+
+The continuous training workload suffers from the same set of issues as the incremental training workload.
+Similar to the incremental training workload, information on similar models and other users' work is not easily available.
+As a result, users tend to redo many of the work that is already done by other users.
+The continuous training workload also imposes two requirements and restrictions.
+First, the transformations and the model training have to be executed in (near) real-time.
+Secondly, an extra mechanism has to be set in place to constantly monitor the performance of the model and report any changes in the quality.
+Therefore, optimizing the continuous workloads is more complex than the other categories of workloads.
+
+Current systems either optimize the execution of a single pipeline \cite{sparks2017keystoneml} or limit the scope of the optimizations to a single session \cite{zhang2016materialization}.
+
+% How will you validate your solution? What metric will you use to compare yourself to the state of the art, and how/when will you declare  success? 
+%  What improvement do you expect according to your metric? 
+We expect an improvement in time (both human latency and processing time).
+By optimizing the hyper-parameter search, we can reduce the time users spent on fine-tuning their machine learning pipelines.
+Moreover, by using the historical data, executing the data transformations can be optimized as similar transformations can be skipped.
+
+We also expect an increase in the quality of the pipelines that are created over time.
+By using the information in the experiment database, more hyper-parameter configurations become available. 
+This, in turn, guides the search to explore more promising hyper-parameters and avoid spending time in configurations that are already explored.
+
+\section{Workload Optimization using Experiment Databases}\label{workload-optimization}
+\todo[inline]{more details on experiment databases}
+% What are your ideas for solving the database research problem? What research methodology will you use in order to solve the problem? 
+In order to solve the problem of optimization of machine learning workloads, we plan to utilize the experiment databases \cite{schelterautomatically}.
+Experiment databases include meta-data of different data analytics and machine learning experiments executed over time.
+They include information about datasets, data processing pipelines, machine learning models, execution of machine learning training, and quality of the models.
+The experiment database is populated when users execute workloads.
+Using the information in the experiment database, we are able to optimize the execution of the machine learning workloads.
+We propose two main approaches for optimizing the workloads. 
+The first method is dataset materialization based on the meta-data in the experiment database.
+For materializing the datasets we use a similar approach to Bhattacherjee et al. \cite{bhattacherjee2015principles}.
+The second method is improving the hyper-parameter tuning by analyzing similar pipelines and models in the experiment database.
+Currently, we focus on interactive batch workload, although in principle, the proposed optimizations can be applied to different workloads.
+In future work, we analyze the applicability of the proposed optimization techniques to the incremental training and the continuous training workloads.
+
+\subsection{Graph Transformation}
+\todo[inline]{How graphs: nodes and edges resemble pipelines: data and transformations, how we construct the graph from the experiment database }
+\subsection{Transformation Materialization}
+\todo[inline]{How to use to graph to find optimal points for materializing the results of transformations}
+During the execution of a user-generated machine learning pipeline, the dataset goes through various transformations.
+After the final stage, a machine learning model is created that can be used for making predictions.
+By analyzing the experiment database we can view all the possible transformations applied to each dataset.
+Datasets are typically stored in their raw unprocessed format.
+While this is desirable as it shows the data in its natural form, it may provide an extra computation overhead.
+If certain transformations are commonly applied to a dataset, we may gain benefit by materializing and storing the results of these transformations as well.
+Each transformation applied to a dataset create a new version of the dataset.
+
+Two simple approaches for storage of datasets are storing all the possible versions or storing only the raw dataset.
+Storing all the possible versions will require a lot of storage capacity.
+Moreover, some of the transformation applied to datasets are rare or not useful for other users and as a result may not be repeated ever again.
+Storing only the raw data minimizes the storage requirement.
+However, it requires a lot of computation resources and time to process the data.
+We plan to use a similar approach to Bhattacherjee et al. to find a storage plan that finds the best trade-off between storage capacity requirement and computation resources \cite{bhattacherjee2015principles}.
+
+In their solution, Bhattacherjee et al. create a (version) graph, where each node is a version of a dataset and an edge between two nodes indicate that one version is the result of a transformation applied to the other version.
+Nodes are labeled with storage capacity and computation time.
+To infer the computation time, we plan to use the historical information from the experiment database.
+Edges are assigned a weight indicating the importance of the transformation they represent. 
+In their solution, Bhattacherjee et al. consider two simple approaches: no weight (every edge has the same weight) and access frequency (based on the frequency of the access to certain versions).
+We plan to extend this simple approach of assigning weights to make it suitable for the interactive machine learning workload.
+
+We consider 3 possible weighting mechanisms.
+
+\textbf{1. Transformation-based approach:}
+In the transformation-based approach, for each dataset, we extract the possible transformations and the frequency of those transformations from the experiment database. 
+Based on the frequency of each transformation, we apply a weight to the edge between two versions.
+This approach is similar to the access frequency approach of Bhattacherjee et al.
+
+\textbf{2. Quality-based approach:}
+In the quality-based approach, we first query the experiment database to find every machine learning pipeline that is used to create a specific model.
+Each predictive model accompanies a score indicating the quality of the model.
+We can use this score to assign weights to the edges of the graph.
+Using this approach, every transformation in a pipeline (an edge in the graph) will receive the score of the model (a weight).
+There are certain challenges such as heterogeneity of the model scores (there are multiple quality metrics such as accuracy, F-score, AUC), how the scores were computed (scores may be computed on different test datasets), and the temporal aspects of the model (how old or new a model is) that we plan to investigate.
+
+\textbf{3. User-defined scores:}
+We plan to investigate the effectiveness of user-defined weights for the edges of the graph as well.
+In some use cases, pipelines, models, or even datasets can be given a user-defined score.
+For example in community data science challenge website, kaggle.com, users can write public scripts for analyzing certain datasets.
+These scripts can be scored by other users (typically an implicit "upvote") and users can comment on the scripts.
+We plan to use the "upvote" score and the number of comments as another weighting mechanism.
+
+Moreover, we investigate whether using a combination of these weighting methods (transformation-based, quality-based, and user-defined scores) may lead to a better solution for storing versions of the dataset.
+
+After constructing this graph, to identify the versions to explicitly store, we need to find a spanning tree that minimizes the recreation cost while not exceeding a pre-defined storage capacity.
+
+\subsection{Hyperparameter Search}
+\todo[inline]{How to use the graph to improve the search, for simple search method (random and grid) we can prune the space by reusing the results of the existing set of tried hyperparamters and for more advanced methods we can use the existing tried hyperparameters to improve the Gaussian process}
+Another important artifact in the different machine learning workloads is the configuration of the pipelines and models.
+Contrary to dataset materialization where the limiting factor is the storage cost, in pipelines and models, the processing time is the limiting factor.
+Pipelines are the result of trials and errors where many different configurations are applied.
+To solve a machine learning task, typically different machine learning training algorithms can be utilized.
+Moreover, the raw data needs to be preprocessed before it is ready for the training phase.
+Therefore, there are many different pipeline components (transformations), many different training algorithms and models, and each of these components has many different parameters (called hyper-parameters).
+Searching through the entire possible space of configurations for a pipeline is not feasible as there is an exponential number of different configurations.
+Furthermore, executing each configuration is very time consuming, as it involves transforming the data, training a model, and testing the quality of the model.
+On large datasets, even trying one configuration may take hours or days.
+
+By using the experiment database, we have access to many existing pipeline configurations and the results they produced for specific tasks.
+Similar to the dataset materialization problem, we are interested in 'versions' of the pipeline configuration (a series of transformations, a model, and the accompanying hyper-parameters) that yield the most promising results.
+These pipeline configurations can be fully or partially used when new users are executing similar tasks.
+For example, consider the task of training a classifier on the dataset A.
+By querying the experiment database, we are able to retrieve all the similar tasks.
+From the result of this query, we are able to deduce (to some extent) a set of promising transformations, training algorithm, and their hyper-parameters.
+The results can either be shown to the user as candidate pipelines, or it can be used to make the search space (of hyper-parameters) smaller.
+
+Similar to the dataset materialization, each pipeline that results in a machine learning model is accompanied by the score of the model.
+This score can indicate the quality of the model and whether or not the user should use the existing result or not.
+Moreover, typically the search for the optimum set of hyper-parameters is guided by a budget, indicating how many different configurations should be tried before one configuration setting has to be picked.
+By using the experiment database, we can guide the search to explore more promising configuration and avoid executing the pipeline for configurations that are already executed.
+
+The challenges in pipeline configuration are more difficult as each transformation, model, even the machine learning task differ.
+This means different tasks may never have exactly the same set of transformations or model training algorithms.
+As a result, we have to use heuristics to find the similarity of different pipelines.
+Similar to the dataset materialization problem, we plan to formulate the problem of finding the promising pipeline configurations as a graph, where each node represents a specific configuration and edges connect configurations belonging to similar pipelines (for example, pipelines that are designed to solve the same task).
+Once such a graph is constructed, we can find all the connected components and argue that searching only in this space for hyper-parameter configurations should provide a promising result.
+At this stage, this is just a simple idea and we have to investigate the correctness and applicability of it.
+
+\section{Related Work}\label{sec-related-work}
+% Why is your solution novel, how is it different from related work/the state of the art? 
+To allow collaboration between data scientists, Vanschoren et al. created OpenML, a repository of past experiments, tasks, datasets, machine learning models and pipelines \cite{vanschoren2014openml}. 
+However, they lack fine-grained details of the steps in each machine learning pipeline.
+Schelter et al. build a more flexible schema, that improves upon OpenML \cite{schelterautomatically}. 
+Their schema keeps track of every transformation applied to a dataset. 
+Moreover, they keep track of the quality of machine learning models over time.
+However, they do not tackle the challenge of automatic optimization of machine learning workloads.
+In our work, we plan to use a combination of the schemas from the related work to populate the experiment database.
+
+Model management and search systems store information about the machine learning models and (semi-) automatically create models for solving machine learning problems  \cite{vartak2016m, kumar2016model, kraska2013mlbase}.
+They allow users to query existing machine learning models (ModelDB \cite{vartak2016m}) and automatically find a suitable model for solving a machine learning task (MLbase \cite{kraska2013mlbase}).
+Contrary to our work, ModelDB does not automatically optimize machine learning workloads and only provides an interface for users to query other user-generated models.
+MLbase offers a limited amount of optimizations such as selecting parallelism and hyper-parameter tuning without taking advantage of the historical data.
+Our work focuses on automatically optimizing the machine learning pipelines by leveraging the experiment database. 
+
+An important aspect of machine learning workload optimization is materializing the data and the computation.
+Bhattacherjee et al.  explore the tradeoff between storage and recreation cost of datasets \cite{bhattacherjee2015principles}.
+In their work, they focus on materializing different versions of a dataset, where the differences between versions are simple additions, deletions, or transformations. 
+We plan to leverage their work to create a model for automatically materializing the transformed datasets.
+In our work, the transformations applied to a dataset are more complex.
+Therefore, modeling the recreation cost is a complex procedure.
+Zhang et al. also focus on materialization optimization of machine learning workloads \cite{zhang2016materialization}.
+However, they limit their scope to the feature selection part of the machine learning pipeline and they offer optimization within a single session.
+By utilizing the experiment database, we plan to extend their work to solve the materialization optimization for end-to-end machine learning pipelines and not limit the optimization to a single session.
+
+\section{Conclusion}\label{conclusion}
+
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
