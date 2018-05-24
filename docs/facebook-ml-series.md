@@ -1,6 +1,6 @@
-#ML at Facebook
+# ML at Facebook
 
-##Problem Definition
+## Problem Definition
 
 1. Determine the right task for your project
 2. Simple is better than complicated
