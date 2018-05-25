@@ -76,4 +76,11 @@ Practical considerations in real-world data and use cases:
 - Data volume
 - Training and predicction considerations
 
-
+Model settings can be divided into two groups:
+1. Hyper parameters
+2. Model Architecture Settings
+  - Feature interactions for linear models
+  - Number of leaves/trees for tree-based
+  - Number, type, and width of layers for neural networks
+  
+This is a very large space to explore.
