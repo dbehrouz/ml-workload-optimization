@@ -123,11 +123,7 @@ class ExperimentGraph:
             return '{} , ({})'.format(edgeLabel['name'], edgeLabel['weight'])
 
 class ExperimentParser:
-    pipelines = []
-
-    def __init__(self,pipelines):
-        self.pipelines = pipelines
-
+    # Internal methods for parsing
     def parseValue(self, value):
         import ast
         try:
@@ -143,13 +139,13 @@ class ExperimentParser:
             return actual
         except:
             return value
+    # Internal methods
     def getFullyQualifiedName(self,o):
         return o.__module__ + "." + o.__class__.__name__
     
-    def extractExperimentObject(self,run,flow,task,quality, setup):
-        assert flow == setup.flow_id
-        pipeline = self.pipelines[flow]
-        experimentObject = ExperimentObject(run, flow, task, quality)
+    def fromSKLearnPipeline(self, runId, flowId, taskId, quality, setup, pipeline):
+        assert flowId == setup.flow_id
+        experimentObject = ExperimentObject(runId, flowId, taskId, quality)
         for componentKey,componentValue in pipeline.steps:
             prefix = componentKey
             fullName = self.getFullyQualifiedName(componentValue)
@@ -171,3 +167,34 @@ class ExperimentParser:
             comp = Component(prefix, fullName, componentParams)
             experimentObject.components.append(comp)
         return experimentObject
+    
+    def fromOpenMLFlow(self, runId, flowId, taskId, quality, setup, pipeline):
+        assert flowId == setup.flow_id
+        experimentObject = ExperimentObject(runId, flowId, taskId, quality)
+        for componentKey,componentValue in pipeline.components.items():
+            prefix = componentKey
+            fullName = componentValue.class_name
+            componentParams = dict()
+            for paramKey,paramValue in setup.parameters.items():
+                if paramValue.full_name.startswith(fullName):
+                    componentParams[paramValue.parameter_name] = paramValue.value
+            comp = Component(prefix, fullName, componentParams)
+            experimentObject.components.append(comp)
+        return experimentObject
+    
+    def extractSKLearnPipelines(self,experiments, pipelines):
+        experimentObjects = []
+        for index,row in experiments.iterrows():
+            runId, flowId, taskId, accuracy, setup = row.run_id,row.flow_id,row.task_id,row.accuracy,row.setup
+            pipeline = pipelines[flowId]
+            experimentObjects.append(self.fromSKLearnPipeline(runId, flowId, taskId, accuracy, setup, pipeline))
+        return experimentObjects
+    
+    def extractOpenMLFlows(self,experiments, pipelines):
+        experimentObjects = []
+        for index,row in experiments.iterrows():
+            runId, flowId, taskId, accuracy, setup = row.run_id,row.flow_id,row.task_id,row.accuracy,row.setup
+            pipeline = pipelines[flowId]
+            experimentObjects.append(self.fromOpenMLFlow(runId, flowId, taskId, accuracy, setup, pipeline))
+        return experimentObjects
+    
