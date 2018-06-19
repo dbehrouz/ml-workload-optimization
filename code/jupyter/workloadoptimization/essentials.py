@@ -75,7 +75,9 @@ class ExperimentGraph:
             self.graph.add_node(experimentObject.task, label = experimentObject.task)
         # setting the starting point to root
         v = experimentObject.task
+        i = 0
         for c in experimentObject.components:
+            i = i + 1
             exists = False
             for e in self.graph.out_edges(v):  
                 if c.equals(self.graph[e[0]][e[1]]['transformation']):
@@ -87,7 +89,8 @@ class ExperimentGraph:
             if not exists:
                 dataset_id = str(uuid.uuid4())
                 self.graph.add_node(dataset_id, label = '')
-                self.graph.add_edge(v,dataset_id, name = c.name, weight = 1, time =c.estimatedRunTime, transformation = c)
+                isModelNode = True if i == len(experimentObject.components) else False
+                self.graph.add_edge(v,dataset_id, name = c.name, weight = 1,  time =c.estimatedRunTime, isModel = isModelNode, transformation = c)
                 v = dataset_id 
             prev = c
     
