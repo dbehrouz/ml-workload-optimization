@@ -36,6 +36,14 @@ class ExperimentObject:
     def toString(self):
         return '{}, {}, {}, {}, {}'.format(self.run, self.flow,self.task, self.quality, [comp.name for comp in self.components])
    
+    def extractParams(self):
+        params = {}
+        for c in self.components:
+            preKey = c.name
+            #print c.params
+            for k,v in c.params.iteritems():
+                params['{}__{}'.format(preKey,k)] = v
+        return params
     
     def equals(self, other):
         if self.flow != other.flow:
@@ -139,6 +147,9 @@ class ExperimentParser:
             actual = ast.literal_eval(value)
             if type(actual) is list:   
                 return sorted(actual)
+            if type(actual) is str:
+                return actual.replace('"','')
+                
             return actual
         except:
             return value
@@ -180,7 +191,18 @@ class ExperimentParser:
             componentParams = dict()
             for paramKey,paramValue in setup.parameters.items():
                 if paramValue.full_name.startswith(fullName):
-                    componentParams[paramValue.parameter_name] = paramValue.value
+                    # Openml saves the type informatino in a weird way so we have to write a special piece of code
+                    if (paramValue.parameter_name == 'dtype'):
+                        componentParams[str(paramValue.parameter_name)] = np.float64
+                        #typeValue = self.parseValue(paramValue.value)['value']
+                        #if (typeValue == 'np.float64'):
+                        #    componentParams[str(paramValue.parameter_name)] = np.float64
+                        #else:
+                        #    componentParams[str(paramValue.parameter_name)] = typeValue
+                    elif (paramValue.parameter_name == 'random_state'):
+                            componentParams[str(paramValue.parameter_name)] = 14766
+                    else:
+                        componentParams[str(paramValue.parameter_name)] = self.parseValue(paramValue.value)
             comp = Component(prefix, fullName, componentParams)
             experimentObject.components.append(comp)
         return experimentObject

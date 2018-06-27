@@ -6,8 +6,10 @@ import math
 import numpy as np
 from scipy import sparse
 
+import sklearn
 from sklearn.utils import check_array
-from sklearn.utils.fixes import astype
+if sklearn.__version__ == '0.18.1':
+    from sklearn.utils.fixes import astype
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils.validation import FLOAT_DTYPES
 
@@ -203,9 +205,11 @@ class ConditionalImputer(Imputer):
             mask = _get_mask(X.data, self.missing_values)
             indexes = np.repeat(np.arange(len(X.indptr) - 1, dtype=np.int),
                                 np.diff(X.indptr))[mask]
-
-            X.data[mask] = astype(valid_statistics[indexes], X.dtype,
-                                  copy=False)
+            if sklearn.__version__ == '0.18.1':
+                print 'SOMETHING IS HAPPENING'
+                X.data[mask] = astype(valid_statistics[indexes], X.dtype, copy=False)
+            else:
+                X.data[mask] = valid_statistics[indexes].astype(X.dtype, copy=False)
         else:
             if sparse.issparse(X):
                 X = X.toarray()
