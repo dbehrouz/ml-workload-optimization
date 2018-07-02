@@ -48,18 +48,6 @@
 \documentclass[sigconf]{acmart}
 
 \usepackage{booktabs} % For formal tables
-% DOI
-%\acmDOI{10.475/123_4}
-
-% ISBN
-%\acmISBN{123-4567-24-567/08/06}
-
-%Conference
-%\acmConference[WOODSTOCK'97]{ACM Woodstock conference}{July 1997}{El
-%  Paso, Texas USA} 
-\acmYear{2019}
-%\copyrightyear{2016}
-
 \usepackage{url}
 \usepackage{lipsum}% http://ctan.org/pkg/lipsum
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
@@ -77,6 +65,12 @@
 \def\@copyrightspace{\relax}
 \makeatother
 \DeclareMathOperator*{\argmin}{arg\,min}
+% ACM Reference and Copy right
+\settopmatter{printacmref=false}
+\makeatletter
+\def\@copyrightspace{\relax}
+\makeatother
+
 \begin{document}
 %\lstset{numbers=left, numberstyle=\small, numbersep=8pt, frame = single, language=Pascal, framexleftmargin=15pt}
 

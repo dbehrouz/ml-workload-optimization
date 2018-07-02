@@ -63,6 +63,30 @@ class ExperimentObject:
     def stepSize(self):
         return len(self.components)
     
+    def asTrialDoc(self, space, index):
+        from hyperopt.pyll.base import Apply
+        PARAMS = self.extractParams()
+        misc = {}
+        idxs = {}
+        vals = {}
+        for k in space.keys():
+            idxs[k] = [index]
+            v = space[k]
+            # for switch hyperparameter types, their index should be used instead of their actual value
+            if v.name == 'switch':
+                for i in range(len(v.pos_args)):
+                    if type(v.pos_args[i]) is not Apply:
+                        if v.pos_args[i].obj == PARAMS[k]:
+                            vals[k] = [i - 1]
+            else:
+                vals[k] = [PARAMS[k]]
+        misc['cmd'] = ('domain_attachment', 'FMinIter_Domain')
+        misc['tid'] = index
+        misc['idxs'] = idxs
+        misc['vals'] = vals
+        misc['workdir'] = None
+        return {'tid':index,'spec':None,'result':{'loss': 1 - self.quality, 'status': 'ok'},'misc':misc}
+    
     estimatedRunTime = 0
     run = 0    
     flow = 0

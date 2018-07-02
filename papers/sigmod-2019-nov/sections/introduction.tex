@@ -1,0 +1,31 @@
+\section{Introduction} \label{sec-introduction}
+% Opening
+Machine learning is at the core of academic and industry.
+To make sense of the data, one designs a machine learning pipeline, selects training algorithm, finds appropriate parameters (typically called hyperparameters), and finally utilize the pipeline to solve a task.
+The space of available tools, data preprocessing methods, training algorithms, and their parameters is typically large.
+This overwhelms expert data scientist, let alone novice users.
+
+% G
+Recently, the scientific community embraced collaborative science to improve the work.
+By storing logs of machine learning experiments which includes information about the data, the algorithms and their parameters, and the results in a structured way, data scientists can share information.
+By sharing information, users can learn from other users work.
+% P
+However, the abundance of information still overwhelms users.
+As a result, searching through the experiment database to find how others have solved similar tasks or what is the result of specific data operation or machine learning algorithm on a dataset creates more overhead than if the data scientist executes their hypothesis and see the result for themselves.
+% S
+Our solution is to utilize established database optimization techniques (such as view materialization and caching) and novel optimization strategies to enhance the user experience by automatically optimize the given workload.
+
+We identify two groups of audiences typically utilize a machine learning system: expert data scientists and novice users.
+Each group have different mode of operation when designing and executing machine learning models for solving tasks.
+The expert scientists typically first analyze the data by computing several statistics.
+Based on the initial analysis they form hypothesis which leads to the creation of a machine learning pipeline and a training algorithm.
+Moreover, they also have a good understanding of each component therefore, they rely on grid search methods to try out many different set of hyperparameters.
+On the other hand, novice users have less knowledge and they would like to try out different models.
+They would like to be given hints on what are the good data preprocessing steps, training algorithms, and hyperparameters to apply to the given dataset.
+
+Our key idea is to leverage the experiment database to speed up the data processing and grid search for expert users and use the knowledge of the expert users to enhance the experience of the novice users.
+The initial analysis of expert users are typically involve many similar steps.
+Moreover, the grid that they specify for searching through hyperparameters typically have overlapping branches with other experts.
+By analyzing the meta-data of the existing experiments we can determine the frequent transformations and cache them.
+This can save time by skipping many of the data operation of the subsequent users.
+Moreover, after defining a grid search, we utilize the experiment database to inform the user on the branches that are already computed and provide the result without recomputing them.
