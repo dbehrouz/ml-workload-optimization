@@ -29,3 +29,17 @@ Moreover, the grid that they specify for searching through hyperparameters typic
 By analyzing the meta-data of the existing experiments we can determine the frequent transformations and cache them.
 This can save time by skipping many of the data operation of the subsequent users.
 Moreover, after defining a grid search, we utilize the experiment database to inform the user on the branches that are already computed and provide the result without recomputing them.
+
+Another method method for automatically transferring knowledge from the expert to the novice users is through bayesian optimization of hyperparameters [CITE].
+Bayesian optimization of hyperparameters relies on many trials to find more promising set of hyperparameters. 
+Each trial is lengthy and as a result, even a few trials on large datasets may take hours or days [CITE].
+Through experiment databases, we can utilize past experiments to warm start the bayesian optimization process.
+For every existing experiment, we extract the parameters and the quality metrics of the given pipeline.
+Then, we add the parameters to the bayesian optimization process.
+
+Our contributions are:
+\begin{itemize}
+\item A system that optimizes the user experience by utilizing an experiment database
+\item Materialization of frequent data transformation
+\item Use of collaborative advanced hyperparameter optimization techniques to improve the quality of machine learning pipelines
+\end{itemize}
