@@ -1,10 +1,17 @@
-\section{Proposed Optimizations} \label{sec-proposed-optimizations}
+\section{Expert to Novice Knowledge Transfer} \label{sec-expert-to-novice}
+Here briefly explain the warmstarting of bayesian hyperparameter optimization search.
+Can we provide a mathematical formulation of using the graph for warmstarting?
+
+\subsection{Automatic Search Space Definition}
+Extracting the parameter ranges from the experiment database can give us an estimate for defining the search space over undefined hyperaprameters, thus, making the search process easier for users that do not have in-depth knowledge of machine learning.
 
 \subsection{Avoiding Local Optima}
+Present the experiment result that shows sometimes no warmstarting arrives the best solution faster due to more exploitation of the search space.
 Warm starting for bayesian optimization have the benefit of reducing the overhead of computing many trials.
 However, inserting the data from the experiment database into the bayesian optimization search history may lead the search process into local optimas.
 Specially, when the experiment database contain many hyperparameters that lead to very low error rate.
 Subsequent search may focus on exploiting the areas that yield low loss and avoid exploring the space.
 This is more prevalent is most of the search methods first start by exploring the space and as the search progresses they focus on exploiting the promising areas.
 However, if the search history is already filled with many instances, the search process may focus solely on exploitation.
+
 
