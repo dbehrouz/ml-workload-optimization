@@ -74,12 +74,20 @@ class ExperimentObject:
             v = space[k]
             # for switch hyperparameter types, their index should be used instead of their actual value
             if v.name == 'switch':
+                # TODO: some pipeliens are missing some of the parameters or the values dont match, this
+                # should be investiaged further
+                # default incase the variable is missing from some experiments 
+                vals[k] = [0]
                 for i in range(len(v.pos_args)):
                     if type(v.pos_args[i]) is not Apply:
                         if v.pos_args[i].obj == PARAMS[k]:
                             vals[k] = [i - 1]
             else:
-                vals[k] = [PARAMS[k]]
+                if isinstance(PARAMS[k], float):
+                    vals[k] = [PARAMS[k]]
+                else:
+                    raise Exception('This should be solved: {} should be float for run {} since the hyperopt space requires a float'.format(PARAMS[k], self.run))
+                    
         misc['cmd'] = ('domain_attachment', 'FMinIter_Domain')
         misc['tid'] = index
         misc['idxs'] = idxs

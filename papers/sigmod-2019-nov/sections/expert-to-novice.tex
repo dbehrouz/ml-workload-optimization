@@ -1,17 +1,24 @@
 \section{Expert to Novice Knowledge Transfer} \label{sec-expert-to-novice}
-Here briefly explain the warmstarting of bayesian hyperparameter optimization search.
-Can we provide a mathematical formulation of using the graph for warmstarting?
+\subsection{Automatic Search Space Definition}\label{sub-section-automatic-search-definition}
+Extracting the parameter ranges from the experiment database can give us an estimate for defining the search space over undefined hyperparameters, thus, making the search process easier for users that do not have in-depth knowledge of machine learning.
 
-\subsection{Automatic Search Space Definition}
-Extracting the parameter ranges from the experiment database can give us an estimate for defining the search space over undefined hyperaprameters, thus, making the search process easier for users that do not have in-depth knowledge of machine learning.
+\subsection{Warm Starting the Optimization}
+Here, we discuss how we use the experiment database to warm start the search process., thus, reducing the search time and increasing the probability of finding very good hyperparameter settings.
 
 \subsection{Avoiding Local Optima}
-Present the experiment result that shows sometimes no warmstarting arrives the best solution faster due to more exploitation of the search space.
-Warm starting for bayesian optimization have the benefit of reducing the overhead of computing many trials.
-However, inserting the data from the experiment database into the bayesian optimization search history may lead the search process into local optimas.
-Specially, when the experiment database contain many hyperparameters that lead to very low error rate.
-Subsequent search may focus on exploiting the areas that yield low loss and avoid exploring the space.
-This is more prevalent is most of the search methods first start by exploring the space and as the search progresses they focus on exploiting the promising areas.
-However, if the search history is already filled with many instances, the search process may focus solely on exploitation.
+Warm starting for advanced hyperparameter optimization have the benefit of reducing the overhead of computing many trials.
+However, inserting the data from the experiment database into the optimization process may lead the search into local optima.
+Hence, the search process may focus on exploiting specific areas and avoid exploring the space.
+This could decrease the chance of finding the best hyperparameter setting.
+
+
+\subsubsection{Adaptive warmstarting}
+Many sets of hyperparameters are similar and may force the search to local minima.
+By adaptively selecting points, we can still increase the efficiency of search without forcing the search into local regions.
+
+\subsubsection{Explorer unit}
+The explorer is a bot that explorers beyond the defined search space.
+Using pipelines defined by experts, the explorer can help in the exploration of the search space.
+Ultimately, by automatically exploring the space, not only we can help in avoiding the local optima but possibly we can also help redefine the search space as described in Section \ref{sub-section-automatic-search-definition}.
 
 

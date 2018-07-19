@@ -1,15 +1,24 @@
 \section{Expert-to-Expert Knowledge Transfer} \label{sec-expert-expert}
-Experts tend to use an standard set of transformations and models and parameters.
 
-\subsection{Path Materialization}
-Analyze the graph, find frequent path and materialize them.
-Provide the mathematical formula.
-Essentially, we would like to minimize the total 'compute' time by caching path of the graph with large weights.
-We can provide the solution in case where we have limited storage or we provide a heuristic on what path to cache and what paths not to.
 
-\subsection{Grid-Search Unpacking}
-We discuss how to unpack grid search, and use the graph to find the path in the grid that are frequent.
-Based on the assumption that experts have similar logic when designing the grids, there will be paths that could be materialized.
+\subsection{Materialization of Transformed Data}\label{sub-sec-materialization-of-transformed-data}
+\begin{itemize}
+\item Analyze the graph
+\item find frequent path 
+\item materialize them
+\item Discuss different criteria for materialization
+	\begin{itemize} 
+		\item Execution frequency 
+		\item Quality of the model
+	\end{itemize}
+\item Provide the mathematical formulation
+\end{itemize}
+
+
+\subsection{Materialization of Grid Search}
+In order to analyze whether or not we should materialize parts of the grid search, we first have to unpack it, and compare it with other grid search.
+Then, similar to Section \ref{sub-sec-materialization-of-transformed-data}, we materialize the parts that are executed frequently.
 
 \subsection{Guided Grid-Search}
+\todo[inline]{just an idea}
 By extracting correlation between different parameters and the model quality we can provided a guided grid search, where we can provide some estimate or show the effects of a hyperparameter range on the model quality

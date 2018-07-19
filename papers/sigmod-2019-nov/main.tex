@@ -46,7 +46,9 @@
 % For tracking purposes - this is V2.0 - May 2012
 
 \documentclass[sigconf]{acmart}
-
+\settopmatter{printacmref=false} % Removes citation information below abstract
+\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+\pagestyle{plain}
 \usepackage{booktabs} % For formal tables
 \usepackage{url}
 \usepackage[export]{adjustbox}
@@ -63,9 +65,6 @@
 \usepackage{upquote}
 %\usepackage[utf8]{inputenc}
 %\usepackage{pgfplots}
-\makeatletter
-\def\@copyrightspace{\relax}
-\makeatother
 \DeclareMathOperator*{\argmin}{arg\,min}
 % ACM Reference and Copy right
 \settopmatter{printacmref=false}
