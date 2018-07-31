@@ -14,11 +14,38 @@ Warm starting the search decreases the overall loss of the trials.
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{../images/experiment-results/task31-3flows-cold-starting-warm-avgtrials.eps}
+\includegraphics[width=\columnwidth]{../images/experiment-results/task31-cold-warm-trials.eps}
 \caption{Loss value of 100 Trials with and without warmstarting}
 \label{fig-avg-warm-vs-cold-task-31}
 \end{figure}
 
+\subsection{Avoiding Local Optima}
+
+\subsubsection{Adaptive Selection}
+In this experiment, we show the result of our adaptive selection methods on the hyperparameter search process.
+Figure \ref{fig-avg-adaptive-selection-task-31} shows the result of the histogram and random selection method on the hyperparameter search process.
+When compared to the vanilla approach (where full history is used in warmstarting), we see that random selection decrease the error rate of the trials where histogram increases them.
+To make the difference more visible we limit the scope of the loss (y axis) from 0.20 to 0.25.
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{../images/experiment-results/t31-f7707-adaptive-method-random.eps}
+\caption{Effect of adaptive warmstarting on hyperparameter search process}
+\label{fig-avg-adaptive-selection-task-31}
+\end{figure}
+
+\begin{table}
+\centering
+\begin{tabular}{crrr}
+\hline
+	   Pipeline & Best Loss & Warm & Cold \\ \hline
+        7077 & 0.16 & 1 & 0 \\
+        8315 & 0.18 & 173 & 14\\
+        8353 & 0.18 &0& 1\\ 
+        8568 & 0.15 &0&2\\
+        \hline
+\end{tabular}
+\caption{Best loss and their occurrences for different pipelines using warm starting}
+\end{table}
 
 %Table \ref{table-best-hyperparameters} shows the best loss achieved from the search process for every pipeline on the Task 31.
 %Figure \ref{figure-best-hyperparameters} shows the number of time that the search process (with budget of 100) manages to find the best set of hyperparameters that results in the lowest loss value.

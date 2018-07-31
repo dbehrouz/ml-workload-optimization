@@ -40,3 +40,16 @@ class OpenMLReader:
             idx = idx + 500
         Setup = pd.concat(frames).reset_index(drop=True)
         return pd.merge(Setup, Experiment, how = 'inner', left_on='id', right_on='setup_id').drop(columns = ['id','setup_id'])[['run_id','task_id','flow_id', 'accuracy','setup']]
+    
+    def flow_to_sklearn_with_hack(self, flow):
+        copyFlow = flow
+        if copyFlow.flow_id == 7707:
+            copyFlow.dependencies = u'sklearn==0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
+            for v in copyFlow.components.itervalues():
+                v.dependencies = u'sklearn==0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
+            return flows.flow_to_sklearn(copyFlow)
+        if copyFlow.flow_id == 8568:
+            copyFlow.components['conditionalimputer'].class_name = 'hyperimp.utils.preprocessing.ConditionalImputer2'
+            return flows.flow_to_sklearn(copyFlow)
+        
+        return flows.flow_to_sklearn(copyFlow)

@@ -8,6 +8,7 @@ class TrialConverter:
         results = []
         miscs = []
         index = 0
+        errorCounter = 0
         for e in experimentObjects:
             try:
                 doc = e.asTrialDoc(space, index)
@@ -16,9 +17,10 @@ class TrialConverter:
                 specs.append(doc['spec'])
                 results.append(doc['result'])
                 miscs.append(doc['misc'])
-                print ('Succesfully Added an Item')
+                #print ('Succesfully Added an Item')
             except Exception as error:
-                print('Error in parsing: '+ repr(error))
+                errorCounter = errorCounter + 1
+                #print('Error in parsing: '+ repr(error))
                 
         docs = trials.new_trial_docs(tids,specs, results, miscs)
         for doc in docs:
@@ -26,5 +28,6 @@ class TrialConverter:
             
         insertedTrials = trials.insert_trial_docs(docs)
         trials.refresh()
+        print 'Trial transformation completed, {} errors detected'.format(errorCounter)
         
         return trials
