@@ -3,7 +3,10 @@ from hyperopt import Trials
 
 class TrialConverter:
 
-    def trialsFromExperimentObjects(self, space, experimentObjects):
+    def __init__(self):
+        pass
+
+    def trialsFromExperimentObjects(self, space, experiment_objects):
         trials = Trials()
         tids = []
         specs = []
@@ -11,7 +14,7 @@ class TrialConverter:
         miscs = []
         index = 0
         errorCounter = 0
-        for e in experimentObjects:
+        for e in experiment_objects:
             try:
                 doc = e.asTrialDoc(space, index)
                 index = index + 1
@@ -19,16 +22,14 @@ class TrialConverter:
                 specs.append(doc['spec'])
                 results.append(doc['result'])
                 miscs.append(doc['misc'])
-                # print ('Succesfully Added an Item')
             except Exception as error:
                 errorCounter = errorCounter + 1
-                # print('Error in parsing: '+ repr(error))
 
         docs = trials.new_trial_docs(tids, specs, results, miscs)
         for doc in docs:
             doc['state'] = 2
 
-        insertedTrials = trials.insert_trial_docs(docs)
+        trials.insert_trial_docs(docs)
         trials.refresh()
         print 'Trial transformation completed, {} errors detected'.format(errorCounter)
 

@@ -52,14 +52,35 @@
 \usepackage{booktabs} % For formal tables
 \usepackage{url}
 \usepackage[export]{adjustbox}
+
 \usepackage{lipsum}% http://ctan.org/pkg/lipsum
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
-\usepackage{color,soul}
+\usepackage{soul}
 \usepackage{float}
 \usepackage{amsmath}
 \usepackage{todonotes}
 \usepackage[outdir=./figures/]{epstopdf}
 \usepackage{listings}
+%\usepackage{courier}
+\usepackage[scaled]{beramono}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\lstdefinestyle{pythonstle}{
+language=Python,
+basicstyle=\ttfamily\footnotesize,
+otherkeywords={self},             % Add keywords here
+keywordstyle=\color{forestgreen},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\color{red},    % Custom highlighting style
+stringstyle=\color{blue},
+frame=tb,                         % Any extra options here
+showstringspaces=false            % 
+}
+\lstset{style=pythonstle}
+
 \PassOptionsToPackage{table}{colorx}
 \usepackage{booktabs}
 \usepackage{upquote}
