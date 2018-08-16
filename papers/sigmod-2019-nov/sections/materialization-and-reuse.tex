@@ -10,7 +10,7 @@ Algorithm \ref{alg-reuse} shows the process of detecting reuse for one operation
 \begin{algorithm}
 \caption{Reuse algorithm}\label{alg-reuse}
 \begin{algorithmic}[1]
-\Require vertex $d$ representing the dataset, edge $e$ representing the operation, graph $G$ constructed from the experiment database
+\Require vertex $d$ (dataset), edge $e$ (transformation), graph $G$ (experiment graph)
 \Ensure vertex $d'$ representing the transformed data (returns the input vertex if reuse is not possible)
 \Function{Reuse}{$d,e,G$}
 	\If {$d \in G$}
@@ -29,7 +29,7 @@ Algorithm \ref{alg-reuse} shows the process of detecting reuse for one operation
 \begin{algorithm}
 \caption{Path Reuse algorithm}\label{alg-reuse-partial_pipeline}
 \begin{algorithmic}[1]
-\Require vertex $d$ representing the dataset, edge list $E$ representing the sorted list of operations, graph $G$ constructed from the experiment database
+\Require vertex $d$ (dataset), edge list $E$ (transformations), graph $G$ (experiment graph)
 \Ensure vertex $d'$ representing the transformed data to use
 \Function{Reuse\_path}{$d,E,G$}
 	\State $next$ = $REUSE(d, E[0],G)$
@@ -84,14 +84,14 @@ The process continues until a vertex does not contain all the input columns, or 
 \begin{algorithm}
 \caption{Add and Augment Graph algorithm}\label{alg-add-augment-graph}
 \begin{algorithmic}[1]
-\Require vertex $d$ representing the dataset, edge $e$ representing the operation, graph $G$ constructed from the experiment database
+\Require vertex $d$ (dataset), edge $e$ (transformation), graph $G$ (experiment graph)
 \Ensure Graph $G$ containing the new transformation and all the augment edges
 \Function{Add\_And\_Augment\_Graph}{$d,e,G$}
-	\State $G = G \cup e$ \Comment{Add the transformation to the graph}
+	\State $G = G.add\_edge(e)$ \Comment{Add the transformation to the graph}
 	\State $destination = e.destination$ 
-	\State $tf=e.transformation\_function$ 
-	\State $ac=e.active\_columns$ \Comment{columns involved in e}
-	\State \textbf{return} $AUGMENT\_GRAPH(d, destination,ac, tf, G)$   \Comment{Call the recursive augment procedure}
+	\State $tf=e.tf$ 
+	\State $ic=e.in\_columns$ \Comment{columns involved in e}
+	\State \textbf{return} $AUGMENT\_GRAPH(d, destination,ic, tf, G)$   \Comment{Call the recursive augment procedure}
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -99,14 +99,14 @@ The process continues until a vertex does not contain all the input columns, or 
 \begin{algorithm}
 \caption{Augment Graph algorithm}\label{alg-augment-graph}
 \begin{algorithmic}[1]
-\Require vertex $d$ representing the dataset, vertex $d'$ representing the transformed dataset, active columns $ac$ representing the list of columns involved in the operation, transformation function $tf$, graph $G$ constructed from the experiment database
+\Require vertex $d$ (dataset), vertex $d'$ (transformed dataset), input columns $ic$ (of the transformations), transformation function $tf$, graph $G$ (experiment graph)
 \Ensure Graph $G$ representing the augmented graph
-\Function{Augment\_Graph}{$d,d',ac,tf,G$}
-	\For {$n$ in $in\_edges(G,d)$ }
-		\If {$n.columns = ac$}
-			\State  $new\_edge=Edge(n.start, d', ac,tf)$
-			\State $G = G \cup new_edge$
-			\State  $AUGMENT\_GRAPH(n.start, d',ac, tf,G)$
+\Function{Augment\_Graph}{$d,d',ic,tf,G$}
+	\For {$p$ in $parents_of(G,d)$ }
+		\If {$p.columns.contains(ic)$}
+			\State  $new\_edge=Edge(p, d', ic,tf)$
+			\State $G = G.add\_edge(new\_edge)$
+			\State  $AUGMENT\_GRAPH(p, d',ic, tf,G)$
 		\EndIf
 	\EndFor
    \State \textbf{return} $G$

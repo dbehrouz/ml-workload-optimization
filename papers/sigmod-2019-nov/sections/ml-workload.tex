@@ -1,3 +1,4 @@
+
 \section{Machine Learning Workloads} \label{sec-ml-workloads}
 We define a machine learning workload as a series of exploratory data analysis steps followed by one or multiple model building steps.
 Typically users analyze the data by first performing an exploratory analysis.
@@ -31,57 +32,80 @@ Then, we specify how to detect reuse opportunities from the experiment database.
 We assume the main units of work are dataframe like objects that contain one or many columns, where all the data items in one column are of one data type.
 We divide the operations in the ML workloads into 2 categories.
 
+\begin{table}
+\centering
+\begin{tabular}{ll}
+\hline
+	   Feature Extraction & Feature Selection\\ \hline
+        feature hasher & variance threshold  \\
+        one hot encoding & select k best \\
+        count vectorizer& select percentile \\ 
+        tfidf transformer & recursive feature elimination \\
+        hashing vectorizer & select from model \\
+        extract\_patch\_2d &  \\
+        \hline
+\end{tabular}
+\caption{List of feature extraction and feature selection operations}\label{feature-engineering-operations}
+\end{table}
+
 \textbf{1. Feature engineering:}
 \begin{itemize}
-\item feature selection operation that selects a set of features (columns) from the dataset
-\item feature transformation that applies a function to a set of columns from the dataset and generates new columns
+\item feature selection operations
+\item feature extraction operations
+\item user-define feature engineering operations
 \end{itemize}
 
+Table \ref{feature-engineering-operations} shows the list common feature extraction and feature selection operations.
 
 \textbf{2. Model building: }
 \begin{itemize}
 \item model training operation that applies a training algorithm to a dataset
-\item aggregation operation that aggregates a set of columns based on the values in another column
+\item common aggregation operations (such as mean, max, min, and percentile)
+\item user-define aggregation operations 
 \end{itemize}
-Each model building operation results in objects (vertices) that can either be used in other feature engineering operations (applying PCA to data or categorizing a column based on values in percentile aggregate) or can be a complete machine learning model that can be used to make predictions on unseen data.
+Each model building operation results in objects that can either be used in other feature engineering operations (applying PCA to data or categorizing a column based on values in percentile aggregate) or can be a complete machine learning model that can be used to make predictions on unseen data.
 \todo[inline]{How can we capture these in the graph? maybe special edges that connect these nodes to a data node? }
 
 %%% Continue from here
 \subsection{Graph Construction}
 Typically the graph is initially constructed from the experiment database that contains all the historical feature engineering and model building operations.
 When new workloads are executed, the graph is extended to capture the new feature engineering and model building operations.
-To construct the experiment graph, we first analyze each feature engineering and model building operation to create the vertices and edges of the graph.
-A feature engineering transformation operation is defined as \textit{transform(d, i\_columns, tf, o\_columns)}, where $d$ represents the dataset, $i\_columns$ represents the list of input columns, $tf$ represents the function to be applied to those columns, and $o\_columns$ represents the output columns (selection operation can be defined as a transform operation as well). 
-In the graph, vertices represent datasets and transformation operations that transform one dataset to another dataset, represent edges.
-Each vertex contains a reference to the dataset and the list of the columns in the dataset.
-Each edge contains the transformation function ($tf$) and the list of the input columns ($i\_columns$).
+The process of constructing the graph is as follows.
+First, a node (root) which represents the (training) dataset is created.
+Since operations are performed on columns of the dataset, an edge is drawn for every column of the data from the root to new vertices representing every column of the data.
+Every operation represents an edge.
+Edge connects a starting node (one or more columns of the data) to another node (the resulting columns).
+If the feature engineering operations is known, the edge also stores information about the feature engineering operation applied.
+the resulting node of the operation contains the columns of data resulted from applying the operation.
 
-We define the model building operations with two methods.
-Training a machine learning model is defined as \textit{train(d, alg)} which trains a model using the $alg$ on the given dataset $d$.
-An aggregation operations is defined as \textit{aggr(d, i\_columns, af)}, which performs a $groupby$ on the input columns ($i\_columns$) and aggregate the groups using the $af$ function.
+Model building operations also operate on one or more columns of the data.
+Similar to the feature engineering operation, an edge represent the operation.
+If the operation is not a user-defined aggregation operation, the edge carries information about the operation (such as training algorithm and hyper-parameters).
+The resulting node represents a machine learning model (for model training operations) or data structures keeping the aggregated values (for aggregation operations).
 
 Figure \ref{fig-experiment-graph} shows an example graph constructed from the code in Listing \ref{listing-experiment-graph}.
-The script is based on the \textit{Titanic Best Working Classifier} notebook from the Kaggle competition\footnote{https://www.kaggle.com/sinakhorami/titanic-best-working-classifier}.
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
 import numpy as np
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+
+from sklearn import svm
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_extraction.text import CountVectorizer
 
 train = pd.read_csv('../input/train.csv')
-print (train[['Pclass', 'Survived']].groupby(['Pclass']).mean())
-train['IsAlone'] = 0
-train.loc[dataset['FamilySize'] == 1, 'IsAlone'] = 1
-train['Embarked'] = train['Embarked'].fillna('S') 
-train['Sex'] = train['Sex'].map( {'female': 0, 'male': 1} )
-train_matrix = train.values
-model = DecisionTreeClassifier()
-model.fit(train_matrix)
+vectorizer = CountVectorizer()
+count_vectorized = vectorizer.fit_transform(train['ad_description'])
+selector =  SelectKBest(k=2)
+top_features = selector.fit_transform(train[['t','u_id','price']], train['y'])
+X = pd.concat([count_vectorized,top_features], axis = 1)
+model = svm.SVC()
+model.fit(X, train['y'])
 \end{lstlisting}
 
 \begin{figure}
 \centering
-\includegraphics[width=0.6\columnwidth]{../images/experiment-graph}
+\includegraphics[width=\columnwidth]{../images/experiment-graph}
 \caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
 \label{fig-experiment-graph}
 \end{figure}
