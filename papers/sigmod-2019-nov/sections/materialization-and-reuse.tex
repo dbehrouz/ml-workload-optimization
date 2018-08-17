@@ -1,16 +1,18 @@
 \section{Materialization and Reuse of Operations}\label{sec-materializaiton-and-reuse}
-With the experiment graph constructed, we can look for optimization opportunities to both the feature engineering and the model building operations.
+With the experiment graph constructed, we can look for optimization opportunities for feature engineering and model building operations.
 The experiment graph contains all the historical data operations.
-By materialization the result of these operations we can reuse them for future workloads.
+By materializing the result of the historical operations we can reuse them for future workloads.
 
 \subsection{Materialization of the Experiment Graph}
 Since every historical operation may not be useful, we need to devise a mechanism for selecting the best data nodes to materialize.
 Since we do not know the implementation details of the user-defined operations, we do not materialize nodes resulting from the user-defined feature engineering and aggregation operations.
-In the rest of this chapter, the assumption is we have materialized every data node resulted from feature extraction, feature selection, common aggregation, and model training operations.
-Materialization under limited resources is tackled by Bhattacherjee et al. \cite{bhattacherjee2015principles}.
+For the rest of the operation, we follow the work of Bhattacherjee et al. \cite{bhattacherjee2015principles}.
+In their work, they propose materialization strategies under limited resources.
+\todo[inline]{different metrics for assigning importance to the edges of the graph (number of repetition, quality of the model, a usability heuristic which is a combination of the repetition and the quality of the model)}
+
 
 \subsection{Reuse Optimization for Feature Engineering Operations}
-Having our materialized experiment graph, we know devise a simple strategy to detect reuse opportunities when new machine learning workloads are executed.
+Having our materialized experiment graph, we know devise a simple strategy to detect reuse opportunities for the feature engineering operations of the new machine learning workloads.
 Every edge can be uniquely identified in terms of the input columns and the operation.
 Before executing a workload, we first use the same strategy for constructing the experiment graph, to transform the workload into the graph representation.
 Using the graph representation, we can then search in the materialized graph for edges that have the same input columns (starting vertex) and operation type.
@@ -20,15 +22,32 @@ If the end-vertex of such edges are materialized, we can directly access them an
 Some feature engineering operations are non-deterministic (such as count vectorizer).
 Therefore, before the workload is executed we cannot know the resulting columns of such operations.
 However, as described earlier, edges can be uniquely identified by the input vertex and the operation.
-Therefore, for non-deterministic operations, we can look whether the same edge exists in the experiment graph and thus infer the output vertex.
+Therefore, for non-deterministic operations, we can look whether the same edge exists in the experiment graph and infer the output vertex without explicitly executing the operation.
 
 \subsection{Reuse Optimization for Model Building Operations}
-1. Aggregations are easy.
-2. If input columns to the train is the same and hyperparameter are the same ==> trivial
-3. If grid search hyperparameter search, for existing parameters reuse the trained model
-4. If none existing, warmstarting
-5. Random search, warm start with the best model
-6. Advanced optimization, chapter 5
+Reuse for model building operations is more complicated.
+There are two types of reuse opportunities in the model building operations.
+
+\subsubsection{Exact Reuse}\label{sub-sub-exact-reuse}
+For non-user-defined aggregation operations, we follow the same procedure as the feature engineering processes.
+When the corresponding edge in the experiment graph has the same vertex and (aggregation) operation type, we reuse the result of the operation directly.
+We can also reuse the existing model training operation, if the input columns, algorithm, and all the hyper-parameters are the same.
+
+\subsubsection{Model parameter and hyper parameter warmstarting}\label{sub-sub-model-reuse}
+For the model training operations, 3 scenarios can occur.
+In the \textit{first scenario}, the training algorithm used for training the model has never been used before, therefore no meta-data about it exists in the experiment graph.
+In this scenario, no optimization is possible and the model training operation has to be executed completely.
+In the \textit{second scenario}, the training algorithm and the input columns to the model already exist in the experiment graph, but the specific hyperparameter setting does not.
+In this scenario, we can warmstart the model using the parameters from the corresponding node in the experiment graph.
+This reduces the training time as the model \hl{may} converge faster.
+\todo[inline]{This requires experiment and some math ?}
+In the \textit{third scenario}, the training algorithm and the hyperparameters are the same, but all the input columns do not exist in the corresponding node in the experiment graph.
+In this scenario, we provide partial warmstarting.
+In partial warmstarting, the model parameters corresponding to the columns of the input data that already exist in the experiment graph are warmstarted, and the rest of the parameters are randomly initialized.
+\todo[inline]{This requires experiment and some math ?}
+
+%The case for grid search, random search and advanced hyperparameter search will be discussed in chapter 5.
+
 
 %\subsection{Materialization of Grid Search}
 %\todo[inline]{Incomplete}
