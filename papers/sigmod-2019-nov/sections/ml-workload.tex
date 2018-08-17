@@ -52,7 +52,7 @@ We divide the operations in the ML workloads into 2 categories.
 \begin{itemize}
 \item feature selection operations
 \item feature extraction operations
-\item user-define feature engineering operations
+\item user-defined feature engineering operations
 \end{itemize}
 
 Table \ref{feature-engineering-operations} shows the list common feature extraction and feature selection operations.
@@ -61,7 +61,7 @@ Table \ref{feature-engineering-operations} shows the list common feature extract
 \begin{itemize}
 \item model training operation that applies a training algorithm to a dataset
 \item common aggregation operations (such as mean, max, min, and percentile)
-\item user-define aggregation operations 
+\item user-defined aggregation operations 
 \end{itemize}
 Each model building operation results in objects that can either be used in other feature engineering operations (applying PCA to data or categorizing a column based on values in percentile aggregate) or can be a complete machine learning model that can be used to make predictions on unseen data.
 \todo[inline]{How can we capture these in the graph? maybe special edges that connect these nodes to a data node? }
