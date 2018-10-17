@@ -1,13 +1,13 @@
 \begin{abstract}
-Machine learning workloads having varying characteristics.
-Some involve a large user base (online education, data science challenges) where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks.
+Machine learning workloads have varying characteristics.
+Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.
 Some involve fewer users, typically experts, working together to solve a task.
 For example, a team of data scientist in a company trying to design a recommender system based on the data available.
-Both workloads are interactive and require many iterations to find a better solution.
+Both workloads are interactive and require many iterations to improve the solution.
 In such scenarios, communication between the users involved is not optimal and as a result, many repetitions may happen.
-Repetitions can be of the form of repeated data preprocessing and hyperparameter search.
+Repetitions can be of the form of repeated data preprocessing, hyperparameter search, and model training.
 
-Using experiment databases, where a log of previous machine learning experiments is stored, we propose a solution that can automatically utilize the information to enhance the user experience.
-We utilize the logs to reduce the data processing time by automatically caching the preprocessed data.
+Using experiment databases, where a log of previous machine learning experiments is stored, we propose a solution that utilizes the information to enhance the user experience.
+Specifically, we utilize the logs in the experiment databases to reduce the data processing and model training time by caching the preprocessed data and trained models.
 Moreover, we leverage the logs to enhance the hyperparameter search process and provide the users (both expert and novice) with better hyperparameter settings in a shorter amount of time.
 \end{abstract}

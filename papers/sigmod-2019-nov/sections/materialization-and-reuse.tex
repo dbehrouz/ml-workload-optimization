@@ -12,7 +12,7 @@ In their work, they propose materialization strategies under limited resources.
 
 
 \subsection{Reuse Optimization for Feature Engineering Operations}
-Having our materialized experiment graph, we know devise a simple strategy to detect reuse opportunities for the feature engineering operations of the new machine learning workloads.
+Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations of the new machine learning workloads.
 Every edge can be uniquely identified in terms of the input columns and the operation.
 Before executing a workload, we first use the same strategy for constructing the experiment graph, to transform the workload into the graph representation.
 Using the graph representation, we can then search in the materialized graph for edges that have the same input columns (starting vertex) and operation type.
