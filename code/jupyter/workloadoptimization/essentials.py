@@ -81,7 +81,7 @@ class ExperimentObject:
             if v.name == 'switch':
                 # TODO: some pipeliens are missing some of the parameters or the values dont match, this
                 # should be investiaged further
-                # default incase the variable is missing from some experiments 
+                # default incase the variable is missing from some experiment_notebooks
                 vals[k] = [0]
                 for i in range(len(v.pos_args)):
                     if type(v.pos_args[i]) is not Apply:
