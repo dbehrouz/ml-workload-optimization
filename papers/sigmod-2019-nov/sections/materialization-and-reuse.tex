@@ -2,6 +2,7 @@
 With the experiment graph constructed, we can look for optimization opportunities for feature engineering and model building operations.
 The experiment graph contains all the historical data operations.
 By materializing the result of the historical operations we can reuse them for future workloads.
+We propose three optimizations, namely, \textit{reuse}, \textit{warmstarting}, \textbf{partial-warmstarting}.
 
 \subsection{Materialization of the Experiment Graph}
 Since every historical operation may not be useful, we need to devise a mechanism for selecting the best data nodes to materialize.
@@ -10,13 +11,13 @@ For the rest of the operation, we follow the work of Bhattacherjee et al. \cite{
 In their work, they propose materialization strategies under limited resources.
 \todo[inline]{different metrics for assigning importance to the edges of the graph (number of repetition, quality of the model, a usability heuristic which is a combination of the repetition and the quality of the model)}
 
-
-\subsection{Reuse Optimization for Feature Engineering Operations}
-Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations of the new machine learning workloads.
+\subsection{Reuse Optimization for Feature Engineering Operations and Model building}
+Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations and model training operations of the new machine learning workloads.
 Every edge can be uniquely identified in terms of the input columns and the operation.
-Before executing a workload, we first use the same strategy for constructing the experiment graph, to transform the workload into the graph representation.
-Using the graph representation, we can then search in the materialized graph for edges that have the same input columns (starting vertex) and operation type.
+Before executing a workload, we first utilize the same strategy for constructing the experiment graph, to transform the workload at hand into the graph representation.
+Using the graph representation, we then search in the materialized graph for edges that have the same input columns (starting vertex) and operation type.
 If the end-vertex of such edges are materialized, we can directly access them and skip executing the operation.
+Both feature processing and model building operations can benefit from this optimization.
 
 \subsubsection{Non-deterministic operations}
 Some feature engineering operations are non-deterministic (such as count vectorizer).
@@ -24,29 +25,66 @@ Therefore, before the workload is executed we cannot know the resulting columns 
 However, as described earlier, edges can be uniquely identified by the input vertex and the operation.
 Therefore, for non-deterministic operations, we can look whether the same edge exists in the experiment graph and infer the output vertex without explicitly executing the operation.
 
-\subsection{Reuse Optimization for Model Building Operations}
-Reuse for model building operations is more complicated.
-There are two types of reuse opportunities in the model building operations.
+%\todo[inline]{Is this even a problem?}
+%\subsubsection{Random seed for model building operations}
+%Many of model building operations (such as machine learning training operations) rely on random initialization of model parameters or random shuffling of the training data.
+%By reusing the existing model building operations, we are discarding the random behavior.
+%In some cases, random initialization of the model parameters may yield in a sub-optimal machine learning model which is only converged to a local optima.
+%If all the subsequent workloads reuse this existing model, they all have sub-optimal machine learning models.
+%We alleviate this problem using two approaches.
 
-\subsubsection{Exact Reuse}\label{sub-sub-exact-reuse}
-For non-user-defined aggregation operations, we follow the same procedure as the feature engineering processes.
-When the corresponding edge in the experiment graph has the same vertex and (aggregation) operation type, we reuse the result of the operation directly.
-We can also reuse the existing model training operation, if the input columns, algorithm, and all the hyper-parameters are the same.
+\subsection{Warmstarting Optimization For Model Training Operations}
+Model training operations include extra hyperparameters that must be selected before the training procedure begins.
+Two training operations on the same set of data columns using the same training algorithm could potentially have very different results based on the selected hyperparameters.
+Therefore, we cannot apply the \textit{reuse} optimization in cases where the hyperparameters are different.
+Instead, we apply the \textit{warmstarting} optimization.
+In the warmstarting optimization, we set the model parameters of the given workload to the model parameters from the experiment database.
+Warmstarting can greatly reduce the total running time and increase the quality metric of the model training operations [reference].
+However, the stopping criteria plays an important role in determining the effect of the warmstarting for the current workload.
+For iterative training algorithms that are minimizing a loss function, there are three stopping criteria that specify when to stop the training, namely, the convergence tolerance and the number of iterations, or a combination of the two.
 
-\subsubsection{Model parameter and hyper parameter warmstarting}\label{sub-sub-model-reuse}
-For the model training operations, 3 scenarios can occur.
-In the \textit{first scenario}, the training algorithm used for training the model has never been used before, therefore no meta-data about it exists in the experiment graph.
-In this scenario, no optimization is possible and the model training operation has to be executed completely.
-In the \textit{second scenario}, the training algorithm and the input columns to the model already exist in the experiment graph, but the specific hyperparameter setting does not.
-In this scenario, we can warmstart the model using the parameters from the corresponding node in the experiment graph.
-This reduces the training time as the model \hl{may} converge faster.
-\todo[inline]{This requires experiment and some math ?}
-In the \textit{third scenario}, the training algorithm and the hyperparameters are the same, but all the input columns do not exist in the corresponding node in the experiment graph.
-In this scenario, we provide partial warmstarting.
-In partial warmstarting, the model parameters corresponding to the columns of the input data that already exist in the experiment graph are warmstarted, and the rest of the parameters are randomly initialized.
-\todo[inline]{This requires experiment and some math ?}
+\subsubsection{Convergence tolerance termination criteria}
+In this case, two possible scenarios may occur.
+\begin{itemize}
+\item 1) An existing model in the experiment database has reached the convergence tolerance
+\item 2) No model in the experiment database has reached the convergence tolerance
+\end{itemize}
+In the first case, we expect a large improvement in the training time. 
+Unless the hyperparameter settings do not cause the training algorithm to diverge from the solution, the training operation will end after only 1 iteration.
+In the second case, We still expect an improvement in the training time.
+Warmstarting the model to the parameters of the best model in the experiment database will ensure that the training operation will converge using fewer iterations than it would if the model is not warmstarted.
 
-%The case for grid search, random search and advanced hyperparameter search will be discussed in chapter 5.
+\subsubsection{Augmenting the experiment graph}
+Once the training procedure is finished, the experiment graph is augmented with a new edge and the new node representing the new model.
+This is to ensure that feature workloads will utilize the new model (in case it has a better quality) for the warmstarting optimization.
+
+\subsection{Partial Warmstarting Optimization For Model Training Operations}
+A major part of any machine learning workload is to select different subset of features or create new features from the existing ones and train models on the new features.
+As a result, many model training operations, although utilize the same training algorithm (and sometimes the same hyperparameters), the features that they operate on only overlap and are not completely the same.
+In the partial warmstarting optimization, we aim to improve the training time (and the quality) by warmstarting only the features that exist in the experiment database.
+
+
+%\subsection{Reuse Optimization for Model Building Operations}
+%Reuse for model building operations is more complicated.
+%There are two types of reuse opportunities in the model building operations.
+%
+%\subsubsection{Exact Reuse}\label{sub-sub-exact-reuse}
+%For non-user-defined aggregation operations, we follow the same procedure as the feature engineering processes.
+%When the corresponding edge in the experiment graph has the same vertex and (aggregation) operation type, we reuse the result of the operation directly.
+%We can also reuse the existing model training operation, if the input columns, algorithm, and all the hyper-parameters are the same.
+%
+%\subsubsection{Model parameter and hyper parameter warmstarting}\label{sub-sub-model-reuse}
+%For the model training operations, 3 scenarios can occur.
+%In the \textit{first scenario}, the training algorithm used for training the model has never been used before, therefore no meta-data about it exists in the experiment graph.
+%In this scenario, no optimization is possible and the model training operation has to be executed completely.
+%In the \textit{second scenario}, the training algorithm and the input columns to the model already exist in the experiment graph, but the specific hyperparameter setting does not.
+%In this scenario, we can warmstart the model using the parameters from the corresponding node in the experiment graph.
+%This reduces the training time as the model \hl{may} converge faster.
+%\todo[inline]{This requires experiment and some math ?}
+%In the \textit{third scenario}, the training algorithm and the hyperparameters are the same, but all the input columns do not exist in the corresponding node in the experiment graph.
+%In this scenario, we provide partial warmstarting.
+%In partial warmstarting, the model parameters corresponding to the columns of the input data that already exist in the experiment graph are warmstarted, and the rest of the parameters are randomly initialized.
+%\todo[inline]{This requires experiment and some math ?}
 
 
 %\subsection{Materialization of Grid Search}
