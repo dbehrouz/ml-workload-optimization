@@ -212,14 +212,14 @@ class ExperimentParser:
             for paramKey, paramValue in setup.parameters.items():
                 if paramValue.full_name.startswith(fullName):
                     # Openml saves the type informatino in a weird way so we have to write a special piece of code
-                    if (paramValue.parameter_name == 'dtype'):
+                    if paramValue.parameter_name == 'dtype':
                         componentParams[str(paramValue.parameter_name)] = np.float64
                         # typeValue = self.parseValue(paramValue.value)['value']
                         # if (typeValue == 'np.float64'):
                         #    componentParams[str(paramValue.parameter_name)] = np.float64
                         # else:
                         #    componentParams[str(paramValue.parameter_name)] = typeValue
-                    elif (paramValue.parameter_name == 'random_state'):
+                    elif paramValue.parameter_name == 'random_state':
                         componentParams[str(paramValue.parameter_name)] = 14766
                     else:
                         componentParams[str(paramValue.parameter_name)] = self.parseValue(paramValue.value)
@@ -237,14 +237,14 @@ class ExperimentParser:
             for paramKey, paramValue in setup.parameters.items():
                 if paramValue.full_name.startswith(fullName):
                     # Openml saves the type informatino in a weird way so we have to write a special piece of code
-                    if (paramValue.parameter_name == 'dtype'):
+                    if paramValue.parameter_name == 'dtype':
                         componentParams[str(paramValue.parameter_name)] = np.float64
                         # typeValue = self.parseValue(paramValue.value)['value']
                         # if (typeValue == 'np.float64'):
                         #    componentParams[str(paramValue.parameter_name)] = np.float64
                         # else:
                         #    componentParams[str(paramValue.parameter_name)] = typeValue
-                    elif (paramValue.parameter_name == 'random_state'):
+                    elif paramValue.parameter_name == 'random_state':
                         componentParams[str(paramValue.parameter_name)] = 14766
                     else:
                         componentParams[str(paramValue.parameter_name)] = self.parseValue(paramValue.value)
@@ -252,7 +252,7 @@ class ExperimentParser:
             experimentObject.components.append(comp)
         return experimentObject
 
-    def extractSKLearnPipelines(self, experiments, pipelines):
+    def extract_sklearn_pipelines(self, experiments, pipelines):
         experimentObjects = []
         for index, row in experiments.iterrows():
             runId, flowId, taskId, accuracy, setup = row.run_id, row.flow_id, row.task_id, row.accuracy, row.setup
@@ -267,3 +267,4 @@ class ExperimentParser:
             pipeline = pipelines[flowId]
             experimentObjects.append(self.fromOpenMLFlow(runId, flowId, taskId, accuracy, setup, pipeline))
         return experimentObjects
+
