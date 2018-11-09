@@ -1,3 +1,5 @@
+import copy
+
 import networkx as nx
 import numpy as np
 
@@ -67,6 +69,17 @@ class ExperimentObject:
 
     def stepSize(self):
         return len(self.components)
+
+    def fix_order(self, sklearn_pipeline):
+        reorderedComponents = [None] * len(self.components)
+        for i in range(len(sklearn_pipeline.steps)):
+            for c in self.components:
+                if c.name == sklearn_pipeline.steps[i][0]:
+                    reorderedComponents[i] = c
+                    break
+        self.components = reorderedComponents
+
+
 
     def asTrialDoc(self, space, index):
         from hyperopt.pyll.base import Apply

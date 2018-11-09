@@ -22,6 +22,28 @@ Here's the description of the kaggle challenges that we use.
 
 \subsection{Reuse and Warmstarting for the OpenML Workload}
 \subsubsection{Feature Processing Reuse}  
+In Figure \ref{evaluation-reuse-open-figure}, we show the effect of the reuse optimization on the OpenML workflow.
+The number of executed steps drastically decreases as the majority of the pipelines have the exact same data transformation steps and they only differ in the hyperparameters of the model (Figure \ref{evaluation-reuse-open-figure}a).
+However, Figure \ref{evaluation-reuse-open-figure}b shows that the reuse optimization does not impact the total execution time.
+This is specific to the OpenML use case, as the model training time dominates the data transformation time.
+\todo[inline]{The figure only shows estimates}
+
+\begin{figure}
+\centering
+\begin{subfigure}{.5\linewidth}
+  \includegraphics[width=\linewidth]{../images/experiment-results/reuse-openml-steps.eps}
+  \caption{Executed Steps}
+  \label{fig:sub1}
+\end{subfigure}%
+\begin{subfigure}{.5\linewidth}
+  \includegraphics[width=\linewidth]{../images/experiment-results/reuse-openml-time.eps}
+  \caption{Execution Time}
+  \label{fig:sub1}
+\end{subfigure}
+\caption{Effect of the reuse optimization on the total number of executed transformations and the total execution time for every OpenML pipeline}
+\label{evaluation-reuse-open-figure}
+\end{figure}
+
 \subsubsection{Model Warmstarting}
 In this experiment, we study the effect of the model warmstarting optimization on two pipelines (pipelines 5891 and 8568) from the openml database.
 Pipeline 5891 has a logistic regression model.
