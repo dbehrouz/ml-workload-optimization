@@ -56,7 +56,7 @@ Warmstarting the model to the parameters of the best model in the experiment dat
 
 \subsubsection{Augmenting the experiment graph}
 Once the training procedure is finished, the experiment graph is augmented with a new edge and the new node representing the new model.
-This is to ensure that feature workloads will utilize the new model (in case it has a better quality) for the warmstarting optimization.
+This is to ensure that future workloads will utilize the new model (in case it has a better quality) for the warmstarting optimization.
 
 \subsection{Partial Warmstarting Optimization For Model Training Operations}
 A major part of any machine learning workload is to select different subset of features or create new features from the existing ones and train models on the new features.

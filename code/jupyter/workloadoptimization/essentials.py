@@ -202,9 +202,9 @@ class ExperimentParser:
     def getFullyQualifiedName(self, o):
         return o.__module__ + "." + o.__class__.__name__
 
-    def fromSKLearnPipeline(self, runId, flowId, taskId, quality, setup, pipeline):
-        assert flowId == setup.flow_id
-        experimentObject = ExperimentObject(runId, flowId, taskId, quality)
+    def from_sklearn_pipeline(self, run_id, flow_id, task_id, quality, setup, pipeline):
+        assert flow_id == setup.flow_id
+        experimentObject = ExperimentObject(run_id, flow_id, task_id, quality)
         for componentKey, componentValue in pipeline.steps:
             prefix = componentKey
             fullName = self.getFullyQualifiedName(componentValue)
@@ -227,9 +227,9 @@ class ExperimentParser:
             experimentObject.components.append(comp)
         return experimentObject
 
-    def fromOpenMLFlow(self, runId, flowId, taskId, quality, setup, pipeline):
-        assert flowId == setup.flow_id
-        experimentObject = ExperimentObject(runId, flowId, taskId, quality)
+    def from_openml_flow(self, run_id, flow_id, task_id, quality, setup, pipeline):
+        assert flow_id == setup.flow_id
+        experimentObject = ExperimentObject(run_id, flow_id, task_id, quality)
         for componentKey, componentValue in pipeline.components.items():
             prefix = componentKey
             fullName = componentValue.class_name
@@ -257,14 +257,14 @@ class ExperimentParser:
         for index, row in experiments.iterrows():
             runId, flowId, taskId, accuracy, setup = row.run_id, row.flow_id, row.task_id, row.accuracy, row.setup
             pipeline = pipelines[flowId]
-            experimentObjects.append(self.fromSKLearnPipeline(runId, flowId, taskId, accuracy, setup, pipeline))
+            experimentObjects.append(self.from_sklearn_pipeline(runId, flowId, taskId, accuracy, setup, pipeline))
         return experimentObjects
 
-    def extractOpenMLFlows(self, experiments, pipelines):
+    def extract_openml_flows(self, experiments, pipelines):
         experimentObjects = []
         for index, row in experiments.iterrows():
             runId, flowId, taskId, accuracy, setup = row.run_id, row.flow_id, row.task_id, row.accuracy, row.setup
             pipeline = pipelines[flowId]
-            experimentObjects.append(self.fromOpenMLFlow(runId, flowId, taskId, accuracy, setup, pipeline))
+            experimentObjects.append(self.from_openml_flow(runId, flowId, taskId, accuracy, setup, pipeline))
         return experimentObjects
 
