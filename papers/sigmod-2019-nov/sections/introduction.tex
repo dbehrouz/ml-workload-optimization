@@ -1,21 +1,41 @@
 \section{Introduction} \label{sec-introduction}
 % Opening
 Machine learning is at the core of academic and industry.
-To make sense of the data, one must design a machine learning pipeline, select a training algorithm, find appropriate parameters (typically called hyperparameters), and finally, utilize the pipeline to solve a task.
-The space of available tools, data preprocessing methods, training algorithms, and their parameters are typically large.
+To make sense of the data, one must design and execute a machine learning pipeline which consists of a set of data transformation steps and a model building step.
+Furthermore, for each step of the pipeline (data transformation or model building), one has to set several hyperparameters.
+The space of the available tools, the data preprocessing methods, the training algorithms, and their hyperparameters is extremely large.
 This overwhelms expert data scientist, let alone novice users.
 
 % G
-To improve the process of designing and executing machine learning pipelines and models, the scientific community has started to employ two collaborative approaches.
-In the first approach, data science platforms, such as Kaggle\footnote{https://www.kaggle.com/} and Coursera\footnote{https://www.coursera.org}, provide an intuitive way of sharing scripts and allow execution of the scripts on the platform using Jupyter notebooks \cite{Kluyver:2016aa}. 
+To improve the process of designing and executing machine learning pipelines, the scientific community has started to employ two collaborative approaches.
+The goal of these approaches is to increase the collaboration between data scientists, ease reproducibility of experiments, ease teaching data science, and provide an intuitive way to share results.
+In the first approach, data science platforms, such as Data World\footnote{https://data.world}, Google colabratory\footnote{https://colab.research.google.com} provide an intuitive way of sharing scripts and allow execution of the scripts on the platform using Jupyter notebooks \cite{Kluyver:2016aa}. 
 Users can view other users' scripts and learn how they are solving the same or a similar problem.
+Moreover, users can immediately execute other users' scripts to check the results for themselves or modify the scripts to include their own custom code.
+This approach allows users to share results and ensures the reproducibility of the experiments.
+The popular data science competition platform, Kaggle, utilizes this approach to allow competitors to share ideas and scripts, which ultimately lead to better solutions for the given data problem.
+Online education platforms such as Coursera also utilize the same approach to enable hands-on practice for data science courses.
 The second approach is more systematic.
-In this approach, a tool stores logs of machine learning experiments which includes information about the data, the pipeline components, the training algorithms and their hyperparameters, and the evaluation results in a database, typically referred to as an \textit{experiment database} \cite{Vanschoren2012}.
-Data scientists can then query other users' experiments and view how they solve the same or a similar problem.
+In this approach, a tool stores logs of machine learning experiments which includes information about the data, the pipeline components, the training algorithms, the hyperparameters, and the evaluation results in a database, typically referred to as an \textit{experiment database} \cite{Vanschoren2012}.
+Data scientists can then query other users' experiments to search for more detailed information such as the types of pipeline components (data transformations and models), hyperparameters, and evaluation for specific data problem.
+Examples of these systems are OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and Comet \cite{cometml}.
+
 % P
-However, the abundance of information still overwhelms the users.
-Searching through the experiment database to find how others solve similar tasks or what are the evaluation results of specific data transformations, training algorithms, and hyperparameter settings is time-consuming. 
-As a result, the data scientists prefer to execute their transformations and training algorithms to see the results for themselves.
+Data analytics and machine learning solutions are the results of many iterations of trial-and-error, where one or more users analyze a collection of datasets and apply different transformations to form different hypotheses.
+Based on these hypotheses, users design data processing pipelines and training algorithms to process the datasets and train a model.
+This process continues until the solution is satisfactory. 
+While storing these solutions in a structured manner inside the experiment databases provide valuable insights, there are two problems with it:
+\begin{itemize}
+\item 
+The final solution (pipeline, model, and their hyperparameters) only represent a small fraction of every data transformation and model building operations that the users actually executed in the experiment. 
+Many of the executed operations will not make it into the experiment database as they do not result in a good solution.
+Moreover, the users may apply some of the transformations to only gain insight into the data before forming the hypothesis. 
+Interestingly, we observe that these unattractive operations are the ones that many users will repeat since a lot of data scientists perform similar initial exploratory data analysis to reach promising hypotheses.
+\item 
+Whether or not these 'unattractive' operations are stored in the experiment database, the amount of information available is typically too much to digest.
+Therefore, querying the existing experiments may create more overhead than just simply running a new experiment, regardless of whether or not some parts of the experiments are repeated.
+\end{itemize}
+
 % S
 Our solution is to automatically extract information from the experiment database to optimize the process of design and execution of machine learning workloads.
 We propose similar strategies to database optimization techniques (such as materialized view selection and caching) as well as novel optimization strategies to eliminate data processing redundancies and to speed up the hyperparameter optimization process.
@@ -23,31 +43,53 @@ We propose similar strategies to database optimization techniques (such as mater
 Two categories of users typically utilize a machine learning system: expert data scientists and novice users.
 Each group has a different style of operation when designing and executing machine learning pipelines and models for solving tasks.
 The expert scientists typically first analyze the data by computing several statistics.
-Based on the initial analysis, they form a hypothesis which leads to the creation of a machine learning pipeline and a training algorithm.
+Based on the initial analysis, they form a hypothesis which leads to the creation of a machine learning pipeline for processing and cleaning the data and a training algorithm for training the final model.
 Moreover, expert users have a good understanding of machine learning models and their hyperparameters.
-As a result, they rely on grid search methods to try out many different sets of hyperparameters.
+As a result, they may utilize the grid search or the random search methods to find promising hyperparameters \cite{bergstra2012random}.
 On the other hand, novice users are less aware of the standard methods for analyzing the data and forming a hypothesis about what pipeline components, what training algorithms, and what hyperparameters to use. 
 They would like to be given hints on what are the good data preprocessing steps, training algorithms, and hyperparameters to utilize for solving a machine learning task.
 
-Our key idea is to leverage the experiment database to speed up the data processing and hyperparameter tuning through grid search for expert users and use the knowledge of the expert users to enhance the experience of the novice users.
-For the expert users, the initial data analysis typically involves many similar operations.
-Moreover, the grid that they specify for searching through hyperparameters typically contains overlapping branches with other experts.
-By analyzing the information in the experiment database, we can determine the frequent data transformations and materialize them.
-This can save time by skipping many of the data operations of the subsequent users.
-Moreover, after defining a grid search, we utilize the experiment database to inform the user about the branches that are already computed and provide the result without recomputing them.
-
-To transfer knowledge from the expert users to the novice users we utilize advanced hyperparameter tuning strategies \citep{bergstra2013making, hutter2011sequential, snoek2012practical}.
-The advanced hyperparameter tuning method is an optimization process where the goal is to search through the feasible space of the hyperparameters to find the hyperparameter setting that yields the best evaluation criteria.
-Hyperparameters optimization needs to perform many trials to find a more promising set of hyperparameters. 
-This results in a long search process, especially for large datasets.
-Moreover, the search space has to be defined before the search can begin, which is a burden for novice users.
-By utilizing the experiment database, we can leverage the past experiments to automatically define the feasible search space and warm start the optimization process.
+Our goal is to leverage the experiment database to speed up the design and execution of machine learning pipelines.
+Our solution comprises of two parts.
+In the first part, based on the existing workloads in the experiment database, we devise a strategy to materialize preprocessed datasets and models.
+A preprocessed dataset, is the result of a data transformation.
+Models represent machine learning models.
+In an ideal scenario, we can materialize the result of every data transformation and every model ever trained.
+However, some under a limited storage capacity, we need to decide on materializing some datasets.
+Moreover, recent deep neural network models have billions of parameters [citation] which results in large storage capacity.
+Therefore, we selectively store partial results.
+We devise a speculative materialization strategy to materialize preprocessed datasets or models that have a high probability of being utilized in future workloads.
+In the second part, when presented with a new workload, we detect whether the materialized datasets, models, and the other meta-data from the experiment database can be utilized improve the execution of the workload.
+Concretely, we utilize the information to optimize the workload design and execution in three ways.
+First, by reusing models and datasets we remove the re-processing and reduce the execution time.
+Second, by detecting similar workloads, we warmstart the machine learning models before training them.
+This causes the model to converge faster, resulting in a faster training time and possibly a better quality.
+These two optimizations specifically benefit expert users as there is overlap in the transformations and model building operations.
+Third, we improve the process of bayesian hyperparameter  optimization \cite{bergstra2013making, hutter2011sequential, snoek2012practical} by using the information from the experiment database.
+Bayesian hyperparamter optimization is an iterative process, where in each iteration a set of hyperparameters are proposed and evaluated.
+Based on the evaluation result, new set of hyperparameters are proposed.
+To find the optimum hyperparameters, bayesian hyperparameter optimization process must perform many iterations.
+However, by utilizing the experiment database, we can warmstart the process of hyperparameter optimization, which enables instant recommendation of new set of hyperparameters when executing a new workload.
+This optimization benefits both expert and novice users, as they can receive promising hyperparameters for their model.
+Moreover, recent works have extended the ability of the bayesian hyperparameter optimization to design machine learning pipelines from scratch, typically referred to as automatic machine learning (AutoML) \cite{Feurer15} .
+\todo[inline]{Maybe the highlighted part could be part of the next work}
+\hl{
+In automatic machine learning, instead of just focusing on the hyperparameters of machine learning model, every possible pipeline design decision (such as what preprocessing and feature engineering steps, what training algorithms, and what model hyperparameters ) are treated as hyperparameters.
+Similar to bayesian hyperparameter optimization, automatic machine learning also suffers from a long start-up time.
+Moreover, a major assumption in AutoML is that we have access to no domain knowledge or human input.
+However, by utilizing the information in the experiment database, we automatically inject domain knowledge and \textit{'human'} experience into the process of AutoML.
+Thus, we can increase the efficiency of AutoML by both increasing the performance and quality of the attained solutions.
+While useful to expert users, we argue that this feature can greatly benefit novice users.
+Based on the selected problem, we can recommend users a complete machine learning pipeline.
+Alternatively, if the users have already pre-selected a set of components of the pipeline, we can recommend the best set of components at interactive speed.}
 
 Our proposed optimizations considerably decrease the design and execution time of machine learning pipelines and models and in some cases even increase the quality of the final machine learning models.
 In summary, our contributions are:
 \begin{itemize}
-\item A system that optimizes the user experience by utilizing an experiment database
-\item Predictive materialization of data transformations and grid to eliminate the data reprocessing
-\item Increase in the efficiency of hyperparameter grid search by automatically eliminating redundant searches
+\item A system that optimizes the process of design and execution of machine learning worklaods by utilizing an experiment database
+\item Predictive materialization of data transformations and machine learning models to eliminate the data reprocessing and model retraining
 \item Increase in the efficiency of hyperparameter optimization by incorporating the information from the experiment database, which leads to higher quality pipelines and models
+\item Enabling users to design machine learning pipelines with quality guarantee at interactive speed
 \end{itemize}
+
+The rest of this document is organized as follows.

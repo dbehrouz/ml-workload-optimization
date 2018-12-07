@@ -1,9 +1,9 @@
 \section{Evaluation} \label{sec-evaluation} 
 In this section, we evaluate the performance of our proposed optimizations.
 \subsection{Setup}
-To evaluate our proposed optimizations, we provide two different set of workloads, namely, openml workload and manual workload.
+To evaluate our proposed optimizations, we provide two different set of workloads, namely, OpenML workload and Kaggle workload.
 
-\textbf{OpenML workloads.} In the OpenML workloads we utilize several pipelines (OpenML platform calls pipelines, flows.)
+\textbf{OpenML workloads.} In the OpenML workloads, we utilize several pipelines (OpenML platform calls pipelines, flows.)
 Here's a description of each pipeline:
 \begin{itemize}
 \item 5981: imputer -> standard scaler -> logistic regression
@@ -15,10 +15,10 @@ Here's a description of each pipeline:
 Pipeline 8568 uses a different code for performing the imputation although the input and output are similar.
 For all of the OpenML workloads, we use the credit\_g dataset (also from the OpenML platform).
 
-\textbf{Interactive workloads.} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent in data and feature preprocessing.
-We design the workload by studying several kaggle scripts and populating the database based on those.
-Here's the description of the kaggle challenges that we use.
-
+\textbf{Kaggle workloads.} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent on data and feature preprocessing.
+We design the workload by studying several Kaggle scripts and populating the database based on those.
+Here's the description of the Kaggle challenges that we use.
+\todo[inline]{This is my next immediate ToDo.}
 
 \subsection{Reuse and Warmstarting for the OpenML Workload}
 \subsubsection{Feature Processing Reuse}  

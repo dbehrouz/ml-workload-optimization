@@ -5,11 +5,13 @@ By materializing the result of the historical operations we can reuse them for f
 We propose three optimizations, namely, \textit{reuse}, \textit{warmstarting}, \textbf{partial-warmstarting}.
 
 \subsection{Materialization of the Experiment Graph}
-Since every historical operation may not be useful, we need to devise a mechanism for selecting the best data nodes to materialize.
+Since every historical operation may not be useful, we need to devise a mechanism for selecting the most useful operation results (nodes in the graph) to materialize.
 Since we do not know the implementation details of the user-defined operations, we do not materialize nodes resulting from the user-defined feature engineering and aggregation operations.
-For the rest of the operation, we follow the work of Bhattacherjee et al. \cite{bhattacherjee2015principles}.
-In their work, they propose materialization strategies under limited resources.
-\todo[inline]{different metrics for assigning importance to the edges of the graph (number of repetition, quality of the model, a usability heuristic which is a combination of the repetition and the quality of the model)}
+Every edge (operation) in the experiment graph has a label which specifies its execution time in seconds, its size in byte, the number of times it is executed.
+Furthermore, some paths in the graph may end with a model.
+For every edge in such a path, we also include information about the quality metrics of the model at the end of the path.
+Using these four metrics (i.e., execution time, size, frequency, and quality) we devise a cost model that decides which intermediate datasets and machine models should be materialized and which ones can be recreated by executing the operation.
+\todo[inline]{Come up with a cost model, something similar to MISTIQUE \cite{vartak2018mistique}}
 
 \subsection{Reuse Optimization for Feature Engineering Operations and Model building}
 Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations and model training operations of the new machine learning workloads.
@@ -35,34 +37,33 @@ Therefore, for non-deterministic operations, we can look whether the same edge e
 
 \subsection{Warmstarting Optimization For Model Training Operations}
 Model training operations include extra hyperparameters that must be selected before the training procedure begins.
-Two training operations on the same set of data columns using the same training algorithm could potentially have very different results based on the selected hyperparameters.
-Therefore, we cannot apply the \textit{reuse} optimization in cases where the hyperparameters are different.
+Two training operations on the same set of data (graph node) using the same training algorithm could potentially have very different results based on the selected hyperparameters.
+Therefore, we cannot apply the reuse optimization in cases where the hyperparameters are different.
 Instead, we apply the \textit{warmstarting} optimization.
 In the warmstarting optimization, we set the model parameters of the given workload to the model parameters from the experiment database.
-Warmstarting can greatly reduce the total running time and increase the quality metric of the model training operations [reference].
-However, the stopping criteria plays an important role in determining the effect of the warmstarting for the current workload.
-For iterative training algorithms that are minimizing a loss function, there are three stopping criteria that specify when to stop the training, namely, the convergence tolerance and the number of iterations, or a combination of the two.
+Warmstarting can greatly reduce the total running time and increase the quality of the final machine learning model [citation].
+However, the stopping criteria play an important role in determining the effect of the warmstarting for the current workload.
+For iterative training algorithms that are minimizing a loss function, there are three stopping criteria that specify when to stop the training, namely, the convergence tolerance, the number of iterations, or a combination of the two.
 
 \subsubsection{Convergence tolerance termination criteria}
-In this case, two possible scenarios may occur.
+When the termination criteria is a convergence tolerance value, two scenarios may occur:
 \begin{itemize}
-\item 1) An existing model in the experiment database has reached the convergence tolerance
+\item 1) An existing model in the experiment database has already reached the convergence tolerance
 \item 2) No model in the experiment database has reached the convergence tolerance
 \end{itemize}
-In the first case, we expect a large improvement in the training time. 
-Unless the hyperparameter settings do not cause the training algorithm to diverge from the solution, the training operation will end after only 1 iteration.
-In the second case, We still expect an improvement in the training time.
-Warmstarting the model to the parameters of the best model in the experiment database will ensure that the training operation will converge using fewer iterations than it would if the model is not warmstarted.
+In the first scenario, we expect a large improvement in the training time. 
+Unless the hyperparameter setting does not cause the training algorithm to diverge, the training will stop after one iteration.
+In the second scenario, We also expect an improvement in the training time.
+Warmstarting the model to the parameters of the model with the highest quality will ensure that the training operation will converge using fewer iterations.
 
 \subsubsection{Augmenting the experiment graph}
-Once the training procedure is finished, the experiment graph is augmented with a new edge and the new node representing the new model.
-This is to ensure that future workloads will utilize the new model (in case it has a better quality) for the warmstarting optimization.
+Once the training procedure is finished, we augment the experiment graph with an edge and node representing the new model building operation and resulting model, respectively.
+\todo[inline]{We may need a special edge so that we know the training operation was not run from scratch and is the result of warmstarting.}
 
 \subsection{Partial Warmstarting Optimization For Model Training Operations}
-A major part of any machine learning workload is to select different subset of features or create new features from the existing ones and train models on the new features.
-As a result, many model training operations, although utilize the same training algorithm (and sometimes the same hyperparameters), the features that they operate on only overlap and are not completely the same.
+A common approach in machine learning workloads is to repeatedly select a different subset of features or create new features from the existing ones and train models on the new features.
+As a result, many model training operations operate on overlapping or different set of features.
 In the partial warmstarting optimization, we aim to improve the training time (and the quality) by warmstarting only the features that exist in the experiment database.
-
 
 %\subsection{Reuse Optimization for Model Building Operations}
 %Reuse for model building operations is more complicated.

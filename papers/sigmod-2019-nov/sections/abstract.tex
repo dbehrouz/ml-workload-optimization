@@ -2,12 +2,12 @@
 Machine learning workloads have varying characteristics.
 Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.
 Some involve fewer users, typically experts, working together to solve a task.
-For example, a team of data scientist in a company trying to design a recommender system based on the data available.
+For example, a team of data scientists in a company trying to design a recommender system based on the  available training data.
 Both workloads are interactive and require many iterations to improve the solution.
-In such scenarios, communication between the users involved is not optimal and as a result, many repetitions may happen.
+In such scenarios, communication between the users involved is not optimal and as a result, many repetitions may occur.
 Repetitions can be of the form of repeated data preprocessing, hyperparameter search, and model training.
 
 Using experiment databases, where a log of previous machine learning experiments is stored, we propose a solution that utilizes the information to enhance the user experience.
-Specifically, we utilize the logs in the experiment databases to reduce the data processing and model training time by caching the preprocessed data and trained models.
-Moreover, we leverage the logs to enhance the hyperparameter search process and provide the users (both expert and novice) with better hyperparameter settings in a shorter amount of time.
+Specifically, we utilize the logs in the experiment databases to reduce the data processing and model training time by caching and reusing the preprocessed data and trained models.
+Moreover, we leverage the logs to enhance the hyperparameter optimization process and provide the users (both expert and novice) with better hyperparameter settings in a shorter amount of time.
 \end{abstract}

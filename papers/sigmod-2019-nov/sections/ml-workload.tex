@@ -1,7 +1,6 @@
-
 \section{Machine Learning Workloads} \label{sec-ml-workloads}
 We define a machine learning workload as a series of exploratory data analysis steps followed by one or multiple model building steps.
-Typically users analyze the data by first performing an exploratory analysis.
+Typically users analyze the data by first performing different transformations to gain insight into the data.
 Then, based on these analyses, they apply the right set of transformations to the data to train one or multiple models on the transformed training data.
 Therefore, machine learning workloads typically consist of both interactive (exploratory analysis) and long-running processes (hyperparameter tuning and model training).
 Using the experiment database, we can speed up the execution of the machine learning workloads.
@@ -68,10 +67,10 @@ Each model building operation results in objects that can either be used in othe
 
 %%% Continue from here
 \subsection{Graph Construction}\label{sub-graph-construction}
-The graph is initially constructed from the existing experiment database that contains all the historical feature engineering and model building operations.
-When new workloads are executed, the graph is extended to capture the new feature engineering and model building operations.
+In order to efficiently apply our proposed optimizations, we utilize a graph model to store the meta-data and logs of machine learning workloads.
+When a machine learning workload is executed, we extended the graph to capture the new feature engineering and model building operations.
 The process of constructing the graph is as follows.
-First, a node (root) which represents the (training) dataset is created.
+First, a (root) node which represents the (training) dataset is created.
 Since operations are performed on columns of the dataset, an edge is drawn for every column of the data from the root to new vertices representing every column of the dataset.
 Every operation represents an edge.
 An edge connects a starting node (one or more columns of the data) to another node (the resulting columns).
@@ -98,7 +97,8 @@ print train.columns # [ad_description,ts,u_id,price,y]
 vectorizer = CountVectorizer()
 count_vectorized = vectorizer.fit_transform(train['ad_description'])
 selector =  SelectKBest(k=2)
-top_features = selector.fit_transform(train[['ts','u_id','price']], train['y'])
+top_features = selector.fit_transform(train[['ts','u_id','price']], 
+				      train['y'])
 X = pd.concat([count_vectorized,top_features], axis = 1)
 model = svm.SVC()
 model.fit(X, train['y'])
@@ -110,3 +110,6 @@ model.fit(X, train['y'])
 \caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
 \label{fig-experiment-graph}
 \end{figure}
+
+It is important to note that a given workload does not necessarily need to include a complete set of transformations, machine learning models, and hyperparameters.
+This indicates that a simple dataset load is also considered a workload, upon the execution of which a node is added to the experiment graph.
