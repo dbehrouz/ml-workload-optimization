@@ -1,0 +1,35 @@
+\begin{tikzpicture}
+%\draw[help lines]  (-2,-2) grid (6,6);
+\node[label={\small $train$}]  (train) [circle, draw] at (2,6) {$v_0$};
+% layer 1
+\node[label=left:{\small $[ad\_desc]$}] (ad) [circle, draw] at (-1,5) {$v_1$};
+\node[label=left:{\small $[ts, u_id, price, y]$}] (forselection) [circle, draw] at (2.5,5) {$v_2$};
+\node[label=right:{\small $[y]$}] (y) [circle, draw] at (5,5) {$v_3$};
+% layer 2
+\node[label=left:{\small $[c_1,\cdots, c_{10}]$}] (cv) [circle, draw] at (0, 3.5) {$v_4$};
+\node[label=left:{\small $[ts, price]$}](sk) [circle, draw] at (2.5, 3.5) {$v_5$};
+% layer 3
+\node[label=left:{\small $[c_1, \cdots, c_{10}, ts, price]$},label=above:{concat}] (cvsk) [circle, draw] at (1, 2.5) {$v_6$};
+% layer 4
+\node[label=right:{\small $[c_1,\cdots, c_{10}, ts, price, y]$}, label=above:{concat}] (merged) [circle, draw] at (2, 1.5) {$v_7$};
+% layer 5
+\node[label=left:{\small $SVM\ Model$}] (model) [circle, draw] at (2,0.3) {$v_8$};
+
+\graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw}]{
+(train) [label=train]
+-> [anchor=east, align=center,"project"] (ad)
+-> [anchor=east,auto=false,align=center,text width=1.5cm,"count \_vectorizer"] (cv)
+-> (cvsk) 
+-> (merged);
+
+(train) 
+-> [anchor=east,align=center, "project"] (forselection)
+-> [anchor=west,auto=false,align=center,text width=1.2cm,"select \_k \_best(2)"] (sk)
+->  (cvsk) ;
+
+(train) 
+->  [anchor=west, align=center,"project"]   (y)
+-> (merged) 
+-> [anchor=east,auto=false,align=center,text width=0.8cm,"fit \_svm"] (model);
+};
+\end{tikzpicture}

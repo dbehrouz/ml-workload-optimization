@@ -52,7 +52,6 @@
 \usepackage{booktabs} % For formal tables
 \usepackage{url}
 \usepackage[export]{adjustbox}
-
 \usepackage{lipsum}% http://ctan.org/pkg/lipsum
 \usepackage{graphicx}% http://ctan.org/pkg/graphicx
 \usepackage{soul}
@@ -62,8 +61,14 @@
 \usepackage{subcaption}
 \usepackage[outdir=./figures/]{epstopdf}
 \usepackage{listings}
+\usepackage{booktabs}
+\usepackage{upquote}
 %\usepackage{courier}
 \usepackage[scaled]{beramono}
+
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows}
+\usegdlibrary{trees}
+
 \usepackage{algorithm}% http://ctan.org/pkg/algorithms
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \algrenewcommand\algorithmicrequire{\textbf{Input:}}
@@ -83,8 +88,6 @@ showstringspaces=false            %
 \lstset{style=pythonstle}
 
 \PassOptionsToPackage{table}{colorx}
-\usepackage{booktabs}
-\usepackage{upquote}
 %\usepackage[utf8]{inputenc}
 %\usepackage{pgfplots}
 \DeclareMathOperator*{\argmin}{arg\,min}

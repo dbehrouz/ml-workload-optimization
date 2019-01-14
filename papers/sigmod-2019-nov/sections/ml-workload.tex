@@ -93,9 +93,9 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.feature_extraction.text import CountVectorizer
 
 train = pd.read_csv('../input/train.csv') 
-print train.columns # [ad_description,ts,u_id,price,y]
+print train.columns # [ad_desc,ts,u_id,price,y]
 vectorizer = CountVectorizer()
-count_vectorized = vectorizer.fit_transform(train['ad_description'])
+count_vectorized = vectorizer.fit_transform(train['ad_desc'])
 selector =  SelectKBest(k=2)
 top_features = selector.fit_transform(train[['ts','u_id','price']], 
 				      train['y'])
@@ -106,10 +106,16 @@ model.fit(X, train['y'])
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{../images/experiment-graph}
+\input{../images/tikz/example-graph.tex}
 \caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
 \label{fig-experiment-graph}
 \end{figure}
+%\begin{figure}
+%\centering
+%\includegraphics[width=\columnwidth]{../images/experiment-graph}
+%\caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
+%\label{fig-experiment-graph}
+%\end{figure}
 
 It is important to note that a given workload does not necessarily need to include a complete set of transformations, machine learning models, and hyperparameters.
 This indicates that a simple dataset load is also considered a workload, upon the execution of which a node is added to the experiment graph.
