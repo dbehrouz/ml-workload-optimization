@@ -5,13 +5,60 @@ By materializing the result of the historical operations we can reuse them for f
 We propose three optimizations, namely, \textit{reuse}, \textit{warmstarting}, \textbf{partial-warmstarting}.
 
 \subsection{Materialization of the Experiment Graph}
-Since every historical operation may not be useful, we need to devise a mechanism for selecting the most useful operation results (nodes in the graph) to materialize.
-Since we do not know the implementation details of the user-defined operations, we do not materialize nodes resulting from the user-defined feature engineering and aggregation operations.
-Every edge (operation) in the experiment graph has a label which specifies its execution time in seconds, its size in byte, the number of times it is executed.
-Furthermore, some paths in the graph may end with a model.
-For every edge in such a path, we also include information about the quality metrics of the model at the end of the path.
-Using these four metrics (i.e., execution time, size, frequency, and quality) we devise a cost model that decides which intermediate datasets and machine models should be materialized and which ones can be recreated by executing the operation.
-\todo[inline]{Come up with a cost model, something similar to MISTIQUE \cite{vartak2018mistique}}
+Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
+For example, the Home Credit Default Risk Kaggle competition, we inspected X popular scripts and observed that they generate up to XXX gigabytes of artifacts. 
+\todo[inline]{We need to do a quick experiment to get the proper estimate.}
+Therefore, we cannot materialize every artifact.
+In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage.
+The goal of the algorithm is to select the artifacts that have the highest probability of being re-used in future workloads while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+
+\begin{algorithm}
+\caption{Materialization of Artifacts}\label{materialization-algorithm}
+\begin{algorithmic}[1]
+\Require  $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{B}=$ storage limit
+\Ensure $\mathcal{MV}=$ set of materialized artifacts
+\State $T=0$, $\mathcal{MV} =\emptyset$
+\While {$T < \mathcal{B}$}
+	\State $e^* = \argmax\limits_{e \in \{e' \in \mathcal{E} \lvert e'_{dest} \notin \mathcal{MV}\}} e_f \times e_t$
+	\State $v = e^{*}_{dest}$
+		\If {$T + v_{size} \leq \mathcal{B}$}
+			\State $T = T + v_{size}$
+			\State $\mathcal{MV} = \mathcal{MV} \cup \{v\}$
+		\EndIf
+\EndWhile
+\Do
+	\State $\mathcal{FV} = \{(v',u') \lvert v' \in \mathcal{MV}, u' \notin \mathcal{MV}, T + v - u \leq \mathcal{B} \}$
+	\State $(v^*,u^*) =  \argmax\limits_{(v,u) \in \mathcal{FV}}  imp\_ratio(v,u, \mathcal{G}, \mathcal{MV})$
+	\State $T = T + v^{*}_{size}$
+	\State $\mathcal{MV} = \mathcal{MV} \cup \{v^*\}$
+\DoWhile{$\mathcal{FV} = \emptyset$}
+\State \Return $\mathcal{MV}$
+\end{algorithmic}
+\end{algorithm}
+
+Algorithms \ref{materialization-algorithm} and \ref{improvement-ratio-algorithm} show the details of our method for selecting the vertices to materialize.
+First, we start from an empty set of materialized vertices.
+Then, while the storage unit is not full, we start materializing vertices that are the result of the most time-consuming operations that have high frequencies (i.e., Algorithm \ref{materialization-algorithm}, Lines 2-9)
+Finally, we compute the improvement ratio (Algorithm \ref{improvement-ratio-algorithm}) between pairs of materialized and un-materialized vertices.
+
+\begin{algorithm}
+\caption{imp\_ratio}\label{improvement-ratio-algorithm}
+\begin{algorithmic}[1]
+\Require  $v=$ new vertex, $u=$ old vertex, $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{MV}=$ materialized artifacts
+\Ensure  improvement ratio
+\State $r = \dfrac{total\_time(\mathcal{G}, \mathcal{MV})}{total\_time(\mathcal{G}, \mathcal{MV} \cup \{v\} \setminus \{u\})}$
+\State $s= \dfrac{u_{size}}{v_{size}}$
+\State \Return $r \times s$
+\end{algorithmic}
+\end{algorithm}
+
+The $total\_time$ function in Algorithm \ref{improvement-ratio-algorithm} computes an estimate of the total run-time of all the operations in the experiment database, given the materialized vertices set.
+It is computed as
+\[
+total\_time(\mathcal{G}, \mathcal{MV}) = \sum\limits_{e \in \{e' \in \mathcal{E} \lvert e'_{dest} \notin \mathcal{MV}\}} e_f \times e_t
+\]
+where $\mathcal{G}$ represent the experiment graph, $\mathcal{E}$ is the set of edges in the graph, and $\mathcal{MV}$ is the set of materialized vertices.
+%\todo[inline]{Come up with a cost model, something similar to MISTIQUE \cite{vartak2018mistique}}
 
 \subsection{Reuse Optimization for Feature Engineering Operations and Model building}
 Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations and model training operations of the new machine learning workloads.

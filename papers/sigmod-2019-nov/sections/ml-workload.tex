@@ -71,7 +71,7 @@ In order to efficiently apply our proposed optimizations, we utilize a graph mod
 We let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ to be a collection of artifacts that exist in the experiment database, where each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model building operation.
 We let $\mathcal{E}=\{e_i\}, i = 1, \cdots, n$ to be a collection of executed operations that exist in the experiment database.
 A directed edge $e$ from $v_i$ to $v_j$ in $\mathcal{G}(\mathcal{V},\mathcal{E})$ indicates that the artifact $v_j$ is the result of applying the operation $e$ to the artifact $v_i$.
-Every vertex is labeled by $<s>$, which represents the storage size of artifact when materialized.
+Every vertex is labeled by $\langle s \rangle$, which represents the storage size of artifact when materialized.
 Every edge is labeled by $\langle f, t\rangle$, where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represent the average run time (in seconds) of the operation.
 Similarly, when a machine learning workload is executed, we extended the graph to capture the new feature engineering and model building operations.
 If an operation already exists in the graph, we update the frequency and average run time attributes.
@@ -91,7 +91,7 @@ Otherwise, we add a new edge and vertex, representing the new operation and the 
 %If the operation is not an user-defined aggregation operation, the edge carries information about the operation (such as training algorithm and hyper-parameters).
 %The resulting node represents a machine learning model (for model training operations) or data structures for keeping the aggregated values (for aggregation operations).
 
-Figure \ref{fig-experiment-graph} shows an example graph constructed from the code in Listing \ref{listing-experiment-graph} based on the Avito demand prediction challenge \footnote{https://www.kaggle.com/c/avito-demand-prediction/}.
+Figure \ref{fig-experiment-graph} shows an example graph constructed from the code in Listing \ref{listing-experiment-graph} based on the Avito demand prediction challenge\footnote{https://www.kaggle.com/c/avito-demand-prediction/}.
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
 import numpy as np

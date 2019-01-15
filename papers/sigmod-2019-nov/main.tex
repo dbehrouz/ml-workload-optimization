@@ -73,6 +73,8 @@
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \algrenewcommand\algorithmicrequire{\textbf{Input:}}
 \algrenewcommand\algorithmicensure{\textbf{Output:}}
+\algdef{SE}[DOWHILE]{Do}{DoWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}%
+
 \definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
 \lstdefinestyle{pythonstle}{
 language=Python,
@@ -91,6 +93,7 @@ showstringspaces=false            %
 %\usepackage[utf8]{inputenc}
 %\usepackage{pgfplots}
 \DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{argmax}
 % ACM Reference and Copy right
 \settopmatter{printacmref=false}
 \makeatletter
