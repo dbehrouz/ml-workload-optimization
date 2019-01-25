@@ -67,30 +67,17 @@ Each model building operation results in objects that can either be used in othe
 
 %%% Continue from here
 \subsection{Graph Representation}\label{sub-graph-construction}
-In order to efficiently apply our proposed optimizations, we utilize a graph model to store the meta-data and logs of machine learning workloads.
-We let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ to be a collection of artifacts that exist in the experiment database, where each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model building operation.
-We let $\mathcal{E}=\{e_i\}, i = 1, \cdots, n$ to be a collection of executed operations that exist in the experiment database.
-A directed edge $e$ from $v_i$ to $v_j$ in $\mathcal{G}(\mathcal{V},\mathcal{E})$ indicates that the artifact $v_j$ is the result of applying the operation $e$ to the artifact $v_i$.
-Every vertex $v$ is labeled by $\langle s \rangle$ (accessed by $v.s$), which represents the storage size of artifact when materialized.
-Every edge $e$ is labeled by $\langle f, t\rangle$ (accessed by $e.f$ and $e.t$), where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represent the average run time (in seconds) of the operation.
-Similarly, when a machine learning workload is executed, we extended the graph to capture the new feature engineering and model building operations.
-If an operation already exists in the graph, we update the frequency and average run time attributes.
-Otherwise, we add a new edge and vertex, representing the new operation and the generated artifact, to the experiment graph.
-
-
-%The process of constructing the graph is as follows.
-%First, a (root) node which represents the (training) dataset is created.
-%Since operations are performed on columns of the dataset, an edge is drawn for every column of the data from the root to new vertices representing every column of the dataset.
-%Every operation represents an edge.
-%An edge connects a starting node (one or more columns of the data) to another node (the resulting columns).
-%If the feature engineering operation is not user-defined, the edge also stores information about the feature engineering operation applied.
-%The resulting node of the operation contains the columns of data resulted from applying the operation.
-%
-%Model building operations also operate on one or more columns of the data.
-%Similar to the feature engineering operation, an edge represents the operation.
-%If the operation is not an user-defined aggregation operation, the edge carries information about the operation (such as training algorithm and hyper-parameters).
-%The resulting node represents a machine learning model (for model training operations) or data structures for keeping the aggregated values (for aggregation operations).
-
+To efficiently apply our optimizations, we utilize a graph data structure (called the experiment graph) to store the meta-data and logs of the machine learning workloads.
+Let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the experiment database.
+Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
+Let $\mathcal{E}=\{e_i\}, i = 1, \cdots, m$ be a collection of executed operations that exist in the experiment database.
+A directed edge $e$ from $v_i$ to $v_j$ in $\mathcal{G}(\mathcal{V},\mathcal{E})$ indicates that the artifact $v_j$ is (fully or partially) derived from the artifact $v_i$ by applying the operation in $e$.
+Every vertex $v$ has the attribute $\langle s \rangle$ (accessed by $v.s$), which represents the storage size of artifact when materialized.
+Every edge $e$ has the attributes $\langle f, t\rangle$ (accessed by $e.f$ and $e.t$), where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represents the average run-time (in seconds) of the operation.
+Furthermore, each vertex contains meta-data about the artifacts (such as the name and type of the columns for datasets and name, size, value of parameters and hyperparameters, and loss value of the models) and each edge contains the meta-data about the operation (such as the function name, training algorithm, hyperparameters, and in some cases even the source code of the operation).
+When a new machine learning workload is executed, we extend the graph to capture the new operations and artifacts.
+If an operation already exists in the graph, we update the frequency and average run-time attributes.
+Otherwise, we add a new edge and vertex to the experiment graph, representing the new operation and the artifact.
 Figure \ref{fig-experiment-graph} shows an example graph constructed from the code in Listing \ref{listing-experiment-graph} based on the Avito demand prediction challenge\footnote{https://www.kaggle.com/c/avito-demand-prediction/}.
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
@@ -125,16 +112,16 @@ First, most of the operations are applied to one or a subset of the columns of a
 In this case, we augment the graph with an edge representing a projection operation that selects the required subset of the columns.
 The run-time ($t$) attribute of this edge is set to 0 as this operation is never actually executed.
 Second, multiple edges merging into one vertex indicates an operation that receives as input multiple artifacts and outputs one artifact.
-This is a critical assumption for our materialization algorithm in Section \ref{sec-materializaiton-and-reuse}.
+This is a critical assumption for our materialization algorithm in Section \ref{sec-materializaiton-and-reuse}
 Currently, we support three types of merge operations:
 \begin{itemize}
-\item \textbf{concat}: a physical operation that concatenates the columns of the input datasets (e.g., concatenation of $v_4$ and $v_5$ in Figure \ref{fig-experiment-graph} which represents Pandas' \textit{concat} operation).
-\item \textbf{join}: a physical operation that joins multiple datasets on a given key.
-\item \textbf{combine}: a logical operation that combines the input datasets. The combine operation is used to simplify the representation of operations that require multiple artifacts as input (e.g., combining $v_6$ and $v_3$ in Figure \ref{fig-experiment-graph} which simplifies the representation of \textit{model.fit} of sklearn library).
+\item \textbf{concat}: a \textit{physical} operation that concatenates the columns of the input datasets (e.g., concatenation of $v_4$ and $v_5$ in Figure \ref{fig-experiment-graph} which represents Pandas' \textit{concat} operation).
+\item \textbf{join}: a \textit{physical} operation that joins multiple datasets on a given key.
+\item \textbf{combine}: a \textit{logical} operation that combines the input datasets. The combine operation is used to simplify the representation of operations that require multiple artifacts as input (e.g., combining $v_6$ and $v_3$ in Figure \ref{fig-experiment-graph} which simplifies the representation of \textit{model.fit} of scikit-learn library).
 \end{itemize}
 Since the \textit{combine} operation is logical, the run-time attribute ($t$) of every participating edge is set to $0$.
-For \textit{join} and \textit{concat} operations, for every participating edge, the frequency is set to the total number of times the merge operation executed.
-While, the run-time of every participating edge is set to the total run-time divided by the number of the participating edges (e.g., in Figure \ref{fig-experiment-graph}, if the \textit{concat} operation between $v_4$ and $v_5$ is executed 6 times with an average run-time of 10 seconds, the edges connecting $v_4$ to $v_6$ and $v_5$ to $v_6$ have the label $\langle6, 5\rangle$).
+For the \textit{join} and \textit{concat} operations, the frequency attribute of every participating edge is set to the frequency of the merge operation.
+However, the run-time attribute of every participating edge is set to the average run-time of the merge operation divided by the number of the participating edges (e.g., in Figure \ref{fig-experiment-graph}, if the \textit{concat} operation between $v_4$ and $v_5$ is executed 6 times with an average run-time of 10 seconds, the edges connecting $v_4$ to $v_6$ and $v_5$ to $v_6$ have the attributes $\langle6, 5\rangle$).
 
-It is important to note that a given workload does not necessarily need to include a complete set of transformations, machine learning models, and hyperparameters.
-This indicates that a simple dataset load is also considered a workload, upon the execution of which a node is added to the experiment graph.
+It is important to note that based our definition of a task in Section \ref{sec-introduction} if the experiment database contains meta-data about multiple tasks, the constructed graph will contain one connected component for every task.
+In the next sections, we assume that the experiment database contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.

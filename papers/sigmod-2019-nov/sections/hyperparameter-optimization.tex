@@ -1,8 +1,7 @@
-\section{Optimizing Hyperparameter Tuning and AutoML} \label{sec-hyperparam-optimization}
-In some workloads, instead of training a model on the data, the user performs a hyperparameter tuning operation.
-In the hyperparameter tuning, the user defines a space of possible hyperparameters for the model and train multiple models (sometimes hundreds or thousands) to find the model with the hyperparameters that provides the best performance.
-The three common search strategies are grid search, random search, and Bayesian hyperparameter optimization (which is also referred to as the sequential model-based optimization).
-In this section, we propose several optimizations to improve the process of hyperparameter tuning.
+\subsection{Improved Hyperparameter Tuning} \label{sec-hyperparam-optimization}
+Hyperparameters of a machine learning model greatly impact on the quality of the model.
+There are three common techniques for tuning the hyperparameters, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
+In this section, we propose two optimizations to improve the process of hyperparameter tuning.
 
 \subsection{Grid unpacking}
 Both grid and random search are a series of individual training operations that only differ in hyperparameters.
@@ -18,15 +17,13 @@ After unpacking, the reuse optimizations techniques discussed in Section \ref{se
 \end{figure}
 
 \subsection{Automatic Search Space Definition}\label{sub-section-automatic-search-definition}
-A major challenge in hyperparameter tuning is defining the search space.
-Currently, there is no formal process and typically the search space is defined through experience and common sense.
-While this is a less critical issue for expert data scientists, many users struggle with defining the proper range for every hyperparameters before executing the tuning operation.
-
-Extracting the parameter ranges from the experiment database can give us an estimate for defining the search space over undefined hyperparameters, thus, making the search process easier for users that do not have in-depth knowledge of machine learning.
-We devise an adaptive strategy to define search space for hyperparameters by utilizing the information in the experiment database.
-By utilizing the experiment graph, every existing hyperparameter is mapped to one or several models.
-We use the performance of the model (quality metric) to specify a goodness measure for the value of the hyperparameter.
-This in turn helps us decide what are the promising and unpromising regions for every hyperparameter in the database.
+A major challenge in all the hyperparameter tuning techniques is defining the appropriate search space.
+Currently, the ranges of the hyperparameters are defined through trial-and-error, experience, and common sense.
+We propose to extract the hyperparameter ranges from the experiment database.
+These extracted values can guide us to define the search space over the hyperparameters.
+As a result, the search process becomes less challenging for users, especially the users that do not have in-depth knowledge of machine learning.
+We utilize the performance of the model (quality metric) to specify a goodness measure for the value of the hyperparameters.
+This helps us to discover the promising (and unpromising) regions for the hyperparameters.
 \todo[inline]{If we end up including AutoML as well, we should mention again that hyperparameters are not just limited to models anymore and any pipeline design decision counts as a (possible) hyperparameter}
 
 \subsubsection{Explorer unit}
@@ -37,24 +34,31 @@ Similar workloads are defined workloads that operate on the same dataset.
 In case the number of the similar workloads is below a threshold, we invoke the explorer unit to automatically propose values for hyperparameters and find performance of the model trained using each hyperparameter setting.
 \todo[inline]{This can be defined as a combination of the existing 'best-practices' and a random walk}
 
-\subsection{Warm Starting the Bayesian Optimization and AutoML}
-In this section, we discuss how we use the experiment database to warm start the search process of AutoML and the Bayesian optimization.
-Thus, reducing the search time and increasing the probability of finding promising hyperparameter settings faster.
-For every existing dataset in the experiment database, we have a corresponding Bayesian optimization process.
-We then warmstart the Bayesian optimization process with the existing data transformations, machine learning models, and hyperparameters.
+\subsection{Fast Bayesian Hyperparameter Tuning and AutoML}
+One drawback of the Bayesian hyperparameter tuning is that it requires many initial random trials until it starts to propose promising hyperparameters \cite{hutter2011sequential,snoek2012practical}.
+By utilizing the experiment database, we devise a strategy to decrease the number of initial trials (or in some cases avoid it altogether).
+As a result, the search process can propose promising hyperparameters faster.
 
-For every new workload, we perform the following.
-First, we transform the workload into its graph representation.
-Then, we find the corresponding Bayesian optimization process for the dataset in the workload.
-Depending on the workload requirement, we perform one of the followings.
-\begin{itemize}
-\item if the user wishes to find a machine learning pipeline with a specific quality, we resume the Bayesian optimization process until the requirement is met or terminate after a system-defined maximum number of tries ($MAX\_ATTEMPS$).
-\item If the user specifies a time budget $MAX\_TIME$, we resume the Bayesian optimization process until the budget is exhausted and return the best (or top $k$) pipeline.
-\item If the user requires a pipeline with no quality guarantee and time budget, we return the best existing pipeline back to the user.
-\item If no matching Bayesian optimization for the workload exists, we inform the user that automatic optimization is not possible.
-\end{itemize}
+Our solution is as follows.
+For every existing model group in the experiment database, we start a Bayesian search process.
+A model group is a set of models that only differ in their hyperparameter values.
+We then initialize the search process by including the existing hyperparameters and the corresponding model quality from the model group.
+For every new workload, we transform it into its graph representation.
+We anticipate three types of workloads.
+In the first type, the workload may contain a model training operation with all of the hyperparameters already set.
+In this case, we only execute the model training operation with the given hyperparameters and return the model (no optimization).
+In the second type, the workload does not contain the hyperparameter values, and the user relies on our hyperparameter search to receive promising hyperparameters.
+In this case, we first find the model group that this workload belongs to.
+Then, from the corresponding Bayesian search process, we utilize the proposed hyperparameters to train the model.
+In the third type, a user may specify a Bayesian search process with a specific budget \textit{within} the workload.
+In this case, similar to the second workload type, we find the corresponding Bayesian search process and resume the Bayesian hyperparameter search until the budget is exhausted.
+\todo[inline]{should we do automl in this paper}
+Next, we plan to extend the Bayesian hyperparameter search to the entire pipeline, typically referred to as AutoML \cite{thornton2013auto}.
+In AutoML, the decision to perform an operation on the training dataset is also considered a hyperparameter.
+As a result, we can propose promising machine learning \textit{pipelines} instead of just hyperparameters for the model.
 
 \subsubsection{Avoiding Local Optima}
+\todo[inline]{This may not be a problem though. I should study more.}
 Warm starting for hyperparameter optimization and AutoML have the benefit of reducing the overhead of computing many trials.
 However, inserting the data from the experiment database into the optimization process may lead the search into local optima.
 This could decrease the chance of finding the best hyperparameter setting.
