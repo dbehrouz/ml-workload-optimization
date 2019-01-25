@@ -11,7 +11,7 @@
 % layer 3
 \node[label=left:{\small $[c_1, \cdots, c_{10}, ts, price]$},label=above:{concat}] (cvsk) [circle, draw] at (1, 2.5) {$v_6$};
 % layer 4
-\node[label=right:{\small $[c_1,\cdots, c_{10}, ts, price, y]$}, label=above:{combine}] (merged) [circle, draw] at (2, 1.5) {$v_7$};
+\node[label=right:{\small $[c_1,\cdots, c_{10}, ts, price, y]$}, label={[yshift=0.2cm]combine}] (merged) [circle, draw] at (2, 1.5) {$v_7$};
 % layer 5
 \node[label=left:{\small $SVM\ Model$}] (model) [circle, draw] at (2,0.3) {$v_8$};
 

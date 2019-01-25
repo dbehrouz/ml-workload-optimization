@@ -71,8 +71,8 @@ In order to efficiently apply our proposed optimizations, we utilize a graph mod
 We let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ to be a collection of artifacts that exist in the experiment database, where each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model building operation.
 We let $\mathcal{E}=\{e_i\}, i = 1, \cdots, n$ to be a collection of executed operations that exist in the experiment database.
 A directed edge $e$ from $v_i$ to $v_j$ in $\mathcal{G}(\mathcal{V},\mathcal{E})$ indicates that the artifact $v_j$ is the result of applying the operation $e$ to the artifact $v_i$.
-Every vertex is labeled by $\langle s \rangle$, which represents the storage size of artifact when materialized.
-Every edge is labeled by $\langle f, t\rangle$, where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represent the average run time (in seconds) of the operation.
+Every vertex $v$ is labeled by $\langle s \rangle$ (accessed by $v.s$), which represents the storage size of artifact when materialized.
+Every edge $e$ is labeled by $\langle f, t\rangle$ (accessed by $e.f$ and $e.t$), where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represent the average run time (in seconds) of the operation.
 Similarly, when a machine learning workload is executed, we extended the graph to capture the new feature engineering and model building operations.
 If an operation already exists in the graph, we update the frequency and average run time attributes.
 Otherwise, we add a new edge and vertex, representing the new operation and the generated artifact, to the experiment graph.
@@ -124,7 +124,7 @@ We make two important assumptions when constructing the graph from the workloads
 First, most of the operations are applied to one or a subset of the columns of a dataset.
 In this case, we augment the graph with an edge representing a projection operation that selects the required subset of the columns.
 The run-time ($t$) attribute of this edge is set to 0 as this operation is never actually executed.
-Second, multiple edges merging into one vertex indicates an operation the receives as input multiple artifacts and outputs one artifact.
+Second, multiple edges merging into one vertex indicates an operation that receives as input multiple artifacts and outputs one artifact.
 This is a critical assumption for our materialization algorithm in Section \ref{sec-materializaiton-and-reuse}.
 Currently, we support three types of merge operations:
 \begin{itemize}

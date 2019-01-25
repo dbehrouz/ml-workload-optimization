@@ -10,55 +10,87 @@ For example, the Home Credit Default Risk Kaggle competition, we inspected X pop
 \todo[inline]{We need to do a quick experiment to get the proper estimate.}
 Therefore, we cannot materialize every artifact.
 In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage.
-The goal of the algorithm is to select the artifacts that have the highest probability of being re-used in future workloads while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+The goal of the algorithm is to materialize the artifacts that results in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+We define the total recreation cost of the graph $\mathcal{G}$, given the set of materialized vertices $\mathcal{MV}$ as 
+\[
+total\_recreation\_cost(\mathcal{G}, \mathcal{MV}) =  \sum\limits_{e \in \{e' \in \mathcal{E}  \lvert dest(e') \notin \mathcal{MV}\}}  e.f \times e.t
+\]
+where $dest(e)$ represent the destination vertex of the edge $e$.
+In other words, the total recreation cost is equal to the sum of multiplication of the frequency and run time of all the operations (edges) whose endpoints (destination vertex) are not materialized.
+\todo[inline]{show that it is NP hard and cite \cite{bhattacherjee2015principles} and state the differences in their work and solution and ours}
+%Bhattacherjee et al. \cite{bhattacherjee2015principles} tackle a similar problem and prove that the problem is NP-hard.
+%They provide a greedy solution for the problem as well.
+%However, there differences in both the use cases and problem formulation that make their solution not feasible in our case.
 
 \begin{algorithm}
-\caption{Materialization of Artifacts}\label{materialization-algorithm}
+\caption{Materialization of Artifacts}\label{algorithm-materialization}
 \begin{algorithmic}[1]
 \Require  $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{B}=$ storage limit
 \Ensure $\mathcal{MV}=$ set of materialized artifacts
-\State $T=0$, $\mathcal{MV} =\emptyset$
-\While {$T < \mathcal{B}$}
-	\State $e^* = \argmax\limits_{e \in \{e' \in \mathcal{E} \lvert e'_{dest} \notin \mathcal{MV}\}} e_f \times e_t$
-	\State $v = e^{*}_{dest}$
-		\If {$T + v_{size} \leq \mathcal{B}$}
-			\State $T = T + v_{size}$
-			\State $\mathcal{MV} = \mathcal{MV} \cup \{v\}$
-		\EndIf
-\EndWhile
-\Do
-	\State $\mathcal{FV} = \{(v',u') \lvert v' \in \mathcal{MV}, u' \notin \mathcal{MV}, T + v - u \leq \mathcal{B} \}$
-	\State $(v^*,u^*) =  \argmax\limits_{(v,u) \in \mathcal{FV}}  imp\_ratio(v,u, \mathcal{G}, \mathcal{MV})$
-	\State $T = T + v^{*}_{size}$
+\State $T=v_0.size$, $\mathcal{MV} =\{v_0\}$
+\Do 
+	\State $\mathcal{CV} = \{v \in \mathcal{V} \lvert v \notin \mathcal{MV}, T + v.s \leq \mathcal{B}\}$
+	\State $v^* = \argmax\limits_{v \in \mathcal{CV}} \dfrac{\rho(\mathcal{G}, v)}{v.s}$
 	\State $\mathcal{MV} = \mathcal{MV} \cup \{v^*\}$
-\DoWhile{$\mathcal{FV} = \emptyset$}
-\State \Return $\mathcal{MV}$
+\DoWhile{$\mathcal{CV} \neq \emptyset$}
 \end{algorithmic}
 \end{algorithm}
 
-Algorithms \ref{materialization-algorithm} and \ref{improvement-ratio-algorithm} show the details of our method for selecting the vertices to materialize.
-First, we start from an empty set of materialized vertices.
-Then, while the storage unit is not full, we start materializing vertices that are the result of the most time-consuming operations that have high frequencies (i.e., Algorithm \ref{materialization-algorithm}, Lines 2-9)
-Finally, we compute the improvement ratio (Algorithm \ref{improvement-ratio-algorithm}) between pairs of materialized and un-materialized vertices.
-
-\begin{algorithm}
-\caption{imp\_ratio}\label{improvement-ratio-algorithm}
-\begin{algorithmic}[1]
-\Require  $v=$ new vertex, $u=$ old vertex, $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{MV}=$ materialized artifacts
-\Ensure  improvement ratio
-\State $r = \dfrac{total\_time(\mathcal{G}, \mathcal{MV})}{total\_time(\mathcal{G}, \mathcal{MV} \cup \{v\} \setminus \{u\})}$
-\State $s= \dfrac{u_{size}}{v_{size}}$
-\State \Return $r \times s$
-\end{algorithmic}
-\end{algorithm}
-
-The $total\_time$ function in Algorithm \ref{improvement-ratio-algorithm} computes an estimate of the total run-time of all the operations in the experiment database, given the materialized vertices set.
-It is computed as
+We propose a local greedy solution to the problem.
+Algorithm \ref{algorithm-materialization} shows the details of our solution for selecting the vertices to materialize.
+First, we start by initializing the materialized vertices set ($\mathcal{MV}$) to contain the root artifact ($v_0$) which represents the raw dataset.
+This is essential as many of the feature engineering and model building operations are not invertible.
+As a result, we cannot reconstruct the raw dataset if it is not materialized.
+Then, while the storage limit is not reached, we materialize vertices with maximum value of recreation cost over size.
+We compute the recreation cost ($\rho$) of the vertex $v$ as, 
 \[
-total\_time(\mathcal{G}, \mathcal{MV}) = \sum\limits_{e \in \{e' \in \mathcal{E} \lvert e'_{dest} \notin \mathcal{MV}\}} e_f \times e_t
+\rho(\mathcal{G}, v) = \alpha(\mathcal{G}, v) \times \sum\limits_{e \in path(\mathcal{G}, v_0, v)}  e.t
 \]
-where $\mathcal{G}$ represent the experiment graph, $\mathcal{E}$ is the set of edges in the graph, and $\mathcal{MV}$ is the set of materialized vertices.
-%\todo[inline]{Come up with a cost model, something similar to MISTIQUE \cite{vartak2018mistique}}
+where $\alpha(\mathcal{G}, v)$ represents the access frequency of the vertex $v$ which is the same as frequency of the edge (or any of the edges in case of merge operation) connected to $v$.
+The function $path(\mathcal{G}, v_0, v)$ represents the set of all edges from the root node to the vertex $v$. 
+For example, in Figure \ref{fig-materialization-example}, the recreation cost of $v_3$ is $3 \times (1 + 25) = 76$.
+The ratio of recreation cost over size has the unit second per megabyte.
+For example, the ratio 10 s/mb for an artifact, indicates that we need to spend 10 seconds to recreate 1 megabyte of the artifact.
+
+\begin{figure}
+\begin{subfigure}{0.5\linewidth}
+\centering
+\input{../images/tikz/graph-mat-step-1.tex}
+\caption{Original Graph}
+\label{fig-materialization-example}
+\end{subfigure}%
+\begin{subfigure}{0.5\linewidth}
+\centering
+\input{../images/tikz/graph-mat-step-2.tex}
+\caption{Materialized Graph}
+\label{fig-materialization-example}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+\begin{tabular}{l||>{\bfseries}r|r|r|r|>{\bfseries}r|>{\bfseries}r|>{\bfseries}r|>{\bfseries}r}
+\hline
+\textbf{vertex} & $\boldsymbol{v_0}$ & $v_1$ & $v_2$ & $v_3$ & $\boldsymbol{v_4}$ & $\boldsymbol{v_5}$ & $\boldsymbol{v_6}$ & $\boldsymbol{v_7}$  \\
+\hline
+\textbf{size (mb)}    & 10 & 8 & 2 & 40 & 30 & 1 & 2 & 3            \\
+\textbf{$\boldsymbol{\rho}$ (s)} & ---   & 0 & 0& 75 & 135 & 50 & 105 & 150	  \\
+\textbf{ratio}& --- &0.0 & 0.0 & 1.875 & 4.5 & 50.0 & 52.5 & 50.0 \\
+\hline
+\end{tabular}
+\caption{List of vertices, their sizes, recreation costs, and the cost over size ratio (Bold vertices are materialized). We do not compute $\rho$ and the ratio for $v_0$ as it should be materialized regardless of its size.}
+\end{subfigure}
+\caption{Artifact materialization based on Algorithm \ref{algorithm-materialization} when storage capacity is 55 (mb)}
+\end{figure}
+
+\subsubsection{The Effect of Model Quality on the Materialization Decision}
+The Algorithm \ref{algorithm-materialization} only considers the size of the artifacts and the frequency and run time of the operations.
+We are primarily targeting machine learning workloads with the goal of creating a predictive model.
+As a result, we can utilize the quality of the model trained using a data processing pipeline as an indicator of the goodness of the pipeline itself.
+Ultimately, we can utilize this goodness metric in the decision on what artifacts to materialize.
+We propose a simple method for utilizing the model quality in the materialization decision algorithm.
+For every edge that belongs to one or more paths that end with a predictive model, we add a new attribute $q$.
+The new attribute is computed as follows.
+If the edge $e$ belongs to no path that leads to a predictive model, we assign $q$ to the average quality of all the predictive models in the connected subgraph that $e$ belongs to.
+If $e$ belongs to only one path that leads to a predictive model, then we assign $q$ to the quality of the model.
+If $e$ belongs to multiple paths that lead to different predictive models, we assign $q$ to the quality of the model with the maximum quality among all the models.
 
 \subsection{Reuse Optimization for Feature Engineering Operations and Model building}
 Having our materialized experiment graph, we now devise a simple strategy to detect reuse opportunities for the feature engineering operations and model training operations of the new machine learning workloads.
