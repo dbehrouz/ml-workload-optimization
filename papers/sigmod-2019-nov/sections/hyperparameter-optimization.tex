@@ -1,4 +1,4 @@
-\subsection{Improved Hyperparameter Tuning} \label{sec-hyperparam-optimization}
+\section{Improved Hyperparameter Tuning} \label{sec-hyperparam-optimization}
 Hyperparameters of a machine learning model greatly impact on the quality of the model.
 There are three common techniques for tuning the hyperparameters, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
 In this section, we propose two optimizations to improve the process of hyperparameter tuning.
@@ -8,7 +8,7 @@ Both grid and random search are a series of individual training operations that 
 To optimize the grid and random search operation, we first transform them into several model training operations through a simple process called grid unpacking.
 In grid unpacking, each training operation is considered a separate workload.
 Figure \ref{fig-grid-unpacking} shows an example of grid unpacking for a simple SVM Model which has the two hyperparameters penalty (C) and learning rate.
-After unpacking, the reuse optimizations techniques discussed in Section \ref{sec-materializaiton-and-reuse} can be applied.
+After unpacking, the reuse optimizations techniques discussed in Section \ref{sec-reuse-and-warmstarting} can be applied.
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{../images/grid-unpacking}

@@ -1,100 +1,6 @@
-\section{Materialization and Reuse of Operations}\label{sec-materializaiton-and-reuse}
-With the experiment graph constructed, we can look for optimization opportunities for feature engineering and model building operations.
-The experiment graph contains all the historical data operations.
-By materializing the result of the historical operations we can reuse them for future workloads.
-We propose three optimizations, namely, \textit{reuse}, \textit{warmstarting}, \textbf{partial-warmstarting}.
-
-\subsection{Materialization of the Experiment Graph}
-Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
-For example, the Home Credit Default Risk Kaggle competition, we inspected X popular scripts and observed that they generate up to XXX gigabytes of artifacts. 
-\todo[inline]{We need to do a quick experiment to get the proper estimate.}
-herefore, materializing every artifact is not feasible.
-In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage.
-The goal of the algorithm is to materialize the artifacts that result in the lowest weighted recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-We define the weighted recreation cost of the graph $\mathcal{G}$, given the set of materialized vertices $\mathcal{MV}$ as 
-\[
-weighted\_recreation\_cost(\mathcal{G}, \mathcal{MV}) =  \sum\limits_{e \in \{e' \in \mathcal{E}  \lvert dest(e') \notin \mathcal{MV}\}}  e.f \times e.t
-\]
-where $dest(e)$ represent the destination vertex of the edge $e$.
-The weighted recreation cost indicates how much time do we need to spend to execute all the operations in the graph, since the beginning of time.
-For un-materialized artifacts, we must consider the frequency of the operations that produce the artifact.
-For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ and the operation \textit{count\_vectorizer} has a frequency of 10, we must consider all 10 executions of the operation when computing the weighted cost.
-Whereas, if $v_4$ is materialized, the \textit{count\_vectorizer} operation has no impact on the weighted recreation cost.
-We propose a local greedy algorithm to the problem.
-\todo[inline]{show that it is NP hard and cite \cite{bhattacherjee2015principles} and state the differences in their work and solution and ours}
-%Bhattacherjee et al. \cite{bhattacherjee2015principles} tackle a similar problem and prove that the problem is NP-hard.
-%They provide a greedy solution for the problem as well.
-%However, there differences in both the use cases and problem formulation that make their solution not feasible in our case.
-
-\begin{algorithm}[h]
-\caption{Materialization of Artifacts}\label{algorithm-materialization}
-\begin{algorithmic}[1]
-\Require  $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{B}=$ storage limit
-\Ensure $\mathcal{MV}=$ set of materialized artifacts
-\State $T=v_0.size$, $\mathcal{MV} =\{v_0\}$
-\Do 
-	\State $\mathcal{CV} = \{v \in \mathcal{V} \lvert v \notin \mathcal{MV}, T + v.s \leq \mathcal{B}\}$
-	\State $v^* = \argmax\limits_{v \in \mathcal{CV}} \tfrac{\rho(\mathcal{G}, v)}{v.s}$
-	\State $\mathcal{MV} = \mathcal{MV} \cup \{v^*\}$
-	\State $T = T + v^*.size$
-\DoWhile{$\mathcal{CV} \neq \emptyset$}
-\end{algorithmic}
-\end{algorithm}
-Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
-First, we start by initializing the materialized vertices set ($\mathcal{MV}$) to contain the root artifact ($v_0$) which represents the raw dataset.
-This is essential as many of the feature engineering and model building operations are not invertible.
-As a result, we cannot reconstruct the raw dataset if it is not materialized.
-Then, while the storage limit is not reached, we materialize vertices with the maximum value of weighted recreation cost over size.
-We compute the weighted recreation cost ($\rho$) of the vertex $v$ as, 
-\[
-\rho(\mathcal{G}, v) = \alpha(\mathcal{G}, v) \times \sum\limits_{e \in path(\mathcal{G}, v_0, v)}  e.t
-\]
-where $\alpha(\mathcal{G}, v)$ represents the access frequency of the vertex $v$ which is the same as frequency of the edge (or any of the edges in case of merge operation) connected to $v$.
-The set $path(\mathcal{G}, v_0, v)$ represents the set of all edges from the root node to the vertex $v$. 
-For example, in Figure \ref{fig-materialization-example}, the recreation cost of $v_4$ is $3 \times (0 + 0 + 25 + 10 + 10) = 135$.
-The ratio of the weighted recreation cost over size has the unit second per megabyte.
-For example, the ratio 10 s/mb for an artifact, indicates that we need to spend 10 seconds to recreate 1 megabyte of the artifact.
-Figure \ref{fig-materialization-example} shows an example of the materialization process when the storage capacity is 55.
-For $v_0$ we do not compute $\rho$ as $v_0$ is always materialized.
-
-\begin{figure}
-\begin{subfigure}{0.5\linewidth}
-\centering
-\input{../images/tikz/graph-mat-step-1.tex}
-\caption{Original Graph}
-\label{fig-materialization-example}
-\end{subfigure}%
-\begin{subfigure}{0.5\linewidth}
-\centering
-\input{../images/tikz/graph-mat-step-2.tex}
-\caption{Materialized Graph}
-\label{fig-materialization-example}
-\end{subfigure}
-\begin{subfigure}{\linewidth}
-\begin{tabular}{l||>{\bfseries}r|r|r|r|>{\bfseries}r|>{\bfseries}r|>{\bfseries}r|>{\bfseries}r}
-\hline
-\textbf{vertex} & $\boldsymbol{v_0}$ & $v_1$ & $v_2$ & $v_3$ & $\boldsymbol{v_4}$ & $\boldsymbol{v_5}$ & $\boldsymbol{v_6}$ & $\boldsymbol{v_7}$  \\
-\hline
-\textbf{size (mb)}    & 10 & 8 & 2 & 40 & 30 & 1 & 2 & 3            \\
-\textbf{$\boldsymbol{\rho}$ (s)} & ---   & 0 & 0& 75 & 135 & 50 & 105 & 150	  \\
-\textbf{ratio}& --- &0.0 & 0.0 & 1.875 & 4.5 & 50.0 & 52.5 & 50.0 \\
-\hline
-\end{tabular}
-\caption{List of vertices, their sizes, recreation costs, and the cost over size ratio (Bold vertices are materialized).}
-\end{subfigure}
-\caption{Artifact materialization based on Algorithm \ref{algorithm-materialization} when storage capacity is 55 (mb)}
-\end{figure}
-
-\subsubsection{The Effect of Model Quality on the Materialization Decision}
-Since the goal of all the workloads in the experiment graph is to solve the same task (as described in \ref{sec-introduction}), all the machine learning models will be evaluated using the same quality metric.
-Therefore, we can utilize the quality of the model in the materialization algorithm.
-We propose a simple method for utilizing the model quality in the materialization decision algorithm.
-We start by adding a new attribute $q$ to every edge.
-The new attribute is computed as follows.
-If the edge $e$ belongs to no path that leads to a predictive model, we assign $q$ to the average quality of all the predictive models in the experiment graph.
-If $e$ belongs to only one path that leads to a predictive model, then we assign $q$ to the quality of the model.
-If $e$ belongs to multiple paths that lead to different predictive models, we assign $q$ to the quality of the model with the maximum quality among all the models.
-After computing $q$, we include it in the computation of $\rho$, by multiplying $e.q$ by $e.t$ in the summation. 
+\section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
+With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model building operations.
+In this section, we propose two optimizations, namely, \textit{reuse}, \textit{warmstarting}.
 
 \subsection{Reuse Optimization for Feature Engineering Operations and Model building}
 Having the experiment graph constructed, we now devise a strategy to detect which operations in the current workload exist in the experiment graph.
@@ -139,7 +45,7 @@ Therefore, we ensure the training procedure will converge faster.
 Once the training procedure is finished, we augment the experiment graph with an edge and node representing the new model building operation and resulting model, respectively.
 \todo[inline]{We may need a special edge so that we know the training operation was not run from scratch and is the result of warmstarting.}
 
-\subsection{Partial Warmstarting Optimization For Model Training Operations}
+\subsubsection{Partial Warmstarting Optimization For Model Training Operations}
 A common approach in machine learning workloads is to repeatedly select a different subset of features or create new features from the existing ones and train models on the new features.
 As a result, many model training operations operate on overlapping or different set of features.
 In the partial warmstarting optimization, we aim to improve the training time (and the quality) by warmstarting only the features that exist in the experiment database.
