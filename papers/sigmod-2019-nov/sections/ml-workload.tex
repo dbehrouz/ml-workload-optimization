@@ -1,36 +1,36 @@
 \section{Machine Learning Workloads} \label{sec-ml-workloads}
-We define a machine learning workload as a series of exploratory data analysis steps followed by one or multiple model building steps.
-Typically users analyze the data by first performing different transformations to gain insight into the data.
-Then, based on these analyses, they apply the right set of transformations to the data to train one or multiple models on the transformed training data.
-Therefore, machine learning workloads typically consist of both interactive (exploratory analysis) and long-running processes (hyperparameter tuning and model training).
-Using the experiment database, we can speed up the execution of the machine learning workloads.
-By analyzing the experiment database, we can extract the common transformations on data and materialize them.
-Thus, during the interactive exploratory analysis, we first analyze the workload to look for reuse opportunities and return the materialized data when possible.
-Moreover, using the experiment database, we provide the users with already trained models or promising hyperparameters which decreases the execution time of the hyperparameter search and model training.
+We define a machine learning workload as a series of exploratory data analysis steps followed by one or multiple model building steps to solve a machine learning \textit{task}.
+We define a machine learning task as designing a set of data transformation steps and a machine learning model, to transform the training data and train a machine learning model, where the goal is to maximize (or minimize) a quality metric (or an error metric) on an evaluation dataset.
+For example, in the \textit{Titanic: Machine Learning from Disaster} competition in Kaggle\footnote{https://www.kaggle.com/c/titanic}, the task is to create a machine learning pipeline and train a classification model on the Titanic training dataset that can predict if a traveler survived the Titanic disaster, with the goal of maximizing the prediction accuracy on a separate test dataset.
+%Typically users analyze the data by first performing different transformations to gain insight into the data.
+%Then, based on these analyses, they apply the right set of transformations to the data to train one or multiple models on the transformed training data.
+%Therefore, machine learning workloads typically consist of both interactive (exploratory analysis) and long-running processes (hyperparameter tuning and model training).
+%Using the experiment database, we can speed up the execution of the machine learning workloads.
+%By analyzing the experiment database, we can extract the common transformations on data and materialize them.
+%Thus, during the interactive exploratory analysis, we first analyze the workload to look for reuse opportunities and return the materialized data when possible.
+%Moreover, using the experiment database, we provide the users with already trained models or promising hyperparameters which decreases the execution time of the hyperparameter search and model training.
 
-We analyzed several scripts from the Titanic: Machine Learning from Disaster competition in Kaggle\footnote{https://www.kaggle.com/c/titanic}.
-The Kaggle platform allows users to submit their solutions as scripts (called notebooks or kernels) to the Kaggle platform.
-These notebooks are available publicly for other users to view and fork in their own workspace.
-Figure \ref{fig-titanic-script-hierarchy} shows some of the popular notebooks and how other users wrote their notebooks based on the existing ones.
+The Kaggle platform allows users to submit their workloads in scripts (called notebooks or kernels) to the Kaggle platform.
+Users can view, copy (fork) the notebooks, modify them, and submit them for evaluation.
+Figure \ref{fig-titanic-script-hierarchy} shows the most popular notebooks and their relationship.
+For example, in the Notebook "Best Working Classifier", the author cites the Notebook "Exploring Survival" as his/her inspiration.
 The numbers show how many times each script is forked.
 The top most-voted notebooks for the Titanic competition have been forked a total of 44,434 times.
-This demonstrates that many of the workloads share similar sets of data transformations and model training.
-Materializing frequent transformations and models can greatly increase the efficiency and many repeated operations can be avoided.
-
+This demonstrates that many of the workloads share similar operations.
+By utilizing an experiment database, we plan to optimize new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{../images/kaggle-titanic-scripts-graph}
-\caption{The fork hierarchy of some of the popular notebooks in Kaggle's Titanic competition and how many times each notebook is forked}
+\caption{The fork hierarchy of some of the popular notebooks in Kaggle's Titanic competition}
 \label{fig-titanic-script-hierarchy}
 \end{figure}
 
 In order to apply the materialization optimization, we first define the characteristics of the machine learning workloads.
 Then, we specify how to detect reuse opportunities from the experiment database.
 
-\subsection{Machine Learning Workload Characteristics}
+\subsection{Operations in Machine Learning Workloads}
 We assume the main units of work are dataframe like objects that contain one or many columns, where all the data items in one column are of one data type.
-We divide the operations in the ML workloads into 2 categories.
-
+We divide the operations in the ML workloads into 3 categories.
 \begin{table}
 \centering
 \begin{tabular}{ll}
@@ -47,23 +47,30 @@ We divide the operations in the ML workloads into 2 categories.
 \caption{List of feature extraction and feature selection operations}\label{feature-engineering-operations}
 \end{table}
 
-\textbf{1. Feature engineering:}
+\textbf{1. Data transformation and Feature engineering:}
 \begin{itemize}
+\item simple data transformations
 \item feature selection operations
 \item feature extraction operations
 \item user-defined feature engineering operations
 \end{itemize}
-
 Table \ref{feature-engineering-operations} shows the list common feature extraction and feature selection operations.
 
-\textbf{2. Model building: }
+\textbf{2. Model Training: }
 \begin{itemize}
 \item model training operation that applies a training algorithm to a dataset
-\item common aggregation operations (such as mean, max, min, and percentile)
-\item user-defined aggregation operations 
+%\item common aggregation operations (such as mean, max, min, and percentile)
+%\item user-defined aggregation operations 
 \end{itemize}
+
 Each model building operation results in objects that can either be used in other feature engineering operations (applying PCA to data or categorizing a column based on values in percentile aggregate) or can be a complete machine learning model that can be used to make predictions on unseen data.
-\todo[inline]{How can we capture these in the graph? maybe special edges that connect these nodes to a data node? }
+\todo[inline]{How can we capture these in the graph? maybe special edges that connect these nodes to a data node? Do we even want this in this version or should we leave it for future work? }
+
+\textbf{3. Hyperparameter Tuning:}
+The goal of hyperparameter tuning operations are to find the models with the highest quality metric.
+A hyperparameter tuning operation is defined by a budget and a search method.
+The budget specifies how many models the operation should train and the search method specifies the what search strategy should be incorporated.
+We limit our focus to popular search methods, namely, grid search, random search, and Bayesian hyperparameter search.
 
 %%% Continue from here
 \subsection{Graph Representation}\label{sub-graph-construction}
@@ -78,7 +85,8 @@ Furthermore, each vertex contains meta-data about the artifacts (such as the nam
 When a new machine learning workload is executed, we extend the graph to capture the new operations and artifacts.
 If an operation already exists in the graph, we update the frequency and average run-time attributes.
 Otherwise, we add a new edge and vertex to the experiment graph, representing the new operation and the artifact.
-Figure \ref{fig-experiment-graph} shows an example graph constructed from the code in Listing \ref{listing-experiment-graph} based on the Avito demand prediction challenge\footnote{https://www.kaggle.com/c/avito-demand-prediction/}.
+Figure \ref{fig-experiment-graph} and  shows an example graph constructed from the code in Listing \ref{listing-experiment-graph} based on the Avito demand prediction challenge\footnote{https://www.kaggle.com/c/avito-demand-prediction/}.
+To uniquely identify an edge, we utilize a hash function that receives as input the operation and hyperparameters.
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
 import numpy as np
@@ -100,12 +108,42 @@ model = svm.SVC()
 model.fit(X, train['y'])
 \end{lstlisting}
 
+%\begin{figure}
+%\centering
+%\input{../images/tikz/example-graph.tex}
+%\caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
+%\label{fig-experiment-graph}
+%\end{figure}
 \begin{figure}
+\begin{subfigure}[b]{0.5\linewidth}
 \centering
 \input{../images/tikz/example-graph.tex}
-\caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph}}
+\caption{}
+\end{subfigure}%
+\begin{subfigure}[b]{0.5\linewidth}
+\begin{tabular}{l|l}
+\textbf{operation} & \textbf{hash}\\
+\hline
+project(ad..) & p1 \\
+project(ts, .., y) & p2\\
+project(y) & p3\\
+count\_... & c1 \\
+select\_... & s1 \\
+concat & c2 \\
+combine & c3\\
+fit\_svm & f1
+\end{tabular}
+\caption{}
+\end{subfigure}
+\caption{Experiment graph constructed from the Listing \ref{listing-experiment-graph} (a) and the hash of the operations in the scripts (b)}
 \label{fig-experiment-graph}
 \end{figure}
+Table \ref{fig-experiment-graph}b shows the (arbitrary) hash of the operations and their hyperparameters.
+To uniquely identify vertices we utilize the same mechanism as in the Trie data structure \cite{brass2008advanced}.
+Trie is a search tree where every vertex is identified by the concatenation of edge names starting from the root node.
+For example in Figure \ref{fig-experiment-graph}a, vertex $v_4$'s identifier is $p1c1$.
+Our optimization methods (described) rely on locating vertices in the experiment graph quickly.
+By utilizing a Trie like naming convention, we can locate any node by performing a walk from the root node using the edges names.
 
 We make two important assumptions when constructing the graph from the workloads.
 First, most of the operations are applied to one or a subset of the columns of a dataset.
@@ -122,9 +160,16 @@ Currently, we support three types of merge operations:
 Since the \textit{combine} operation is logical, the run-time attribute ($t$) of every participating edge is set to $0$.
 For the \textit{join} and \textit{concat} operations, the frequency attribute of every participating edge is set to the frequency of the merge operation.
 However, the run-time attribute of every participating edge is set to the average run-time of the merge operation divided by the number of the participating edges (e.g., in Figure \ref{fig-experiment-graph}, if the \textit{concat} operation between $v_4$ and $v_5$ is executed 6 times with an average run-time of 10 seconds, the edges connecting $v_4$ to $v_6$ and $v_5$ to $v_6$ have the attributes $\langle6, 5\rangle$).
+Furthermore, to construct the unique identifier for merge vertices, we concatenate every path starting from the root node.
+For example, in Figure \ref{fig-experiment-graph}a, the identifier of $v_6$ is $p1c1c2p2s1c2$.
 
 It is important to note that based our definition of a task in Section \ref{sec-introduction} if the experiment database contains meta-data about multiple tasks, the constructed graph will contain one connected component for every task.
 In the next sections, we assume that the experiment database contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
+
+\subsubsection{Artifacts Unique Identifiers}
+To uniquely identify artifacts, we utilize a similar method to \textit{Trie}\footnote{https://en.wikipedia.org/wiki/Trie}.
+As a result, we can uniquely identify each artifact by performing a walk starting from the root node and concatenate the hash of every operation and its hyperparameters to name a vertex.
+For merge operations (two edges entering a vertex), we  
 
 \subsection{Materialization of the Experiment Graph}\label{subsec-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
@@ -229,3 +274,9 @@ This results in a new workload graph which depending on the types of optimizatio
 \caption{System workflow}
 \label{fig-system-workflow}
 \end{figure}
+
+\todo[inline]{Do we need to discuss implementation details? I will utilize a Trie like method to name the vertices so essentially a vertex $v$ is identified by the sequence of operations that have been applied to the root node to transform it to $v$}
+%\subsection{Artifacts Unique Identifiers}
+%To uniquely identify artifacts, we utilize a similar method to \textit{Trie}\footnote{https://en.wikipedia.org/wiki/Trie}.
+%As a result, we can uniquely identify each artifact by performing a walk starting from the root node and concatenate the hash of every operation and its hyperparameters to name a vertex.
+%For merge operations (two edges entering a vertex), we  
