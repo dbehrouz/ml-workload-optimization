@@ -166,11 +166,6 @@ For example, in Figure \ref{fig-experiment-graph}a, the identifier of $v_6$ is $
 It is important to note that based our definition of a task in Section \ref{sec-introduction} if the experiment database contains meta-data about multiple tasks, the constructed graph will contain one connected component for every task.
 In the next sections, we assume that the experiment database contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
 
-\subsubsection{Artifacts Unique Identifiers}
-To uniquely identify artifacts, we utilize a similar method to \textit{Trie}\footnote{https://en.wikipedia.org/wiki/Trie}.
-As a result, we can uniquely identify each artifact by performing a walk starting from the root node and concatenate the hash of every operation and its hyperparameters to name a vertex.
-For merge operations (two edges entering a vertex), we  
-
 \subsection{Materialization of the Experiment Graph}\label{subsec-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
 For example, the Home Credit Default Risk Kaggle competition, we inspected X popular scripts and observed that they generate up to XXX gigabytes of artifacts. 
@@ -274,8 +269,6 @@ This results in a new workload graph which depending on the types of optimizatio
 \caption{System workflow}
 \label{fig-system-workflow}
 \end{figure}
-
-\todo[inline]{Do we need to discuss implementation details? I will utilize a Trie like method to name the vertices so essentially a vertex $v$ is identified by the sequence of operations that have been applied to the root node to transform it to $v$}
 %\subsection{Artifacts Unique Identifiers}
 %To uniquely identify artifacts, we utilize a similar method to \textit{Trie}\footnote{https://en.wikipedia.org/wiki/Trie}.
 %As a result, we can uniquely identify each artifact by performing a walk starting from the root node and concatenate the hash of every operation and its hyperparameters to name a vertex.

@@ -3,17 +3,24 @@ In this section, we evaluate the performance of our proposed optimizations.
 \subsection{Setup}
 To evaluate our proposed optimizations, we provide two different set of workloads, namely, OpenML workload and Kaggle workload.
 
-\textbf{OpenML workloads.} In the OpenML workloads, we utilize several pipelines (OpenML platform calls pipelines, flows.)
-Here's a description of each pipeline:
-\begin{itemize}
-\item 5981: imputer -> standard scaler -> logistic regression
-\item 7707: imputer -> onehot encoder -> standard scaler -> variance thresholder -> svm classifier
-\item 8315: imputer -> onehot encoder -> variance thresholder -> random forest classifier
-\item 8353: imputer -> onehot encoder -> variance thresholder -> svm classifier
-\item 8568: imputer -> onehot encoder -> variance thresholder -> random forest classifier
-\end{itemize}
-Pipeline 8568 uses a different code for performing the imputation although the input and output are similar.
-For all of the OpenML workloads, we use the credit\_g dataset (also from the OpenML platform).
+\textbf{OpenML workloads.} In the OpenML workloads, we utilize some of the popular machine learning pipelines from the OpenML repository for solving task 31, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}\footnote{https://www.openml.org/t/31}.
+Table \ref{tab-openml-pipelines} shows the id, components, and number of executions of the OpenML pipelines.\footnote{information about each pipeline is available at https://www.openml.org/f/id}
+\begin{table}
+\begin{tabular}{llr}
+\hline
+\textbf{id} & \textbf{operations} & \textbf{\#exec}   \\
+\hline
+ 5981&  \makecell[l]{Imputer\rightarrow Standard scaler\rightarrow Logistic regression} &11        \\
+ 7707&  \makecell[l]{Imputer\rightarrow Onehot encoder \rightarrow Standard scaler\\ \rightarrow Variance thresholder \rightarrow SVM }&594 \\
+ 8315&  \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder\\ \rightarrow Random Forest} &1084  \\
+8353 & \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder \\ \rightarrow Svm}  & 1000\\
+8568 &  \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder \\ \rightarrow Random Forest} &555 \\
+\hline
+\end{tabular}
+\caption{OpenML pipeline descriptions.}
+\vspace{-25pt}
+\label{tab-openml-pipelines}
+\end{table}
 
 \textbf{Kaggle workloads.} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent on data and feature preprocessing.
 We design the workload by studying several Kaggle scripts and populating the database based on those.

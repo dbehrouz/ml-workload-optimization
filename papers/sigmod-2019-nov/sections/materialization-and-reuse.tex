@@ -6,9 +6,11 @@ In this section, we propose two optimizations, namely, \textit{reuse}, \textit{w
 Having the experiment graph constructed, we now devise a strategy to detect which operations in the current workload exist in the experiment graph.
 When an operation exists in the experiment graph, we directly access the resulting artifact instead of executing the operation.
 Before executing a workload, we first utilize the same strategy for constructing the experiment graph, to transform the workload into its graph representation, which results in a directed graph (called $\mathcal{WG}$) that starts at $v_0$.
-For every edge starting at $v_0$ in $\mathcal{WG}$, we check if the edge also exists in the experiment graph.
-Then, we directly access the furthest vertex from $v_0$ (in terms of the edges in the path from $v_0$ to the vertex) that exists in the experiment graph and skip all the intermediate operations.
-
+Since for every vertex, the path from the root node is encoded in the vertex identifier (described in Section \ref{sub-graph-construction}), we are able to locate the nodes from the workload graph ($\mathcal{WG}$) that also exist in the experiment graph.
+For every unmerged path in $\mathcal{WG}$, we select the furthest vertex from the root node that exist (and materialized) in the experiment graph and skip all the intermediate operations.
+If multiple paths in the workload graph are merged, and one of the vertices after the merge operation exist in the experiment graph, we skip all the operations in every paths and start from the materialized vertex after the merge. 
+\todo[inline]{Maybe add a figure that shows how reuse works, although it is very trivial.}
+%Figure xxx shows two examples for reuse, one with no merge operation and one with a merge operation.
 %\subsubsection{Non-deterministic operations}
 %Some feature engineering operations are non-deterministic (such as count vectorizer).
 %Therefore, before the workload is executed we cannot know the resulting columns of such operations.
