@@ -5,9 +5,7 @@ class Node(object):
     def __init__(self, id, data):
         self.id = id
         self.data = data
-    
-    def edge(self, oper, params=''):
-        return self.id + '->' + oper + '(' + str(params).replace(' ', '') + ')'
+
     
     @staticmethod
     def load(loc, nrows = None): 
@@ -89,7 +87,7 @@ class Feature(Node):
         return Feature(self.edge('dropna'), self.data.dropna())
     
     def sum(self):
-         return Feature(self.edge('sum'), pd.Series(self.data.sum(), name=self.data.name))
+         return Agg(self.edge('sum'), self.data.sum())
         
     def nunique(self, dropna=True):
         return Agg(self.edge('nunique', dropna), self.data.nunique(dropna=dropna))
