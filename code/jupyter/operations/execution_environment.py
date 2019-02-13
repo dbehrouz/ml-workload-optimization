@@ -1,6 +1,7 @@
 import uuid
 
 import pandas as pd
+import numpy as np
 
 from execution_graph import ExecutionGraph
 
@@ -21,10 +22,6 @@ class ExecutionEnvironment(object):
             self.data = data
             self.meta = {}
 
-        @staticmethod
-        def merge(nodes):
-            return SuperNode('super-node', nodes)
-
         # TODO: when params are a dictionary with multiple keys the order may not be the same in str conversion
         def e_hash(self, oper, params=''):
             return oper + '(' + str(params).replace(' ', '') + ')'
@@ -37,8 +34,14 @@ class ExecutionEnvironment(object):
             # graph.compute_result(self.id)
             if self.is_empty():
                 ExecutionEnvironment.graph.compute_result(self.id)
-                self.update_meta()
+                self.reapply_meta()
             return self.data
+
+        def update_meta(self):
+            raise Exception('Node object has no meta data')
+
+        def reapply_meta(self):
+            raise Exception('Node class should not have been instantiated')
 
         def getNotNone(self, nextnode, exist):
             if exist is not None:
@@ -49,10 +52,12 @@ class ExecutionEnvironment(object):
         def is_empty(self):
             return self.data is None or 0 == len(self.data)
 
-        def generate_agg_node(self, oper, args={}):
+        def generate_agg_node(self, oper, args={}, v_id=None):
+            if v_id is None:
+                v_id = self.id
             nextid = self.v_uuid()
             nextnode = ExecutionEnvironment.Agg(nextid, None)
-            exist = ExecutionEnvironment.graph.add_edge(self.id, nextid, nextnode,
+            exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
                                                          'oper': 'p_' + oper,
                                                          'args': args,
@@ -60,12 +65,12 @@ class ExecutionEnvironment(object):
                                                         ntype=ExecutionEnvironment.Agg.__name__)
             return self.getNotNone(nextnode, exist)
 
-        def generate_sklearn_node(self, oper, args={}, id=None):
-            if id is None:
-                id = self.id
+        def generate_sklearn_node(self, oper, args={}, v_id=None):
+            if v_id is None:
+                v_id = self.id
             nextid = self.v_uuid()
             nextnode = ExecutionEnvironment.SK_Model(nextid, None)
-            exist = ExecutionEnvironment.graph.add_edge(id, nextid, nextnode,
+            exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
                                                          'oper': 'p_' + oper,
                                                          'args': args,
@@ -73,12 +78,12 @@ class ExecutionEnvironment(object):
                                                         ntype=ExecutionEnvironment.Agg.__name__)
             return self.getNotNone(nextnode, exist)
 
-        def generate_dataset_node(self, oper, args={}, id=None):
-            if id is None:
-                id = self.id
+        def generate_dataset_node(self, oper, args={}, v_id=None):
+            if v_id is None:
+                v_id = self.id
             nextid = self.v_uuid()
             nextnode = ExecutionEnvironment.Dataset(nextid, pd.DataFrame())
-            exist = ExecutionEnvironment.graph.add_edge(id, nextid, nextnode,
+            exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
                                                          'oper': 'p_' + oper,
                                                          'args': args,
@@ -86,12 +91,12 @@ class ExecutionEnvironment(object):
                                                         ntype=ExecutionEnvironment.Dataset.__name__)
             return self.getNotNone(nextnode, exist)
 
-        def generate_feature_node(self, oper, args={}, id=None):
-            if id is None:
-                id = self.id
+        def generate_feature_node(self, oper, args={}, v_id=None):
+            if v_id is None:
+                v_id = self.id
             nextid = self.v_uuid()
             nextnode = ExecutionEnvironment.Feature(nextid, pd.Series())
-            exist = ExecutionEnvironment.graph.add_edge(id, nextid, nextnode,
+            exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
                                                          'oper': 'p_' + oper,
                                                          'args': args,
@@ -111,6 +116,8 @@ class ExecutionEnvironment(object):
                                                        'root': False,
                                                        'data': nextnode})
                 for n in nodes:
+                    # this is to make sure each merge edge is a unique name
+                    args['uuid'] = self.v_uuid()
                     ExecutionEnvironment.graph.add_edge(n.id, nextid, nextnode,
                                                         {'name': 'merge',
                                                          'oper': 'merge',
@@ -141,102 +148,118 @@ class ExecutionEnvironment(object):
         def update_meta(self):
             self.meta = {'name': self.data.name, 'dtype': self.data.dtype}
 
-        def setname(self, name):
-            self.data.name = name
-            self.meta['name'] = name
+        def reapply_meta(self):
+            if not self.is_empty() and 'name' in self.meta.keys():
+                self.data.name = self.meta['name']
+            self.update_meta()
 
-        ### Overriding math operators
+        def setname(self, name):
+            self.meta['name'] = name
+            self.reapply_meta()
+
+        # Overriding math operators
         def __mul__(self, other):
-            nextid = self.v_uuid()
-            nextnode = Feature(nextid, pd.Series())
-            ExecutionEnvironment.graph.add_edge(self.id, id,
-                                                {'oper': '__mul__',
-                                                 'hash': self.edge('__mul__', other)},
-                                                ntype=type(self).__name__)
-            return nextnode
+            return self.generate_feature_node('__mul__', {'other': other})
+
+        def p___mul__(self, other):
+            return self.data * other
 
         def __rmul__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('multi', other), 'hash': self.edge('multi', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__rmul__', {'other': other})
+
+        def p___rmul__(self, other):
+            return other * self.data
 
         # TODO: When switching to python 3 this has to change to __floordiv__ and __truediv__
         def __div__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('div', other), 'hash': self.edge('div', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__div__', {'other': other})
+
+        def p___div__(self, other):
+            return self.data / other
 
         def __rdiv__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('rdiv', other), 'hash': self.edge('rdiv', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__rdiv__', {'other': other})
+
+        def p___rdiv__(self, other):
+            return other / self.data
 
         def __add__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('add', other), 'hash': self.edge('add', other)}
-                                                , ntype=type(self).__name__)
+            return self.generate_feature_node('__add__', {'other': other})
+
+        def p___add__(self, other):
+            return self.data + other
 
         def __radd__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('add', other), 'hash': self.edge('add', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__radd__', {'other': other})
+
+        def p___radd__(self, other):
+            return other + self.data
 
         def __sub__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('sub', other), 'hash': self.edge('sub', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__sub__', {'other': other})
+
+        def p___sub__(self, other):
+            return self.data - other
 
         def __rsub__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('rsub', other), 'hash': self.edge('rsub', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__rsub__', {'other': other})
+
+        def p___rsub__(self, other):
+            return other - self.data
 
         def __lt__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('lt', other), 'hash': self.edge('lt', other)}
-                                                , ntype=type(self).__name__)
+            return self.generate_feature_node('__lt__', {'other': other})
+
+        def p___lt__(self, other):
+            return self.data < other
 
         def __le__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('le', other), 'hash': self.edge('le', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__le__', {'other': other})
+
+        def p___le__(self, other):
+            return self.data <= other
 
         def __eq__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('eq', other), 'hash': self.edge('eq', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__eq__', {'other': other})
+
+        def p___eq__(self, other):
+            return self.data == other
 
         def __ne__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('ne', other), 'hash': self.edge('ne', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__ne__', {'other': other})
+
+        def p___ne__(self, other):
+            return self.data != other
 
         def __gt__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('gt', other), 'hash': self.edge('gt', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__gt__', {'other': other})
+
+        def p___gt__(self, other):
+            return self.data > other
 
         def __ge__(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('ge', other), 'hash': self.edge('ge', other)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('__ge__', {'other': other})
 
-        ### End of overriden methods
+        def p___ge__(self, other):
+            return self.data >= other
+
+        # End of overridden methods
 
         def isnull(self):
             ExecutionEnvironment.graph.add_edge(self.id,
                                                 {'oper': self.edge('isnull'), 'hash': self.edge('isnull')},
                                                 ntype=type(self).__name__)
 
-        def dropna(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('dropna'), 'hash': self.edge('dropna')},
-                                                ntype=type(self).__name__)
+        def notna(self):
+            return self.generate_feature_node('notna')
+
+        def p_notna(self):
+            return self.data.notna()
 
         def sum(self):
             return self.generate_agg_node('sum')
 
-        def p_sum(self, dropna):
+        def p_sum(self):
             return self.data.sum()
 
         def nunique(self, dropna=True):
@@ -246,56 +269,46 @@ class ExecutionEnvironment(object):
             return self.data.nunique(dropna=dropna)
 
         def describe(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('describe'), 'hash': self.edge('desrcibe')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('describe')
 
-        def abs(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('abs'), 'hash': self.edge('abs')},
-                                                ntype=type(self).__name__)
+        def p_describe(self):
+            return self.data.describe()
 
         def mean(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('mean'), 'hash': self.edge('mean')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('mean')
+
+        def p_mean(self):
+            return self.data.mean()
 
         def min(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('min'), 'hash': self.edge('min')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('min')
+
+        def p_min(self):
+            return self.data.min()
 
         def max(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('max'), 'hash': self.edge('max')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('max')
+
+        def p_max(self):
+            return self.data.max()
 
         def count(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('count'), 'hash': self.edge('count')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('count')
+
+        def p_count(self):
+            return self.data.count()
 
         def std(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('std'), 'hash': self.edge('std')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('std')
+
+        def p_std(self):
+            return self.data.std()
 
         def quantile(self, values):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('quantile'), 'hash': self.edge('quantile')},
-                                                ntype=Agg.__name__)
+            return self.generate_agg_node('quantile', {'values': values})
 
-        def filter_equal(self, value):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('filter'), 'hash': self.edge('filter', value)},
-                                                ntype=type(self).__name__)
-
-        def filter_not_equal(self, value):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('filter_not_equal'),
-                                                 'hash': self.edge('filter_not_equal',
-                                                                   value)},
-                                                ntype=type(self).__name__)
+        def p_quantile(self, values):
+            return self.data.quantile(values=values)
 
         def value_counts(self):
             return self.generate_agg_node('value_counts')
@@ -303,34 +316,45 @@ class ExecutionEnvironment(object):
         def p_value_counts(self):
             return self.data.value_counts()
 
+        def abs(self):
+            return self.generate_feature_node('abs')
+
+        def p_abs(self):
+            return self.data.abs()
+
         def unique(self):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('unique'), 'hash': self.edge('unique')},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('unique')
+
+        def p_unique(self):
+            return self.data.unique()
+
+        def dropna(self):
+            return self.generate_feature_node('dropna')
+
+        def p_dropna(self):
+            return self.data.dropna()
 
         def binning(self, start_value, end_value, num):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('binning'),
-                                                 'hash': self.edge('binning',
-                                                                   str(start_value) + ',' + str(end_value) + ',' + str(
-                                                                       num))},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('binning',
+                                              {'start_value': start_value, 'end_value': end_value, 'num': num})
+
+        def p_binning(self, start_value, end_value, num):
+            return pd.cut(self.data, bins=np.linspace(start_value, end_value, num=num))
 
         def replace(self, to_replace):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('replace'),
-                                                 'hash': self.edge('replace', to_replace)},
-                                                ntype=type(self).__name__)
+            return self.generate_feature_node('replace', {'to_replace': to_replace})
+
+        def p_replace(self, to_replace):
+            return self.data.replace(to_replace, inplace=False)
 
         def onehot_encode(self):
             ExecutionEnvironment.graph.add_edge(self.id,
                                                 {'oper': self.edge('onehot'), 'hash': self.edge('onehot')},
-                                                ntype=Dataset.__name__)
+                                                ntype=ExecutionEnvironment.Dataset.__name__)
 
         def corr(self, other):
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('corr'), 'hash': self.edge('corr')},
-                                                ntype=Agg.__name__)
+            supernode = self.generate_super_node([self, other])
+            return self.generate_agg_node('corr_with', v_id=supernode.id)
 
         def fit_sk_model(self, model):
             return self.generate_sklearn_node('fit_sk_model', {'model': model})
@@ -358,6 +382,11 @@ class ExecutionEnvironment(object):
         def update_meta(self):
             self.meta = {'columns': self.data.columns, 'dtypes': self.data.dtypes}
 
+        def reapply_meta(self):
+            if 'columns' in self.meta.keys():
+                self.data.columns = self.meta['columns']
+            self.update_meta()
+
         def project(self, columns):
             if type(columns) is str:
                 return self.generate_feature_node('project', {'columns': columns})
@@ -373,14 +402,17 @@ class ExecutionEnvironment(object):
             If the index argument is of type string or a list, we apply a projection operator (indexing columns)
             If the index argument is of type Feature, we apply a 'join' operator where we filter the data using values
             in the Feature. The data in the feature must be of the form (index, Boolean)
+            TODO:
+             check how to implement the set_column operation, i.e. dataset['new_column'] = new_feature
             """
             # project operator
             if type(index) in [str, list]:
                 return self.project(index)
             # index operator using another Series of the form (index,Boolean)
-            #             elif isinstance(index, Feature):
-            #                 id = self.id + '->filter-using' +  index.id + '->end'
-            #                 return Dataset(id, self.data[index.data])
+            elif isinstance(index, ExecutionEnvironment.Feature):
+                supernode = self.generate_super_node([self, index])
+                return self.generate_dataset_node('filter_with', args={}, v_id=supernode.id)
+
             else:
                 raise Exception('Unsupported operation. Only project (column index) is supported')
 
@@ -403,10 +435,70 @@ class ExecutionEnvironment(object):
             return self.data.isnull()
 
         def sum(self):
-            return self.generate_agg_node('sum', {})
+            return self.generate_agg_node('sum')
 
         def p_sum(self):
             return self.data.sum()
+
+        def nunique(self, dropna=True):
+            return self.generate_agg_node('nunique', {'dropna': dropna})
+
+        def p_nunique(self, dropna):
+            return self.data.nunique(dropna=dropna)
+
+        def describe(self):
+            return self.generate_agg_node('describe')
+
+        def p_describe(self):
+            return self.data.describe()
+
+        def abs(self):
+            return self.generate_dataset_node('abs')
+
+        def p_abs(self):
+            return self.data.abs()
+
+        def mean(self):
+            return self.generate_agg_node('mean')
+
+        def p_mean(self):
+            return self.data.mean()
+
+        def min(self):
+            return self.generate_agg_node('min')
+
+        def p_min(self):
+            return self.data.min()
+
+        def max(self):
+            return self.generate_agg_node('max')
+
+        def p_max(self):
+            return self.data.max()
+
+        def count(self):
+            return self.generate_agg_node('count')
+
+        def p_count(self):
+            return self.data.count()
+
+        def std(self):
+            return self.generate_agg_node('std')
+
+        def p_std(self):
+            return self.data.std()
+
+        def quantile(self, values):
+            return self.generate_agg_node('quantile', {'values': values})
+
+        def p_quantile(self, values):
+            return self.data.quantile(values=values)
+
+        def notna(self):
+            return self.generate_dataset_node('notna')
+
+        def p_notna(self):
+            return self.data.notna()
 
         def select_dtypes(self, data_type):
             return self.generate_dataset_node('select_dtypes', {'data_type': data_type})
@@ -414,18 +506,22 @@ class ExecutionEnvironment(object):
         def p_select_dtypes(self, data_type):
             return self.data.select_dtypes(data_type)
 
-        def nunique(self, dropna=True):
-            return self.generate_agg_node('nunique', {'dropna': dropna})
-
-        def p_nunique(self, dropna=True):
-            return self.data.nunique(dropna=dropna)
-
         # If drop column results in one column the return type should be a Feature
         def drop_column(self, col_name):
             return self.generate_dataset_node('drop_column', {'col_name': col_name})
 
         def p_drop_column(self, col_name):
             return self.data.drop(columns=col_name)
+
+        def dropna(self):
+            return self.generate_dataset_node('dropna')
+
+        def p_dropna(self):
+            return self.data.dropna()
+
+        def add_column(self, feature, col_name):
+            supernode = self.generate_super_node([self, feature], {'col_name': col_name})
+            return self.generate_dataset_node('add_column', {'col_name': col_name}, v_id=supernode.id)
 
         def onehot_encode(self):
             return self.generate_dataset_node('onehot_encode', {})
@@ -439,13 +535,22 @@ class ExecutionEnvironment(object):
         def p_corr(self):
             return self.data.corr()
 
+        # TODO: Do we need to create special grouped nodes?
+        # For now Dataset node is good enough since aggregation operations that exist on group
+        # also exist in the Dataset
+        def groupby(self, col_names):
+            return self.generate_dataset_node('groupby', {'col_names': col_names})
+
+        def p_groupby(self, col_names):
+            return self.data.groupby(col_names)
+
         # merge node
         def concat(self, nodes):
             if type(nodes) == list:
                 supernode = self.generate_super_node([self] + nodes)
             else:
                 supernode = self.generate_super_node([self] + [nodes])
-            return self.generate_dataset_node('concat', id=supernode.id)
+            return self.generate_dataset_node('concat', v_id=supernode.id)
 
     class Agg(Node):
         def __init__(self, id, data):
@@ -456,6 +561,9 @@ class ExecutionEnvironment(object):
 
         def update_meta(self):
             self.meta = {'type': 'aggregation'}
+
+        def reapply_meta(self):
+            self.update_meta()
 
         def show(self):
             return self.id + " :" + self.data.__str__()
@@ -470,10 +578,13 @@ class ExecutionEnvironment(object):
         def update_meta(self):
             self.meta = {'model_class': self.data.get_params.im_class}
 
+        def reapply_meta(self):
+            self.update_meta()
+
         # The matching physical operator is in the supernode class
         def transform_col(self, node, col_name):
             supernode = self.generate_super_node([self, node])
-            return self.generate_feature_node('transform_col', args={'col_name': col_name}, id=supernode.id)
+            return self.generate_feature_node('transform_col', args={'col_name': col_name}, v_id=supernode.id)
 
     class SuperNode(Node):
         """SuperNode represents a (sorted) collection of other nodes
@@ -484,24 +595,30 @@ class ExecutionEnvironment(object):
         def __init__(self, id, nodes):
             ExecutionEnvironment.Node.__init__(self, id, None)
             self.nodes = nodes
+            self.meta = {'count': len(self.nodes)}
 
         def update_meta(self):
             self.meta = {'count': len(self.nodes)}
 
+        def reapply_meta(self):
+            self.update_meta()
+
         def p_transform_col(self, col_name):
             return pd.Series(self.nodes[0].data.transform(self.nodes[1].data), name=col_name)
+
+        def p_filter_with(self):
+            return self.nodes[0].data[self.nodes[1].data]
+
+        def p_add_column(self, col_name):
+            t = self.nodes[0].data
+            t[col_name] = self.nodes[1].data
+            return t
+
+        def p_corr_with(self):
+            return self.nodes[0].data.corr(self.nodes[1].data)
 
         def p_concat(self):
             ds = []
             for d in self.nodes:
                 ds.append(d.data)
             return pd.concat(ds, axis=1)
-
-        def concat(self):
-            id = ''
-            ds = []
-            for d in self.nodes:
-                id = id + ',' + d.id
-            ExecutionEnvironment.graph.add_edge(self.id,
-                                                {'oper': self.edge('concat'), 'hash': self.edge('concat', id)},
-                                                ntype=Dataset.__name__)

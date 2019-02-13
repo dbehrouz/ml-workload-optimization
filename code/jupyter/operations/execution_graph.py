@@ -1,3 +1,5 @@
+import copy
+
 import networkx as nx
 
 
@@ -11,7 +13,6 @@ class ExecutionGraph(object):
         self.graph.add_node(id, **meta)
 
     def add_edge(self, start_id, end_id, nextnode, meta, ntype):
-        exist = None
         for e in self.graph.out_edges(start_id, data=True):
             if e[2]['hash'] == meta['hash']:
                 exist = self.graph.nodes[e[1]]['data']
@@ -28,7 +29,7 @@ class ExecutionGraph(object):
 
     def compute_result(self, v_id):
         """ main computation for nodes
-                
+
         """
         # find every path from root to the current node
         p = []
@@ -54,7 +55,9 @@ class ExecutionGraph(object):
             edge = self.graph.edges[pair[0], pair[1]]
             # merge is logical and we do not execute it 
             if edge['oper'] != 'merge':
-                cur_node['data'].data = self.compute_next(self.graph.nodes[pair[0]], edge)
+                # Assignment wont work since it copies object reference
+                # TODO: check if a shallow copy is enough
+                cur_node['data'].data = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
 
         return cur_node['data']
 
