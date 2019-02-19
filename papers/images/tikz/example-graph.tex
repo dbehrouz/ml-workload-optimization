@@ -3,34 +3,36 @@
 \tikzstyle{every node}=[inner sep=0.02cm]
 \node (train) [circle, draw] at (2,6) {$v_0$};
 % layer 1
-\node (ad) [circle, draw] at (1,5) {$v_1$};
-\node (forselection) [circle, draw] at (2,5) {$v_2$};
-\node (y) [circle, draw] at (3,5) {$v_3$};
+\node (ad) [circle, draw] at (1,5.2) {$v_1$};
+\node (forselection) [circle, draw] at (2,5.2) {$v_2$};
+\node (y) [circle, draw] at (3,5.2) {$v_3$};
 % layer 2
-\node (cv) [circle, draw] at (1, 4) {$v_4$};
-\node(sk) [circle, draw] at (2, 4) {$v_5$};
+\node (cv) [circle, draw] at (1, 4.3) {$v_4$};
+\node(sk) [circle, draw] at (2, 4.3) {$v_5$};
 % layer 3
-\node (cvsk) [circle, draw] at (1.5, 3.2) {$v_6$};
+\node (merged1) [circle, draw] at (1.5, 3.5) {$v_6$};
+\node (cvsk) [circle, draw] at (2, 2.8) {$v_7$};
 % layer 4
-\node(merged) [circle, draw] at (2, 2.5) {$v_7$};
+\node(merged2) [circle, draw] at (3, 2.8) {$v_8$};
 % layer 5
-\node(model) [circle, draw] at (2,1.7) {$v_8$};
+\node(model) [circle, draw] at (3,1.9) {$v_9$};
 
 \graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\small}]{
 (train) [label=train]
 -> [anchor=east, align=center,"p1"] (ad)
 -> [anchor=east,align=center,"c1"] (cv)
+-> [anchor=east,align=center,"m"](merged1) 
 -> [anchor=east,align=center,"c2"](cvsk) 
--> [anchor=east, align=center,"c3"](merged) (merged);
+-> [anchor=south, align=center,"m"](merged2) ;
 
 (train) 
 -> [anchor=east,align=center, "p2"] (forselection)
 -> [anchor=east,auto=false,align=center,"s1"] (sk)
--> [anchor=west,align=center,"c2"](cvsk) ;
+-> [anchor=west,align=center,"m"](merged1) ;
 
 (train) 
 -> [anchor=west, align=center,"p3"]   (y)
--> [anchor=west, align=center,"c3"](merged) 
+-> [anchor=west, align=center,"m"](merged2) 
 -> [anchor=east,auto=false,align=center,"f1"] (model);
 };
 \end{tikzpicture}

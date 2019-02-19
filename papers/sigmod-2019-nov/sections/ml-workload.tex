@@ -74,6 +74,7 @@ We limit our focus to popular search methods, namely, grid search, random search
 
 %%% Continue from here
 \subsection{Graph Representation}\label{sub-graph-construction}
+\todo[inline]{FIX the text based on the new Supernode concept (merge)}
 To efficiently apply our optimizations, we utilize a graph data structure (called the experiment graph) to store the meta-data and logs of the machine learning workloads.
 Let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the experiment database.
 Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
@@ -130,7 +131,7 @@ project(y) & p3\\
 count\_... & c1 \\
 select\_... & s1 \\
 concat & c2 \\
-combine & c3\\
+merge & m\\
 fit\_svm & f1
 \end{tabular}
 \caption{}
@@ -167,6 +168,7 @@ It is important to note that based our definition of a task in Section \ref{sec-
 In the next sections, we assume that the experiment database contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
 
 \subsection{Materialization of the Experiment Graph}\label{subsec-materialization}
+\todo[inline]{Fix the figure and text based on the new merge concept (merge edge have 0 weight)}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
 For example, the Home Credit Default Risk Kaggle competition, we inspected X popular scripts and observed that they generate up to XXX gigabytes of artifacts. 
 \todo[inline]{We need to do a quick experiment to get the proper estimate.}
