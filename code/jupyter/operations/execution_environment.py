@@ -507,11 +507,11 @@ class ExecutionEnvironment(object):
             return self.data.select_dtypes(data_type)
 
         # If drop column results in one column the return type should be a Feature
-        def drop_column(self, col_name):
-            return self.generate_dataset_node('drop_column', {'col_name': col_name})
+        def drop(self, columns):
+            return self.generate_dataset_node('drop', {'columns': columns})
 
-        def p_drop_column(self, col_name):
-            return self.data.drop(columns=col_name)
+        def p_drop(self, columns):
+            return self.data.drop(columns=columns)
 
         def dropna(self):
             return self.generate_dataset_node('dropna')
@@ -552,6 +552,13 @@ class ExecutionEnvironment(object):
                 supernode = self.generate_super_node([self] + [nodes])
             return self.generate_dataset_node('concat', v_id=supernode.id)
 
+        def fit_sk_model(self, model):
+            return self.generate_sklearn_node('fit_sk_model', {'model': model})
+
+        def p_fit_sk_model(self, model):
+            model.fit(self.data)
+            return model
+
     class Agg(Node):
         def __init__(self, id, data):
             ExecutionEnvironment.Node.__init__(self, id, data)
@@ -586,6 +593,10 @@ class ExecutionEnvironment(object):
             supernode = self.generate_super_node([self, node])
             return self.generate_feature_node('transform_col', args={'col_name': col_name}, v_id=supernode.id)
 
+        def transform(self, node):
+            supernode = self.generate_super_node([self, node])
+            return self.generate_dataset_node('transform', v_id=supernode.id)
+
     class SuperNode(Node):
         """SuperNode represents a (sorted) collection of other nodes
         Its only purpose is to allow operations that require multiple nodes to fit 
@@ -605,6 +616,9 @@ class ExecutionEnvironment(object):
 
         def p_transform_col(self, col_name):
             return pd.Series(self.nodes[0].data.transform(self.nodes[1].data), name=col_name)
+
+        def p_transform(self):
+            return self.nodes[0].data.transform(self.nodes[1].data)
 
         def p_filter_with(self):
             return self.nodes[0].data[self.nodes[1].data]

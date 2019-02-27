@@ -8,54 +8,28 @@
 \node(v1)[circle, draw] at (-1.8,4.8){$v_1$};
 \node(v2)[circle, draw] at (-0.2,4.8) {$v_2$};
 % layer 2
-\node(v3)[circle, draw] at (-1.8,3.8) {$v_3$};
-\node (v4) [circle, draw] at (-1, 3.2) {$v_4$};
-\node(v5)[circle, draw] at (-0.2, 3.8) {$v_5$};
+\node(v3)[circle, draw] at (-1.8,4.0) {$v_3$};
+\node (v4) [circle, draw] at (-1, 3.5) {$v_4$};
+\node(v5)[circle, draw] at (-0.2, 4.0) {$v_5$};
 %layer 3
-\node(v6)[circle, draw] at (-1.8, 2.5) {$v_6$};
-\node(v7)[circle, draw] at (-0.2,2.5) {$v_7$};
+\node(v6)[circle, draw] at (-1, 2.7) {$v_6$};
+%layer 4
+\node(v7)[circle, draw] at (-1.8, 2.0) {$v_7$};
+\node(v8)[circle, draw] at (-0.2, 2.0) {$v_8$};
 \graph [edges ={thick}]{
 (v0)
--> [swap,anchor=mid,align=left,font=\scriptsize,"$\langle3,0\rangle$"] (v1)
+-> [swap,anchor=mid,align=left,font=\scriptsize,"$\langle3,1\rangle$"] (v1)
 -> [swap,anchor=mid,font=\scriptsize,"$\langle3,25\rangle$"] (v3)
--> [swap,anchor=mid,font=\scriptsize,"$\langle3,10\rangle$"]  (v4) ;
+-> [swap,anchor=mid,font=\scriptsize,"$\langle3,0\rangle$"]  (v4) 
+-> [anchor=mid,align=right,font=\scriptsize,"$\langle3,20\rangle$"] (v6); 
 (v0) 
--> [font=\scriptsize, "$\langle3,0\rangle$"] (v2)
+-> [font=\scriptsize, "$\langle3,1\rangle$"] (v2)
 -> [font=\scriptsize,"$\langle2,25\rangle$"] (v5);
 (v2) 
--> [swap,anchor=mid,font=\scriptsize,anchor=mid, align=center,"$\langle3,10\rangle$"]   (v4);
-(v4)
--> [swap,font=\scriptsize,"$\langle1,60\rangle$"]  (v6) ;
-(v4)
--> [font=\scriptsize,"$\langle2,30\rangle$"]  (v7); 
+-> [swap,font=\scriptsize,align=right,"$\langle3,0\rangle$"]   (v4);
+(v6)
+-> [swap,font=\scriptsize,"$\langle1,60\rangle$"]  (v7) ;
+(v6)
+-> [font=\scriptsize,"$\langle2,30\rangle$"]  (v8); 
 };
-%
-%\begin{scope}[shift={(5,0)}]
-%	\node(v0)[label={$\langle\textbf{10}\rangle$}] [circle, draw] at (-1,5.5) {$v_0$};
-%	% layer 1
-%	\node(v1)[label=left:$\langle\textbf{8}\rangle$] [circle, draw] at (-1.8,4.8){$v_1$};
-%	\node(v2)[label=left:$\langle\textbf{2}\rangle$] [circle, draw] at (-0.2,4.8) {$v_2$};
-%	% layer 2
-%	\node(v3)[label=left:$\langle\textbf{40}\rangle$] [circle, draw] at (-1.8,3.8) {$v_3$};
-%	\node (v4)[label=below:$\langle\textbf{42}\rangle$] [circle, draw] at (-1, 3.2) {$v_4$};
-%	\node(v5)[label=right:$\langle\textbf{0.1}\rangle$] [circle, draw] at (-0.2, 3.8) {$v_5$};
-%	%layer 3
-%	\node(v6)[label=below:$\langle\textbf{2}\rangle$] [circle, draw] at (-1.8, 2.5) {$v_6$};
-%	\node(v7)[label=below:$\langle\textbf{2}\rangle$] [circle, draw] at (-0.2,2.5) {$v_7$};
-%	\graph [edges ={thick}]{
-%	(v0)
-%	-> [swap,anchor=mid,align=left,font=\scriptsize,"$\langle3,0\rangle$"] (v1)
-%	-> [swap,anchor=mid,font=\scriptsize,"$\langle3,20\rangle$"] (v3)
-%	-> [swap,anchor=mid,font=\scriptsize,"$\langle3,1\rangle$"]  (v4) ;
-%	(v0) 
-%	-> [font=\scriptsize, "$\langle3,0\rangle$"] (v2)
-%	-> [font=\scriptsize,"$\langle2,2\rangle$"] (v5);
-%	(v2) 
-%	-> [swap,anchor=mid,font=\scriptsize,anchor=mid, align=center,"$\langle3,1\rangle$"]   (v4);
-%	(v4)
-%	-> [swap,font=\scriptsize,"$\langle1,60\rangle$"]  (v6) ;
-%	(v4)
-%	-> [font=\scriptsize,"$\langle2,40\rangle$"]  (v7); 
-%	};
-%\end{scope}
 \end{tikzpicture}

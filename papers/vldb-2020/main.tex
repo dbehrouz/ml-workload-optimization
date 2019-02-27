@@ -1,0 +1,126 @@
+
+
+%\documentclass[sigconf]{acmart}
+
+\documentclass{vldb}
+
+\usepackage{balance}  % for  \balance command ON LAST PAGE  (only there!)
+
+
+% Include information below and uncomment for camera ready
+\vldbTitle{Optimization of Machine Learning Workloads with Experiment Databases}
+\vldbAuthors{Behrouz Derakhshan, Alireza Rezaei Mahdiraji, Tilmann Rabl, and Volker Markl}
+\vldbDOI{https://doi.org/10.14778/xxxxxxx.xxxxxxx}
+\vldbVolume{xx}
+\vldbNumber{xxx}
+\vldbYear{2020}
+
+%\settopmatter{printacmref=false} % Removes citation information below abstract
+%\renewcommand\footnotetextcopyrightpermission[1]{} % removes footnote with conference information in first column
+%\pagestyle{plain}
+
+%\usepackage{array}
+%\usepackage{url}
+%\usepackage[export]{adjustbox}
+%\usepackage{lipsum}% http://ctan.org/pkg/lipsum
+%\usepackage{graphicx}% http://ctan.org/pkg/graphicx
+%\usepackage{soul}
+%\usepackage{float}
+%\usepackage{amsmath}
+\usepackage{todonotes}
+\usepackage{subcaption}
+\usepackage[outdir=./figures/]{epstopdf}
+\usepackage{listings}
+%\usepackage{booktabs}
+%\usepackage{upquote}
+\usepackage{makecell}
+%\usepackage{courier}
+%\usepackage[scaled]{beramono}
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc}
+\usegdlibrary{trees}
+
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+\algdef{SE}[DOWHILE]{Do}{DoWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}%
+
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\lstdefinestyle{pythonstle}{
+language=Python,
+basicstyle=\scriptsize\ttfamily,
+columns=fullflexible,
+otherkeywords={self},             % Add keywords here
+keywordstyle=\color{forestgreen},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\color{red},    % Custom highlighting style
+stringstyle=\color{blue},
+frame=tb,                         % Any extra options here
+showstringspaces=false        % 
+}
+\lstset{style=pythonstle}
+
+\PassOptionsToPackage{table}{colorx}
+%\usepackage[utf8]{inputenc}
+%\usepackage{pgfplots}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{argmax}
+% ACM Reference and Copy right
+%\settopmatter{printacmref=false}
+%\makeatletter
+%\def\@copyrightspace{\relax}
+%\makeatother
+
+\begin{document}
+%\lstset{numbers=left, numberstyle=\small, numbersep=8pt, frame = single, language=Pascal, framexleftmargin=15pt}
+
+\title{Optimization of Machine Learning Workloads with Experiment Databases}
+
+%
+% You need the command \numberofauthors to handle the 'placement
+% and alignment' of the authors beneath the title.
+%
+% For aesthetic reasons, we recommend 'three authors at a time'
+% i.e. three 'name/affiliation blocks' be placed beneath the title.
+%
+% NOTE: You are NOT restricted in how many 'rows' of
+% "name/affiliations" may appear. We just ask that you restrict
+% the number of 'columns' to three.
+%
+% Because of the available 'opening page real-estate'
+% we ask you to refrain from putting more than six authors
+% (two rows with three columns) beneath the article title.
+% More than six makes the first-page appear very cluttered indeed.
+%
+% Use the \alignauthor commands to handle the names
+% and affiliations for an 'aesthetic maximum' of six authors.
+% Add names, affiliations, addresses for
+% the seventh etc. author(s) as the argument for the
+% \additionalauthors command.
+% These 'additional authors' will be output/set for you
+% without further effort on your part as the last section in
+% the body of your article BEFORE References or any 
+\author{
+{\large Behrouz Derakhshan, Alireza Rezaei Mahdiraji, Tilmann Rabl, and Volker Markl}\\
+\affaddr{}\\
+\affaddr{ $ $ DFKI GmbH       \hspace{2.2cm}     Technische Universität Berlin}\\
+\affaddr{ \{behrouz.derakhshan, alireza.rm, tilmann.rabl, volker.markl\}@dfki.de} 
+}
+
+
+\maketitle
+\input{sections/abstract}
+%\keywords{Machine Learning Model Management; End to End Machine Learning; Experiment Databases}
+
+\input{sections/introduction}
+\input{sections/background}
+\input{sections/ml-workload}
+\input{sections/materialization-and-reuse}
+\input{sections/hyperparameter-optimization}
+\input{sections/evaluation}
+\input{sections/related-work}
+\input{sections/conclusion}
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+\end{document}
