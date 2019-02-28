@@ -1,13 +1,13 @@
 \section{Improved Hyperparameter Tuning} \label{sec-hyperparam-optimization}
-Hyperparameters of a machine learning model greatly impact on the quality of the model.
+Hyperparameters of a machine learning model greatly impact the quality of the model.
 There are three common techniques for tuning the hyperparameters, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
-In this section, we propose three optimizations to improve the process of hyperparameter tuning.
+In this section, we propose three techniques to improve the process of hyperparameter tuning.
 
 \subsection{Search unpacking}
-Existing machine learning libraries provide black-box operations for performing the hyperparameter tuning operation.
-However, every search process only consists of a series of individual training operations that only differ in hyperparameters.
+Existing machine learning libraries provide black-box operations for performing hyperparameter tuning.
+However, the search process consists of multiple training operations that only differ in hyperparameters.
 Therefore, instead of using black-box operations, we consider each training run in the hyperparameter tuning process as a separate operation.
-As a result, we consider each training run a separate workload, where we try to utilize the reuse and warmstarting operations when possible.
+This enables us to apply both the reuse and warmstarting operations to individual training operations in hyperparameter tuning.
 \todo[inline]{Do we need a figure for clarification?}
 %To optimize the grid and random search operation, we first transform them into several model training operations through a simple process called grid unpacking.
 %In grid unpacking, each training operation is considered a separate workload.
@@ -22,7 +22,7 @@ As a result, we consider each training run a separate workload, where we try to 
 
 \subsection{Automatic Search Space Definition}\label{sub-section-automatic-search-definition}
 A major challenge in all the hyperparameter tuning techniques is defining the appropriate search space.
-Currently, the ranges of the hyperparameters are defined through trial-and-error, experience, and common sense.
+Currently, the ranges of the hyperparameters are defined through trial-and-error.
 We propose to extract the hyperparameter ranges from the experiment database.
 These extracted values can guide us to define the search space over the hyperparameters.
 As a result, the search process becomes less challenging for users, especially the users that do not have in-depth knowledge of machine learning.
@@ -30,15 +30,15 @@ We utilize the performance of the model (quality metric) to specify a goodness m
 This helps us to discover the promising (and unpromising) regions for the hyperparameters.
 \todo[inline]{If we end up including AutoML as well, we should mention again that hyperparameters are not just limited to models anymore and any pipeline design decision counts as a (possible) hyperparameter}
 
-\subsubsection{Explorer unit}
-One problem when defining the search space having few instances for some specific hyperparameters.
-To address this issue, we design a component called the explorer unit.
-After a workload is executed, we first determine if there are similar workloads in the experiment database.
-Similar workloads are defined workloads that operate on the same dataset.
-In case the number of the similar workloads is below a threshold, we invoke the explorer unit to automatically propose values for hyperparameters and find the performance of the model trained using each hyperparameter setting.
-%\todo[inline]{This can be defined as a combination of the existing 'best-practices' and a random walk}
+%\subsubsection{Explorer unit}
+%One problem when defining the search space having few instances for some specific hyperparameters.
+%To address this issue, we design a component called the explorer unit.
+%After a workload is executed, we first determine if there are similar workloads in the experiment database.
+%Similar workloads are defined workloads that operate on the same dataset.
+%In case the number of the similar workloads is below a threshold, we invoke the explorer unit to automatically propose values for hyperparameters and find the performance of the model trained using each hyperparameter setting.
+%%\todo[inline]{This can be defined as a combination of the existing 'best-practices' and a random walk}
 
-\subsection{Fast Bayesian Hyperparameter Tuning and AutoML}
+\subsection{Fast Bayesian Hyperparameter Tuning}
 One drawback of the Bayesian hyperparameter tuning is that it requires many initial random trials until it starts to propose promising hyperparameters \cite{hutter2011sequential,snoek2012practical}.
 By utilizing the experiment database, we devise a strategy to decrease the number of initial trials (or in some cases avoid it altogether).
 As a result, the search process can propose promising hyperparameters faster.
