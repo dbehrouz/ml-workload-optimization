@@ -1,28 +1,74 @@
 \section{Background} \label{sec-background}
+In this section, we first provide an example use case and outline its deficiencies.
+Next, we describe experiment databases.
+Finally, we discuss how we improve the example use case by incorporating experiment databases.
+\subsection{Example Use Case}
+The data science competition platform, Kaggle, enables organizations to host data science challenges.
+Users participate in the challenges, write solutions, and submit these solutions.
+To arrive at their final solutions, participants utilize the infrastructure provided by Kaggle to write data analysis and machine learning workloads either in the form of R and Python scripts or Jupyter notebooks and execute them on the Kaggle's platform.
+Users can also make their workload publicly available to other users.
+As a result, the entire community works together to find high-quality solutions.
 
-\subsection{Hyperparameter Optimization and AutoML}\label{background-hyperparameter-optimization}
-In this section, we provide an overview of hyperparameter optimization techniques. 
-Specifically, we first describe the grid search method.
-Then we describe more advanced optimization methods and their heavy reliance on defining a proper search space and many iterations of search to acquire enough points to suggest good hyperparameter settings.
-\subsubsection{Grid Search}
-In the grid search approach, the user first defines a grid of hyperparameter values (1 dimension for every hyperparameter of the model).
-The search process then proceeds to use the values at each point of the grid, trains a model to the completion, and stores the quality metrics of the model.
-After executing the training operation for every point in the grid, the model with the best quality metric is chosen as the final model.
-\subsubsection{Random Search}
-\subsubsection{Bayesian Hyperparameter Optimization}
-\subsubsection{AutoML}
+Kaggle utilizes docker containers to provide isolated computational environments (called Kaggle kernels).
+Each kernel has limited CPU, GPU, disk space, and memory (i.e., 4 CPU cores, 17 GB of RAM, 5 GB of disk space, and a maximum of 9 hours of execution time. GPU kernels have 2 CPU cores and 14 GB of RAM\footnote{https://www.kaggle.com/docs/kernels}).
+In busy times, this results in users to be placed in queues (especially for GPU-enabled machines) until resources become available.
+Figure \ref{example-use-case} shows the infrastructure of Kaggle.
+Kaggle groups kernels by competition.
+When users request to execute a kernel, if there are enough resources available, their kernel is executed.
+However, when enough resources are not available, the kernel is inserted into a queue and only executed when existing kernels are completely executed.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{../images/example-use-case}
+\caption{Kaggle Infrastructure}
+\label{example-use-case}
+\end{figure}
+
+Every user that participates in a Kaggle competition, has the same goal, which is to solve the task described by the competition organizer.
+Typically, the task is to design a machine learning workload containing a series of exploratory data analysis steps followed by a model training step to train a machine learning model, which aims to maximize a quality metric on an evaluation dataset.
+For example, in the \textit{Titanic: Machine Learning from Disaster} competition in Kaggle\footnote{https://www.kaggle.com/c/titanic}, the task is to create a machine learning pipeline and train a classification model on the Titanic training dataset that can predict if a traveler survived the Titanic disaster, with the goal of maximizing the prediction accuracy on a separate test dataset.
+When solving the same tasks, users tend to utilize the same type of operations.
+Figure \ref{fig-titanic-script-hierarchy} shows the most popular kernels and their relationship for the Titanic competition.
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{../images/kaggle-titanic-scripts-graph}
+\caption{The fork hierarchy of some of the popular kernels in Kaggle's Titanic competition}
+\label{fig-titanic-script-hierarchy}
+\end{figure}
+For example, in the kernel \textbf{Best Working Classifier}, the author cites the kernel \textbf{Exploring Survival} as his/her inspiration.
+The numbers show how many times other users copy a kernel into their own workspace.
+The most popular kernels for the Titanic competition have been copied a total of 44,434 times.
+This demonstrates that many of the executed workloads share exact or similar operations.
+By using isolated docker containers, the Kaggle platform cannot detect such similarities and must re-execute every operation regardless of how many time it is executed before.
 
 \subsection{Experiment Database}
-A brief overview of the experiment databases, including several prior works such as OpenML and Schelter's  ML metadata management.
-OpenML and ...
+Experiment databases include data and meta-data of different data analytics and machine learning experiments executed over time \cite{miao2018provdb, vanschoren2014openml, schelter2017automatically, vartak2016m}.
+They include different information about datasets, data processing pipelines, machine learning models, execution of machine learning training, and quality of the models. 
+Moreover, experiment databases can also store the artifacts generated during the execution of a workload, such as datasets, intermediate data (resulting from applying data transformation operations), and machine learning models and their parameters.
+ 
+Experiment databases can help in designing a better future workload.
+For example, users can query the database to find the answer to the following questions, what type of data transformations and model training operations are executed on a dataset and what is the accuracy of the final models.
+As a result, users can avoid executing data transformations or model training operations that do not result in high-quality models.
+Moreover, experiment databases enable reproducibility and validation of results.
+For example, users can query information about the environment and list of operations in a specific workload.
+As a result, users can re-execute the workload and compare the results.
 
-%\subsection{Graph Representation of the Experiment Database}
-%Description of how we will transform the experiment database into a graph.
-%Figure \ref{fig-graph-creation} shows the process of converting the experiment database into a graph.
-%
-%\begin{figure}
-%\centering
-%\includegraphics[width=\columnwidth]{../images/graph-creation.png}
-%\caption{Process of converting the experiment database to a graph}
-%\label{fig-graph-creation}
-%\end{figure}
+\subsection{Improved Use Case}
+By utilizing an experiment database, we plan to optimize a new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{../images/improved-use-case}
+\caption{Utilizing Experiment Databases in the infrastructure of Kaggle}
+\label{improved-use-case}
+\end{figure}
+
+Figure \ref{improved-use-case} shows how we utilize the experiment database in the Kaggle Infrastructure. 
+The workflow is as follows.
+Before executing a kernel (workload), first, an optimizer component analyzes the workload.
+Then, the optimizer searches for optimization opportunities by querying the experiment database.
+For example, if a new kernel is trying to standardize the dataset or perform a model training, 
+the optimizer queries the experiment database to find out if other users have already executed the operations.
+Based on the result of the query, the optimizer then decides whether to retrieve the standardized data or the model from the experiment database or execute the operations in the kernel.
+
+In the next sections, we first describe how we utilize the experiment database and what types of optimizations an experiment database enables us to perform.

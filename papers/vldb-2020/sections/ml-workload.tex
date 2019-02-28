@@ -1,29 +1,5 @@
 \section{Machine Learning Workloads} \label{sec-ml-workloads}
-We define a machine learning workload as a series of exploratory data analysis steps followed by one or multiple model building steps to solve a machine learning \textit{task}.
-We define a machine learning task as designing a set of data transformation steps and a machine learning model, to transform the training data and train a machine learning model, where the goal is to maximize (or minimize) a quality metric (or an error metric) on an evaluation dataset.
-For example, in the \textit{Titanic: Machine Learning from Disaster} competition in Kaggle\footnote{https://www.kaggle.com/c/titanic}, the task is to create a machine learning pipeline and train a classification model on the Titanic training dataset that can predict if a traveler survived the Titanic disaster, with the goal of maximizing the prediction accuracy on a separate test dataset.
-%Typically users analyze the data by first performing different transformations to gain insight into the data.
-%Then, based on these analyses, they apply the right set of transformations to the data to train one or multiple models on the transformed training data.
-%Therefore, machine learning workloads typically consist of both interactive (exploratory analysis) and long-running processes (hyperparameter tuning and model training).
-%Using the experiment database, we can speed up the execution of the machine learning workloads.
-%By analyzing the experiment database, we can extract the common transformations on data and materialize them.
-%Thus, during the interactive exploratory analysis, we first analyze the workload to look for reuse opportunities and return the materialized data when possible.
-%Moreover, using the experiment database, we provide the users with already trained models or promising hyperparameters which decreases the execution time of the hyperparameter search and model training.
 
-The Kaggle platform allows users to submit their workloads in scripts (called notebooks or kernels) to the Kaggle platform.
-Users can view, copy (fork) the notebooks, modify them, and submit them for evaluation.
-Figure \ref{fig-titanic-script-hierarchy} shows the most popular notebooks and their relationship.
-For example, in the Notebook "Best Working Classifier", the author cites the Notebook "Exploring Survival" as his/her inspiration.
-The numbers show how many times each script is forked.
-The top most-voted notebooks for the Titanic competition have been forked a total of 44,434 times.
-This demonstrates that many of the workloads share similar operations.
-By utilizing an experiment database, we plan to optimize new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{../images/kaggle-titanic-scripts-graph}
-\caption{The fork hierarchy of some of the popular notebooks in Kaggle's Titanic competition}
-\label{fig-titanic-script-hierarchy}
-\end{figure}
 
 In order to apply the materialization optimization, we first define the characteristics of the machine learning workloads.
 Then, we specify how to detect reuse opportunities from the experiment database.
