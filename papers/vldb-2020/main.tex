@@ -34,7 +34,7 @@
 %\usepackage{booktabs}
 %\usepackage{upquote}
 \usepackage{makecell}
-%\usepackage{courier}
+\usepackage{courier}
 %\usepackage[scaled]{beramono}
 \usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc}
 \usegdlibrary{trees}
@@ -50,6 +50,12 @@
 language=Python,
 basicstyle=\scriptsize\ttfamily,
 columns=fullflexible,
+numbers=left,
+stepnumber=1,
+numbersep=5pt,
+xleftmargin=10pt,
+frame=single,
+framexleftmargin=3pt,
 otherkeywords={self},             % Add keywords here
 keywordstyle=\color{forestgreen},
 emph={MyClass,__init__},          % Custom highlighting

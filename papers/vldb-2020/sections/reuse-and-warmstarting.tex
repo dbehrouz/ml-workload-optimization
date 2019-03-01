@@ -1,27 +1,76 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
-In this section, we propose two optimizations, namely, \textit{reuse}, \textit{warmstarting}.
+In this section, we propose two optimizations, namely, \textit{Reuse}, \textit{Warmstarting}.
 
 \subsection{Reuse Optimization ML Operations}
-We devise a strategy to detect which operations in the current workload exist in the experiment graph.
-When an operation exists in the experiment graph, we directly access the resulting artifact instead of executing the operation.
-Before executing a workload, we first transform it into its graph representation, which results in a directed graph, called $\mathcal{WG}$, that starts at $v_0$.
-Then, we traverse the experiment graph starting from vertex $v_0$ using the edges of the workload graph $\mathcal{WG}$.
-The result of the traversal is a subgraph of the experiment graph, which we refer to as $\mathcal{SG}$, which contains all the vertices and edges that exist in both the experiment graph and the workload graph.
-For every path in $\mathcal{SG}$ which originates at $v_0$, we return the furthest materialized vertex from the root node as the result and skip all the intermediate operations.
-\todo[inline]{Add a figure similar to the one from the offsite slides}
+We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
+If an operation already exists in the experiment graph, we directly access the resulting artifact in the experiment graph instead of executing the operation.
+Before executing a workload, we first transform it into its graph representation, which results in a directed graph, called $\mathcal{WG}$.
+Then, we traverse the experiment graph starting from the root node, using the edges of the workload graph.
+The result of the traversal is a subgraph of the experiment graph, which we refer to as $\mathcal{SG}$.
+The subgraph contains all the vertices and edges that exist in both the experiment graph and the workload graph.
+For every path in $\mathcal{SG}$ which originates at the root node, we return the furthest materialized vertex from the root node as the result and skip all the intermediate operations.
+
+To demonstrate with an example, let us assume a user has executed the code in Listing \ref{listing-experiment-graph} and Figure \ref{fig-experiment-graph}a shows the current experiment graph, where the set of materialized vertices is $\mathcal{MV} = \{v_0, v_2, v_3\}$.
+A new user submits the code in Listing \ref{listing-reuse}.
+Figure \ref{fig-reuse}a shows the workload graph ($\mathcal{WG}$) of the code in Listing \ref{listing-reuse}.
+As described in the Reuse procedure, we traverse the experiment graph, starting at $v_0$, with the edges of $\mathcal{WG}$ which results in the common subgraph, $\mathcal{SG}$, in Figure \ref{fig-reuse}b.
+In the subgraph $\mathcal{SG}$, the furthest vertices in each path originating at $v_0$ are $v_5$ and $v_3$.
+The Reuse procedure selects $v_2$ as the candidate since $v_5$ is not materialized.
+The Reuse procedure results in an optimized graph that skips operations p2 and p3 are skipped (Figure \ref{fig-reuse}c).
+
+\begin{lstlisting}[language=Python, firstnumber = 8,caption=New workload script (Imports are omitted),captionpos=b,label = {listing-reuse}]
+train = pd.read_csv('../input/train.csv') 
+selector =  SelectKBest(k=2)
+top_features = selector.fit_transform(train[['ts','u_id','price']], 
+				      train['y'])
+model = svm.SVC()
+model.fit(top_features, train['y'])
+\end{lstlisting}
+
+\begin{figure}
+\captionsetup[subfigure]{justification=centering}
+\begin{subfigure}[t]{0.33\linewidth}
+\centering
+\input{../images/tikz/reuse-example-wg.tex}
+\caption{Workload Graph ($\mathcal{WG}$)}
+\end{subfigure}%
+\begin{subfigure}[t]{0.33\linewidth}
+\centering
+\input{../images/tikz/reuse-example-sg.tex}
+\caption{Common Subgraph ($\mathcal{SG}$)}
+\end{subfigure}%
+\begin{subfigure}[t]{0.33\linewidth}
+\centering
+\input{../images/tikz/reuse-example-final.tex}
+\caption{Optimized Graph}
+\end{subfigure}
+\begin{subfigure}[t]{\linewidth}
+\centering
+\input{../images/tikz/reuse-example-final-eg.tex}
+\caption{Experiment graph after executing the workload (new nodes are highlighted)}
+\end{subfigure}
+\caption{Steps in the Reuse optimizations}
+\label{fig-reuse}
+\end{figure}
 
 \subsection{Warmstarting Optimization For Model Training Operations}
 Model training operations include extra hyperparameters that must be set before the training procedure begins.
 Two training operations on the same data artifact using the same training algorithm could potentially have very different results based on the values of the hyperparameters.
-Therefore, we cannot apply the reuse optimization in cases the hyperparameters are different.
-Instead, we apply the \textit{warmstarting} optimization.
-In our experiment graph, we refer to the set of every machine learning model that is trained on the same data artifact but only differs in hyperparameters, as a model group.
-If a workload contains a model training operation, $e_{t}$, on a vertex, $v_{t}$, before executing the workload, we proceed as follows.
-First, using the same traversal strategy as explained the reuse optimization, we find the vertex $v_{t}$ exist in the experiment graph.
-Then, if $v_{t}$ exists in the experiment graph, we find the model group containing all the models are trained on $v_{t}$.
+Therefore, we cannot apply the Reuse optimization in cases the hyperparameters of model training operations are different.
+Instead, we apply the \textit{Warmstarting} optimization.
+We first need to describe the concept of model groups.
+We refer to the set of every machine learning model trained on the same data artifact but only differs in hyperparameters, as a model group.
+If a workload contains a model training operation, $e_{m}$, on a vertex, $v_{m}$, before executing the workload, we proceed as follows.
+First, using the same traversal strategy as explained in the Reuse procedure, we look for $v_{t}$ in the experiment graph.
+If $v_{t}$ is in the experiment graph, then, we find the model group containing all the models  trained on $v_{t}$.
 Finally, if the model group is not empty, we warmstart the operation $e_{t}$ with the best performing model from the model group.
-\todo[inline]{Either add a figure are write an algorithm to explain the process}
+
+To demonstrate with an example, after executing both the code in Listings \ref{listing-experiment-graph} and \ref{listing-reuse}, a new users submits the same code as in Listing \ref{listing-reuse}, with a different model hyperparameters (Line 12) shown in Listing \ref{listing-warmstarting}.
+\begin{lstlisting}[language=Python, firstnumber=12, caption= Workload with different hyperparameters,captionpos=b,label = {listing-warmstarting}]
+model = svm.SVC(C=0.1)
+\end{lstlisting}
+Since both models (svm.SVC(C=0.1) and svm.SVC()) are trained on the same vertex ($v_x$ in Figure \ref{fig-reuse}), the Warmstarting procedure selects the existing model node ($v_y$ in Figure \ref{fig-reuse}) to warmstart the training process.
 
 Warmstarting can greatly reduce the total training time.
 However, the type of the machine learning model and the termination criteria play important roles in determining the effect of the warmstarting optimization.
@@ -31,6 +80,17 @@ In the experiment section, we evaluate the effect of warmstarting on different t
 When we utilize warmstarting, we extend the experiment graph with a merge operation which merges the dataset and the candidate model for warmstarting.
 The actual training operation is then applied to the merged node.
 As a result, we can keep track of the models that are utilized in warmstarting the training of other models which ensures reproducibility.
+
+Figure \ref{fig-warmstarting} shows the experiment graph after execution of the script from Listing \ref{listing-warmstarting}.
+The training operation, f1, is applied to the new vertex $v_n$, which is the result of merging the data artifact $v_x$ and the model $v_y$.
+The training operation f1 has a different hash from the existing operations since the hyperparameters are different.
+
+\begin{figure}[t]
+\centering
+\input{../images/tikz/warmstarting-example-final-eg.tex}
+\caption{Experiment graph after warmstarting}
+\label{fig-warmstarting}
+\end{figure}
 
 %For iterative training algorithms that are minimizing a loss function, there are two termination criteria, namely, the convergence tolerance and the number of iterations.
 %

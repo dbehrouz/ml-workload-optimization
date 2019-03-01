@@ -7,15 +7,16 @@ To evaluate our proposed optimizations, we provide two different set of workload
 Table \ref{tab-openml-pipelines} shows the id, components, and number of executions of the OpenML pipelines.\footnote{information about each pipeline is available at https://www.openml.org/f/id}
 
 \begin{table}
+\setlength\tabcolsep{1.5pt} % This is to ensure the table does not go out of bound
 \begin{tabular}{llr}
 \hline
 \textbf{id} & \textbf{operations} & \textbf{\#exec}   \\
 \hline
  5981&  \makecell[l]{Imputer\rightarrow Standard scaler\rightarrow Logistic regression} &11        \\
  7707&  \makecell[l]{Imputer\rightarrow Onehot encoder \rightarrow Standard scaler\\ \rightarrow Variance thresholder \rightarrow SVM }&594 \\
- 8315&  \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder\\ \rightarrow Random Forest} &1084  \\
-8353 & \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder \\ \rightarrow Svm}  & 1000\\
-8568 &  \makecell[l]{Imputer\rightarrow Onehot encoder\rightarrow Variance thresholder \\ \rightarrow Random Forest} &555 \\
+ 8315&  \makecell[l]{Imputer\rightarrow Onehot encoder\\ \rightarrow Variance thresholder \rightarrow Random Forest} &1084  \\
+8353 & \makecell[l]{Imputer\rightarrow Onehot encoder\\ \rightarrow Variance thresholder  \rightarrow Svm}  & 1000\\
+8568 &  \makecell[l]{Imputer\rightarrow Onehot encoder\\ \rightarrow Variance thresholder  \rightarrow Random Forest} &555 \\
 \hline
 \end{tabular}
 \caption{OpenML pipeline descriptions.}
