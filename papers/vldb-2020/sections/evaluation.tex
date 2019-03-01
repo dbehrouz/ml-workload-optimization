@@ -3,7 +3,7 @@ In this section, we evaluate the performance of our proposed optimizations.
 \subsection{Setup}
 To evaluate our proposed optimizations, we provide two different set of workloads, namely, OpenML workload and Kaggle workload.
 
-\textbf{OpenML workloads.} In the OpenML workloads, we utilize some of the popular machine learning pipelines from the OpenML repository for solving task 31, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}\footnote{https://www.openml.org/t/31}.
+\textbf{OpenML workloads:} In the OpenML workloads, we utilize some of the popular machine learning pipelines from the OpenML repository for solving task 31, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}\footnote{https://www.openml.org/t/31}.
 Table \ref{tab-openml-pipelines} shows the id, components, and number of executions of the OpenML pipelines.\footnote{information about each pipeline is available at https://www.openml.org/f/id}
 
 \begin{table}
@@ -23,7 +23,7 @@ Table \ref{tab-openml-pipelines} shows the id, components, and number of executi
 \label{tab-openml-pipelines}
 \end{table}
 
-\textbf{Kaggle workloads.} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent on data and feature preprocessing.
+\textbf{Kaggle workloads:} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent on data and feature preprocessing.
 We design the workload by studying several Kaggle scripts and populating the database based on those.
 Here's the description of the Kaggle challenges that we use.
 \todo[inline]{This is my next immediate ToDo.}
@@ -90,16 +90,14 @@ The warmstarting optimization reduces the total training time by one order of ma
 \label{evaluation-warmstarting-figure}
 \end{figure}
 
-\subsubsection{Partial Warmstarting}
 
 \subsubsection{Combined Optimization}
-In this section we study the effect of combining all three optimizations (feature processing reuse, warmstarting, and partial warmstarting).
+In this section we study the effect of combining both optimizations (Reuse and Warmstarting).
 
-\subsection{Reuse and Warmstarting for the Interactive Workload}
 
-\subsection{Evaluation of Optimizing the Hyperparameter Search}
-\todo[inline]{These results are still without the 'Avoiding Local Optima' solution, so ideally, once we find a good solution to avoid local optimas we should get even better results.}
-
+\subsection{Evaluation of the Improved Hyperparameter Tuning}
+\subsubsection{Search Space Proposal}
+\subsubsection{Improved Bayesian Hyperparameter Tuning}
 In this experiment, we focus on several of the popular machine learning pipelines (flow 7707, 8353, 8315) designed for solving task 31\footnote{https://www.openml.org/t/31}, classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}.
 We extracted the meta-data from the OpenML database which includes all the executions of the pipeline, the value of the hyperparameters, and the evaluation metrics.
 Using the meta-data, we initialize the hyperparameter optimization process with the values of the hyperparameters for each execution and the loss ($1- accuracy$) for the specific execution.
@@ -115,33 +113,33 @@ Warm starting the search decreases the overall loss of the trials.
 \label{fig-avg-warm-vs-cold-task-31}
 \end{figure}
 
-\subsection{Avoiding Local Optima}
-
-\subsubsection{Adaptive Selection}
-In this experiment, we show the result of our adaptive selection methods on the hyperparameter search process.
-Figure \ref{fig-avg-adaptive-selection-task-31} shows the result of the histogram and random selection method on the hyperparameter search process.
-When compared to the vanilla approach (where full history is used in warmstarting), we see that random selection decrease the error rate of the trials where histogram increases them.
-To make the difference more visible we limit the scope of the loss (y axis) from 0.20 to 0.25.
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{../images/experiment-results/t31-f7707-adaptive-method-random.eps}
-\caption{Effect of adaptive warmstarting on hyperparameter search process}
-\label{fig-avg-adaptive-selection-task-31}
-\end{figure}
-
-\begin{table}
-\centering
-\begin{tabular}{crrr}
-\hline
-	   Pipeline & Best Loss & Warm & Cold \\ \hline
-        7707 & 0.16 & 1 & 0 \\
-        8315 & 0.18 & 173 & 14\\
-        8353 & 0.18 &0& 1\\ 
-        8568 & 0.15 &0&2\\
-        \hline
-\end{tabular}
-\caption{Best loss and their occurrences for different pipelines using warm starting}
-\end{table}
+%\subsection{Avoiding Local Optima}
+%
+%\subsubsection{Adaptive Selection}
+%In this experiment, we show the result of our adaptive selection methods on the hyperparameter search process.
+%Figure \ref{fig-avg-adaptive-selection-task-31} shows the result of the histogram and random selection method on the hyperparameter search process.
+%When compared to the vanilla approach (where full history is used in warmstarting), we see that random selection decrease the error rate of the trials where histogram increases them.
+%To make the difference more visible we limit the scope of the loss (y axis) from 0.20 to 0.25.
+%\begin{figure}
+%\centering
+%\includegraphics[width=\columnwidth]{../images/experiment-results/t31-f7707-adaptive-method-random.eps}
+%\caption{Effect of adaptive warmstarting on hyperparameter search process}
+%\label{fig-avg-adaptive-selection-task-31}
+%\end{figure}
+%
+%\begin{table}
+%\centering
+%\begin{tabular}{crrr}
+%\hline
+%	   Pipeline & Best Loss & Warm & Cold \\ \hline
+%        7707 & 0.16 & 1 & 0 \\
+%        8315 & 0.18 & 173 & 14\\
+%        8353 & 0.18 &0& 1\\ 
+%        8568 & 0.15 &0&2\\
+%        \hline
+%\end{tabular}
+%\caption{Best loss and their occurrences for different pipelines using warm starting}
+%\end{table}
 
 %Table \ref{table-best-hyperparameters} shows the best loss achieved from the search process for every pipeline on the Task 31.
 %Figure \ref{figure-best-hyperparameters} shows the number of time that the search process (with budget of 100) manages to find the best set of hyperparameters that results in the lowest loss value.
