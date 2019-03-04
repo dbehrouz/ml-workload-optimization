@@ -5,6 +5,10 @@ import numpy as np
 
 from execution_graph import ExecutionGraph
 
+# Reserved word for representing super nodes.
+# Do not use combine as an operation name
+COMBINE_OPERATION_IDENTIFIER = 'combine'
+
 
 class ExecutionEnvironment(object):
     graph = ExecutionGraph()
@@ -116,13 +120,14 @@ class ExecutionEnvironment(object):
                                                        'root': False,
                                                        'data': nextnode})
                 for n in nodes:
-                    # this is to make sure each merge edge is a unique name
+                    # this is to make sure each combined edge is a unique name
                     args['uuid'] = self.v_uuid()
                     ExecutionEnvironment.graph.add_edge(n.id, nextid, nextnode,
-                                                        {'name': 'merge',
-                                                         'oper': 'merge',
+                                                        # combine is a reserved word
+                                                        {'name': COMBINE_OPERATION_IDENTIFIER,
+                                                         'oper': COMBINE_OPERATION_IDENTIFIER,
                                                          'args': {},
-                                                         'hash': self.e_hash('merge', args)},
+                                                         'hash': self.e_hash(COMBINE_OPERATION_IDENTIFIER, args)},
                                                         ntype=type(nextnode).__name__)
                 return nextnode
             else:
@@ -157,88 +162,97 @@ class ExecutionEnvironment(object):
             self.meta['name'] = name
             self.reapply_meta()
 
+        def math(self, oper, other):
+            # If other is a Feature Column
+            if isinstance(other, ExecutionEnvironment.Feature):
+                supernode = self.generate_super_node([self, other])
+                return self.generate_feature_node(oper, v_id=supernode.id)
+            # If other is a numberical value
+            else:
+                return self.generate_feature_node(oper, {'other': other})
+
         # Overriding math operators
         def __mul__(self, other):
-            return self.generate_feature_node('__mul__', {'other': other})
+            return self.math('__mul__', other)
 
         def p___mul__(self, other):
             return self.data * other
 
         def __rmul__(self, other):
-            return self.generate_feature_node('__rmul__', {'other': other})
+            return self.math('__rmul__', other)
 
         def p___rmul__(self, other):
             return other * self.data
 
         # TODO: When switching to python 3 this has to change to __floordiv__ and __truediv__
         def __div__(self, other):
-            return self.generate_feature_node('__div__', {'other': other})
+            return self.math('__div__', other)
 
         def p___div__(self, other):
             return self.data / other
 
         def __rdiv__(self, other):
-            return self.generate_feature_node('__rdiv__', {'other': other})
+            return self.math('__rdiv__', other)
 
         def p___rdiv__(self, other):
             return other / self.data
 
         def __add__(self, other):
-            return self.generate_feature_node('__add__', {'other': other})
+            return self.math('__add__', other)
 
         def p___add__(self, other):
             return self.data + other
 
         def __radd__(self, other):
-            return self.generate_feature_node('__radd__', {'other': other})
+            return self.math('__radd__', other)
 
         def p___radd__(self, other):
             return other + self.data
 
         def __sub__(self, other):
-            return self.generate_feature_node('__sub__', {'other': other})
+            return self.math('__sub__', other)
 
         def p___sub__(self, other):
             return self.data - other
 
         def __rsub__(self, other):
-            return self.generate_feature_node('__rsub__', {'other': other})
+            return self.math('__rsub__', other)
 
         def p___rsub__(self, other):
             return other - self.data
 
         def __lt__(self, other):
-            return self.generate_feature_node('__lt__', {'other': other})
+            return self.math('__lt__', other)
 
         def p___lt__(self, other):
             return self.data < other
 
         def __le__(self, other):
-            return self.generate_feature_node('__le__', {'other': other})
+            return self.math('__le__', other)
 
         def p___le__(self, other):
             return self.data <= other
 
         def __eq__(self, other):
-            return self.generate_feature_node('__eq__', {'other': other})
+            return self.math('__eq__', other)
 
         def p___eq__(self, other):
             return self.data == other
 
         def __ne__(self, other):
-            return self.generate_feature_node('__ne__', {'other': other})
+            return self.math('__ne__', other)
 
         def p___ne__(self, other):
             return self.data != other
 
         def __gt__(self, other):
-            return self.generate_feature_node('__gt__', {'other': other})
+            return self.math('__qt__', other)
 
         def p___gt__(self, other):
             return self.data > other
 
         def __ge__(self, other):
-            return self.generate_feature_node('__ge__', {'other': other})
+            return self.math('__qe__', other)
 
         def p___ge__(self, other):
             return self.data >= other
@@ -379,6 +393,10 @@ class ExecutionEnvironment(object):
             if len(data) > 0:
                 self.update_meta()
 
+        def set_columns(self, columns):
+            self.meta['columns'] = columns
+            self.reapply_meta()
+
         def update_meta(self):
             self.meta = {'columns': self.data.columns, 'dtypes': self.data.dtypes}
 
@@ -415,6 +433,12 @@ class ExecutionEnvironment(object):
 
             else:
                 raise Exception('Unsupported operation. Only project (column index) is supported')
+
+        def copy(self):
+            return self.generate_dataset_node('copy')
+
+        def p_copy(self):
+            return self.data.copy()
 
         def head(self, size=5):
             return self.generate_dataset_node('head', {'size': size})
@@ -519,9 +543,13 @@ class ExecutionEnvironment(object):
         def p_dropna(self):
             return self.data.dropna()
 
-        def add_column(self, feature, col_name):
-            supernode = self.generate_super_node([self, feature], {'col_name': col_name})
-            return self.generate_dataset_node('add_column', {'col_name': col_name}, v_id=supernode.id)
+        def add_columns(self, features, col_names):
+            if type(features) == list:
+                supernode = self.generate_super_node([self] + features, {'col_names': col_names})
+            else:
+                supernode = self.generate_super_node([self, features], {'col_names': col_names})
+
+            return self.generate_dataset_node('add_columns', {'col_names': col_names}, v_id=supernode.id)
 
         def onehot_encode(self):
             return self.generate_dataset_node('onehot_encode', {})
@@ -544,7 +572,7 @@ class ExecutionEnvironment(object):
         def p_groupby(self, col_names):
             return self.data.groupby(col_names)
 
-        # merge node
+        # combined node
         def concat(self, nodes):
             if type(nodes) == list:
                 supernode = self.generate_super_node([self] + nodes)
@@ -552,8 +580,17 @@ class ExecutionEnvironment(object):
                 supernode = self.generate_super_node([self] + [nodes])
             return self.generate_dataset_node('concat', v_id=supernode.id)
 
+        # dataframe merge operation operation of dataframes
+        def merge(self, other, on, how='left'):
+            supernode = self.generate_super_node([self, other])
+            return self.generate_dataset_node('merge', args={'on': on, 'how': how}, v_id=supernode.id)
+
         def fit_sk_model(self, model):
             return self.generate_sklearn_node('fit_sk_model', {'model': model})
+
+        def fit_sk_model_with_labels(self, model, labels):
+            supernode = self.generate_super_node([self, labels])
+            return self.generate_sklearn_node('fit_sk_model_with_labels', {'model': model}, v_id=supernode.id)
 
         def p_fit_sk_model(self, model):
             model.fit(self.data)
@@ -597,6 +634,10 @@ class ExecutionEnvironment(object):
             supernode = self.generate_super_node([self, node])
             return self.generate_dataset_node('transform', v_id=supernode.id)
 
+        def predict_proba(self, test):
+            supernode = self.generate_super_node([self, test])
+            return self.generate_dataset_node('predict_proba', v_id=supernode.id)
+
     class SuperNode(Node):
         """SuperNode represents a (sorted) collection of other nodes
         Its only purpose is to allow operations that require multiple nodes to fit 
@@ -618,14 +659,29 @@ class ExecutionEnvironment(object):
             return pd.Series(self.nodes[0].data.transform(self.nodes[1].data), name=col_name)
 
         def p_transform(self):
-            return self.nodes[0].data.transform(self.nodes[1].data)
+            df = self.nodes[0].data.transform(self.nodes[1].data)
+            if hasattr(df, 'columns'):
+                return pd.DataFrame(df, columns=df.columns)
+            else:
+                return pd.DataFrame(df)
+
+        def p_fit_sk_model_with_labels(self, model):
+            model.fit(self.nodes[0].data, self.nodes[1].data)
+            return model
+
+        def p_predict_proba(self):
+            df = self.nodes[0].data.predict_proba(self.nodes[1].data)
+            if hasattr(df, 'columns'):
+                return pd.DataFrame(df, columns=df.columns)
+            else:
+                return pd.DataFrame(df)
 
         def p_filter_with(self):
             return self.nodes[0].data[self.nodes[1].data]
 
-        def p_add_column(self, col_name):
+        def p_add_columns(self, col_names):
             t = self.nodes[0].data
-            t[col_name] = self.nodes[1].data
+            t[col_names] = self.nodes[1].data
             return t
 
         def p_corr_with(self):
@@ -636,3 +692,42 @@ class ExecutionEnvironment(object):
             for d in self.nodes:
                 ds.append(d.data)
             return pd.concat(ds, axis=1)
+
+        def p_merge(self, on, how):
+            return self.nodes[0].data.merge(self.nodes[1].data, on=on, how=how)
+
+        def p___div__(self):
+            return self.nodes[0].data / self.nodes[1].data
+
+        def p___rdiv__(self):
+            return self.nodes[1].data / self.nodes[0].data
+
+        def p___add__(self):
+            return self.nodes[0].data + self.nodes[1].data
+
+        def p___radd__(self):
+            return self.nodes[1].data + self.nodes[0].data
+
+        def p___sub__(self):
+            return self.nodes[0].data - self.nodes[1].data
+
+        def p___rsub__(self):
+            return self.nodes[1].data - self.nodes[0].data
+
+        def p___lt__(self):
+            return self.nodes[0].data < self.nodes[1].data
+
+        def p___le__(self):
+            return self.nodes[0].data <= self.nodes[1].data
+
+        def p___eq__(self):
+            return self.nodes[0].data == self.nodes[1].data
+
+        def p___ne__(self):
+            return self.nodes[0].data != self.nodes[1].data
+
+        def p___qt__(self):
+            return self.nodes[0].data > self.nodes[1].data
+
+        def p___qe__(self):
+            return self.nodes[0].data >= self.nodes[1].data

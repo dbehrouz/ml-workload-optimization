@@ -2,6 +2,11 @@ import copy
 
 import networkx as nx
 
+# Reserved word for representing super nodes.
+# Do not use combine as an operation name
+# TODO: make file with all the global names
+COMBINE_OPERATION_IDENTIFIER = 'combine'
+
 
 class ExecutionGraph(object):
     roots = []
@@ -53,8 +58,8 @@ class ExecutionGraph(object):
         for pair in schedule:
             cur_node = self.graph.nodes[pair[1]]
             edge = self.graph.edges[pair[0], pair[1]]
-            # merge is logical and we do not execute it 
-            if edge['oper'] != 'merge':
+            # combine is logical and we do not execute it
+            if edge['oper'] != COMBINE_OPERATION_IDENTIFIER:
                 # Assignment wont work since it copies object reference
                 # TODO: check if a shallow copy is enough
                 cur_node['data'].data = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
