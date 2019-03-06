@@ -32,7 +32,7 @@ class ExecutionGraph(object):
     def has_node(self, node_id):
         return self.graph.has_node(node_id)
 
-    def compute_result(self, v_id):
+    def compute_result(self, v_id, verbose=0):
         """ main computation for nodes
 
         """
@@ -58,7 +58,10 @@ class ExecutionGraph(object):
         for pair in schedule:
             cur_node = self.graph.nodes[pair[1]]
             edge = self.graph.edges[pair[0], pair[1]]
-            # combine is logical and we do not execute it
+            # print the path while executing
+            if verbose == 1:
+                print str(pair[0]) + '--' + edge['oper'] + '->' + str(pair[1])
+                # combine is logical and we do not execute it
             if edge['oper'] != COMBINE_OPERATION_IDENTIFIER:
                 # Assignment wont work since it copies object reference
                 # TODO: check if a shallow copy is enough

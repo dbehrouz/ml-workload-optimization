@@ -1,13 +1,14 @@
 import uuid
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from execution_graph import ExecutionGraph
 
 # Reserved word for representing super nodes.
 # Do not use combine as an operation name
 COMBINE_OPERATION_IDENTIFIER = 'combine'
+RANDOM_STATE = 15071989
 
 
 class ExecutionEnvironment(object):
@@ -33,11 +34,11 @@ class ExecutionEnvironment(object):
         def v_uuid(self):
             return uuid.uuid4().hex.upper()[0:8]
 
-        def get(self):
+        def get(self, verbose=0):
             # compute and return the result
             # graph.compute_result(self.id)
             if self.is_empty():
-                ExecutionEnvironment.graph.compute_result(self.id)
+                ExecutionEnvironment.graph.compute_result(self.id, verbose)
                 self.reapply_meta()
             return self.data
 
@@ -259,6 +260,20 @@ class ExecutionEnvironment(object):
 
         # End of overridden methods
 
+        def head(self, size=5):
+            return self.generate_feature_node('head', {'size': size})
+
+        def p_head(self, size=5):
+            return self.data.head(size)
+
+        # combined node
+        def concat(self, nodes):
+            if type(nodes) == list:
+                supernode = self.generate_super_node([self] + nodes)
+            else:
+                supernode = self.generate_super_node([self] + [nodes])
+            return self.generate_dataset_node('concat', v_id=supernode.id)
+
         def isnull(self):
             ExecutionEnvironment.graph.add_edge(self.id,
                                                 {'oper': self.edge('isnull'), 'hash': self.edge('isnull')},
@@ -406,7 +421,7 @@ class ExecutionEnvironment(object):
             self.update_meta()
 
         def project(self, columns):
-            if type(columns) is str:
+            if type(columns) in [str, int]:
                 return self.generate_feature_node('project', {'columns': columns})
             if type(columns) is list:
                 return self.generate_dataset_node('project', {'columns': columns})
@@ -424,7 +439,7 @@ class ExecutionEnvironment(object):
              check how to implement the set_column operation, i.e. dataset['new_column'] = new_feature
             """
             # project operator
-            if type(index) in [str, list]:
+            if type(index) in [str, int, list]:
                 return self.project(index)
             # index operator using another Series of the form (index,Boolean)
             elif isinstance(index, ExecutionEnvironment.Feature):
@@ -543,6 +558,12 @@ class ExecutionEnvironment(object):
         def p_dropna(self):
             return self.data.dropna()
 
+        def sort_values(self, col_name, ascending=False):
+            return self.generate_dataset_node('sort_values', args={'col_name': col_name, 'ascending': ascending})
+
+        def p_sort_values(self, col_name, ascending):
+            return self.data.sort_values(col_name, ascending=ascending).reset_index()
+
         def add_columns(self, features, col_names):
             if type(features) == list:
                 supernode = self.generate_super_node([self] + features, {'col_names': col_names})
@@ -588,9 +609,10 @@ class ExecutionEnvironment(object):
         def fit_sk_model(self, model):
             return self.generate_sklearn_node('fit_sk_model', {'model': model})
 
-        def fit_sk_model_with_labels(self, model, labels):
+        def fit_sk_model_with_labels(self, model, labels, custom_args=None):
             supernode = self.generate_super_node([self, labels])
-            return self.generate_sklearn_node('fit_sk_model_with_labels', {'model': model}, v_id=supernode.id)
+            return self.generate_sklearn_node('fit_sk_model_with_labels', {'model': model, 'custom_args': custom_args},
+                                              v_id=supernode.id)
 
         def p_fit_sk_model(self, model):
             model.fit(self.data)
@@ -634,13 +656,24 @@ class ExecutionEnvironment(object):
             supernode = self.generate_super_node([self, node])
             return self.generate_dataset_node('transform', v_id=supernode.id)
 
-        def predict_proba(self, test):
+        def feature_importances(self, domain_features_names=None):
+            return self.generate_dataset_node('feature_importances',
+                                              args={'domain_features_names': domain_features_names})
+
+        def p_feature_importances(self, domain_features_names):
+            if domain_features_names is None:
+                return pd.DataFrame({'feature': range(0, len(self.data.feature_importances_)),
+                                     'importance': self.data.feature_importances_})
+            else:
+                return pd.DataFrame({'feature': domain_features_names, 'importance': self.data.feature_importances_})
+
+        def predict_proba(self, test, custom_args=None):
             supernode = self.generate_super_node([self, test])
-            return self.generate_dataset_node('predict_proba', v_id=supernode.id)
+            return self.generate_dataset_node('predict_proba', args={'custom_args': custom_args}, v_id=supernode.id)
 
     class SuperNode(Node):
         """SuperNode represents a (sorted) collection of other nodes
-        Its only purpose is to allow operations that require multiple nodes to fit 
+        Its only purpose is to allow operations that require multiple nodes to fit
         in our data model
         """
 
@@ -665,12 +698,19 @@ class ExecutionEnvironment(object):
             else:
                 return pd.DataFrame(df)
 
-        def p_fit_sk_model_with_labels(self, model):
-            model.fit(self.nodes[0].data, self.nodes[1].data)
+        def p_fit_sk_model_with_labels(self, model, custom_args):
+            if custom_args is None:
+                model.fit(self.nodes[0].data, self.nodes[1].data)
+            else:
+                model.fit(self.nodes[0].data, self.nodes[1].data, **custom_args)
             return model
 
-        def p_predict_proba(self):
-            df = self.nodes[0].data.predict_proba(self.nodes[1].data)
+        def p_predict_proba(self, custom_args):
+            if custom_args is None:
+                df = self.nodes[0].data.predict_proba(self.nodes[1].data)
+            else:
+                df = self.nodes[0].data.predict_proba(self.nodes[1].data, **custom_args)
+
             if hasattr(df, 'columns'):
                 return pd.DataFrame(df, columns=df.columns)
             else:
