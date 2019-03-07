@@ -22,7 +22,7 @@ class Feature(Node):
     
     Todo:
         * Integration with the graph library
-        * Add support for every operations that Pandas Series supports
+        * Add support for every experiment_graph that Pandas Series supports
         * Support for Python 3.x
         
     """
@@ -35,7 +35,7 @@ class Feature(Node):
         self.data.name = name
         self.meta['name'] = name
 
-    ### Overriding math operators
+    # Overriding math operators
     def __mul__(self, other):
         return Feature(self.edge('multi', other), self.data * other)
 
@@ -79,7 +79,7 @@ class Feature(Node):
     def __ge__(self, other):
         return Feature(self.edge('qe', other), self.data >= other)
 
-    ### End of overriden methods
+    # End of overriden methods
 
     def isnull(self):
         return Feature(self.edge('isnull'), self.data.isnull())
@@ -154,7 +154,7 @@ class Dataset(Node):
     
     Todo:
         * Integration with the graph library
-        * Add support for every operations that Pandas DataFrame supports
+        * Add support for every experiment_graph that Pandas DataFrame supports
         * Support for Python 3.x
         
     """
@@ -232,7 +232,7 @@ class SK_Model(Node):
 
 class SuperNode(Node):
     """SuperNode represents a (sorted) collection of other nodes
-    Its only purpose is to allow operations that require multiple nodes to fit 
+    Its only purpose is to allow experiment_graph that require multiple nodes to fit
     in our data model
     """
 

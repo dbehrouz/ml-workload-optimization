@@ -83,11 +83,11 @@ class ExecutionEnvironment(object):
                                                         ntype=ExecutionEnvironment.Agg.__name__)
             return self.getNotNone(nextnode, exist)
 
-        def generate_dataset_node(self, oper, args={}, v_id=None):
+        def generate_dataset_node(self, oper, args={}, v_id=None, meta={}):
             if v_id is None:
                 v_id = self.id
             nextid = self.v_uuid()
-            nextnode = ExecutionEnvironment.Dataset(nextid, pd.DataFrame())
+            nextnode = ExecutionEnvironment.Dataset(nextid, pd.DataFrame(), meta)
             exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
                                                          'oper': 'p_' + oper,
@@ -141,7 +141,7 @@ class ExecutionEnvironment(object):
 
         Todo:
             * Integration with the graph library
-            * Add support for every operations that Pandas Series supports
+            * Add support for every experiment_graph that Pandas Series supports
             * Support for Python 3.x
 
         """
@@ -398,13 +398,14 @@ class ExecutionEnvironment(object):
 
         Todo:
             * Integration with the graph library
-            * Add support for every operations that Pandas DataFrame supports
+            * Add support for every experiment_graph that Pandas DataFrame supports
             * Support for Python 3.x
 
         """
 
-        def __init__(self, id, data):
+        def __init__(self, id, data, meta={}):
             ExecutionEnvironment.Node.__init__(self, id, data)
+            self.meta = meta
             if len(data) > 0:
                 self.update_meta()
 
@@ -450,7 +451,7 @@ class ExecutionEnvironment(object):
                 raise Exception('Unsupported operation. Only project (column index) is supported')
 
         def copy(self):
-            return self.generate_dataset_node('copy')
+            return self.generate_dataset_node('copy', meta=self.meta)
 
         def p_copy(self):
             return self.data.copy()
@@ -564,7 +565,7 @@ class ExecutionEnvironment(object):
         def p_sort_values(self, col_name, ascending):
             return self.data.sort_values(col_name, ascending=ascending).reset_index()
 
-        def add_columns(self, features, col_names):
+        def add_columns(self, col_names, features):
             if type(features) == list:
                 supernode = self.generate_super_node([self] + features, {'col_names': col_names})
             else:
@@ -585,7 +586,7 @@ class ExecutionEnvironment(object):
             return self.data.corr()
 
         # TODO: Do we need to create special grouped nodes?
-        # For now Dataset node is good enough since aggregation operations that exist on group
+        # For now Dataset node is good enough since aggregation experiment_graph that exist on group
         # also exist in the Dataset
         def groupby(self, col_names):
             return self.generate_dataset_node('groupby', {'col_names': col_names})
@@ -617,6 +618,14 @@ class ExecutionEnvironment(object):
         def p_fit_sk_model(self, model):
             model.fit(self.data)
             return model
+
+        def replace_columns(self, col_names, features):
+            if type(features) == list:
+                supernode = self.generate_super_node([self] + features, {'col_names': col_names})
+            else:
+                supernode = self.generate_super_node([self, features], {'col_names': col_names})
+
+            return self.generate_dataset_node('replace_columns', {'col_names': col_names}, v_id=supernode.id)
 
     class Agg(Node):
         def __init__(self, id, data):
@@ -673,7 +682,7 @@ class ExecutionEnvironment(object):
 
     class SuperNode(Node):
         """SuperNode represents a (sorted) collection of other nodes
-        Its only purpose is to allow operations that require multiple nodes to fit
+        Its only purpose is to allow experiment_graph that require multiple nodes to fit
         in our data model
         """
 
@@ -720,6 +729,11 @@ class ExecutionEnvironment(object):
             return self.nodes[0].data[self.nodes[1].data]
 
         def p_add_columns(self, col_names):
+            t = self.nodes[0].data
+            t[col_names] = self.nodes[1].data
+            return t
+
+        def p_replace_columns(self, col_names):
             t = self.nodes[0].data
             t[col_names] = self.nodes[1].data
             return t
