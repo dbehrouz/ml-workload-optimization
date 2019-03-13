@@ -15,6 +15,14 @@ class ExecutionEnvironment(object):
     graph = ExecutionGraph()
 
     @staticmethod
+    def plot_graph(plt):
+        ExecutionEnvironment.graph.plot_graph(plt)
+
+    @staticmethod
+    def get_artifacts_size():
+        return ExecutionEnvironment.graph.get_size()
+
+    @staticmethod
     def load(loc, nrows=None):
         nextnode = ExecutionEnvironment.Dataset(loc, pd.read_csv(loc, nrows=nrows))
         ExecutionEnvironment.graph.roots.append(loc)

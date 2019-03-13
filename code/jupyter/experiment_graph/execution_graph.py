@@ -1,6 +1,8 @@
 import copy
 
 import networkx as nx
+import pandas as pd
+import sys
 
 # Reserved word for representing super nodes.
 # Do not use combine as an operation name
@@ -28,6 +30,47 @@ class ExecutionGraph(object):
         meta['freq'] = 1
         self.graph.add_edge(start_id, end_id, **meta)
         return None
+
+    def plot_graph(self, plt):
+        plt.figure(figsize=(12, 12))
+        pos = nx.spring_layout(self.graph)
+        # pos = graphviz_layout(ee.graph.graph, prog='twopi', args='')
+        color_map = []
+        for node in self.graph.nodes(data=True):
+
+            if node[1]['root']:
+                color_map.append('green')
+            elif node[1]['type'] == 'Dataset' or node[1]['type'] == 'Feature':
+                color_map.append('red')
+            elif node[1]['type'] == 'Agg' or node[1]['type'] == 'SK_Model':
+                color_map.append('blue')
+            elif node[1]['type'] == 'SuperNode':
+                color_map.append('grey')
+            else:
+                color_map.append('black')
+
+        nx.draw(self.graph,
+                node_color=color_map,
+                pos=pos,
+                node_size=100)
+        nx.draw_networkx_edge_labels(self.graph,
+                                     pos=pos,
+                                     edge_labels={(u, v): d["name"] for u, v, d in self.graph.edges(data=True)})
+
+    def get_size(self):
+        def get_mb(df):
+            to_mb = (1024 * 1024)
+            if isinstance(df, pd.DataFrame):
+                return sum(df.memory_usage(index=True, deep=True)) / to_mb
+            elif isinstance(df, pd.Series):
+                return df.memory_usage(index=True, deep=True) / to_mb
+            else:
+                return sys.getsizeof(df) / to_mb
+
+        t_size = 0
+        for node in self.graph.nodes(data=True):
+            t_size += get_mb(node[1]['data'].data)
+        return t_size
 
     def has_node(self, node_id):
         return self.graph.has_node(node_id)
