@@ -36,10 +36,12 @@ class ExecutionEnvironment(object):
             self.meta = {}
 
         # TODO: when params are a dictionary with multiple keys the order may not be the same in str conversion
-        def e_hash(self, oper, params=''):
+        @staticmethod
+        def e_hash(oper, params=''):
             return oper + '(' + str(params).replace(' ', '') + ')'
 
-        def v_uuid(self):
+        @staticmethod
+        def generate_uuid():
             return uuid.uuid4().hex.upper()[0:8]
 
         def get(self, verbose=0):
@@ -65,10 +67,10 @@ class ExecutionEnvironment(object):
         def is_empty(self):
             return self.data is None or 0 == len(self.data)
 
-        def generate_agg_node(self, oper, args={}, v_id=None):
+        def generate_agg_node(self, oper, args={}, v_id=None, eager_mode=0):
             if v_id is None:
                 v_id = self.id
-            nextid = self.v_uuid()
+            nextid = self.generate_uuid()
             nextnode = ExecutionEnvironment.Agg(nextid, None)
             exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
@@ -81,7 +83,7 @@ class ExecutionEnvironment(object):
         def generate_sklearn_node(self, oper, args={}, v_id=None):
             if v_id is None:
                 v_id = self.id
-            nextid = self.v_uuid()
+            nextid = self.generate_uuid()
             nextnode = ExecutionEnvironment.SK_Model(nextid, None)
             exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
@@ -94,7 +96,7 @@ class ExecutionEnvironment(object):
         def generate_dataset_node(self, oper, args={}, v_id=None, meta={}):
             if v_id is None:
                 v_id = self.id
-            nextid = self.v_uuid()
+            nextid = self.generate_uuid()
             nextnode = ExecutionEnvironment.Dataset(nextid, pd.DataFrame(), meta)
             exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
@@ -107,7 +109,7 @@ class ExecutionEnvironment(object):
         def generate_feature_node(self, oper, args={}, v_id=None):
             if v_id is None:
                 v_id = self.id
-            nextid = self.v_uuid()
+            nextid = self.generate_uuid()
             nextnode = ExecutionEnvironment.Feature(nextid, pd.Series())
             exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                         {'name': oper,
@@ -130,7 +132,7 @@ class ExecutionEnvironment(object):
                                                        'data': nextnode})
                 for n in nodes:
                     # this is to make sure each combined edge is a unique name
-                    args['uuid'] = self.v_uuid()
+                    args['uuid'] = self.generate_uuid()
                     ExecutionEnvironment.graph.add_edge(n.id, nextid, nextnode,
                                                         # combine is a reserved word
                                                         {'name': COMBINE_OPERATION_IDENTIFIER,

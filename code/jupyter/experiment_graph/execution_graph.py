@@ -1,8 +1,8 @@
 import copy
+import sys
 
 import networkx as nx
 import pandas as pd
-import sys
 
 # Reserved word for representing super nodes.
 # Do not use combine as an operation name
@@ -75,23 +75,62 @@ class ExecutionGraph(object):
     def has_node(self, node_id):
         return self.graph.has_node(node_id)
 
-    def compute_result(self, v_id, verbose=0):
-        """ main computation for nodes
+    def brute_force_compute_paths(self, vertex):
+        """brute force method for computing all the paths
 
+        :param vertex: the vertex that should be materialized
+        :return: path in the form of [(i,j)] indicating the list of edges that should be executed
         """
-        # find every path from root to the current node
-        p = []
-        for s in self.roots:
-            for path in nx.all_simple_paths(self.graph, source=s, target=v_id):
-                p.append(path)
 
+        def tuple_list(li):
+            res = []
+            for i in range(len(li) - 1):
+                res.append((li[i], li[i + 1]))
+            return res
+
+        all_simple_paths = []
+        for s in self.roots:
+            for path in nx.all_simple_paths(self.graph, source=s, target=vertex):
+                all_simple_paths.append(path)
         # for every path find the sub path that is not computed yet
-        compute_paths = []
-        for path in p:
+        all_paths = []
+        for path in all_simple_paths:
             cur_index = len(path) - 1
             while self.graph.nodes[path[cur_index]]['data'].is_empty():
                 cur_index -= 1
-            compute_paths.append(path[cur_index:])
+            all_paths.append(path[cur_index:])
+
+        tuple_set = []
+        for path in all_paths:
+            tuple_set.append(tuple_list(path))
+        flatten = [item for t in tuple_set for item in t]
+
+        return flatten
+
+    def fast_compute_paths(self, vertex):
+        """faster alternative to brute_force_compute_paths
+        instead of finding all the path in the graph, in this method, we traverse backward from the destination node
+        so computing the path of the nodes that are not already materialized.
+
+        :param vertex: the vertex that should be materialized
+        :return: path in the form of [(i,j)] indicating the list of edges that should be executed
+        """
+
+        def get_path(source, paths):
+            for v in self.graph.predecessors(source):
+                paths.append((v, source))
+                if self.graph.nodes[v]['data'].is_empty():
+                    get_path(v, paths)
+
+        all_paths = []
+        get_path(vertex, all_paths)
+        return all_paths
+
+    def compute_result(self, v_id, verbose=0):
+        """ main computation for nodes
+        """
+        # compute_paths = self.brute_force_compute_paths(v_id)
+        compute_paths = self.fast_compute_paths(v_id)
 
         # schedule the computation of nodes
         schedule = self.schedule(compute_paths)
@@ -103,7 +142,7 @@ class ExecutionGraph(object):
             edge = self.graph.edges[pair[0], pair[1]]
             # print the path while executing
             if verbose == 1:
-                print str(pair[0]) + '--' + edge['oper'] + '->' + str(pair[1])
+                print str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1])
                 # combine is logical and we do not execute it
             if edge['oper'] != COMBINE_OPERATION_IDENTIFIER:
                 # Assignment wont work since it copies object reference
@@ -112,24 +151,22 @@ class ExecutionGraph(object):
 
         return cur_node['data']
 
-    def compute_next(self, node, edge):
+    @staticmethod
+    def compute_next(node, edge):
         func = getattr(node['data'], edge['oper'])
         return func(**edge['args'])
 
-    def schedule(self, paths):
-        """ schedule the computationg of nodes
+    @staticmethod
+    def schedule(path):
+        """schedule the computationg of nodes
         receives all the paths that should be computed. Every path starts with
         a node that is already computed.
         It returns a list of tuples which specifies the execution order of the nodes
         the list is of the form [(i,j), ...], where node[j] = node[i].operation, where operation
         is specifies inside the edge (i,j)
+        :param path: a list of edges (i,j) which indicates the operations that should be executed
+        :return: the ordered list of edges to executed
         """
-
-        def tuple_list(li):
-            res = []
-            for i in range(len(li) - 1):
-                res.append((li[i], li[i + 1]))
-            return res
 
         def get_end_point(endnode, li):
             for i in range(len(li)):
@@ -142,7 +179,7 @@ class ExecutionGraph(object):
             A schedule is feasible if for every start node at position i
             there is no end node at positions greater than i.
             This essentially means, if a node is the source of a computation, it must be 
-            computed befrehand
+            computed beforehand
             """
             for i in range(len(li)):
                 for j in range(i, len(li)):
@@ -151,26 +188,15 @@ class ExecutionGraph(object):
             return True
 
         schedule = []
-        if len(paths) == 1:
-            path = paths[0]
-            for i in range(len(path) - 1):
-                schedule.append((path[i], path[i + 1]))
-        else:
-            # transform to tuples (source, destination)        
-            tuple_set = []
-            for path in paths:
-                tuple_set.append(tuple_list(path))
-            flatten = [item for t in tuple_set for item in t]
-            # Make sure no operation is repeated
-            # after this line, tuple repeation is not allowed
-            for i in flatten:
-                if i not in schedule:
-                    schedule.append(i)
-
-            while not is_feasible(schedule):
-                for i in range(len(schedule)):
-                    toswap = get_end_point(schedule[i][0], schedule[i:])
-                    if toswap != -1:
-                        schedule.remove(toswap)
-                        schedule.insert(i, toswap)
+        # removing overlapping edges resulted from multiple paths from the root to the end node
+        for i in path:
+            if i not in schedule:
+                schedule.append(i)
+        # TODO: this can be done more efficiently
+        while not is_feasible(schedule):
+            for i in range(len(schedule)):
+                toswap = get_end_point(schedule[i][0], schedule[i:])
+                if toswap != -1:
+                    schedule.remove(toswap)
+                    schedule.insert(i, toswap)
         return schedule
