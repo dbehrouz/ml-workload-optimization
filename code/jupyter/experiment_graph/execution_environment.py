@@ -9,6 +9,7 @@ from execution_graph import ExecutionGraph
 # Do not use combine as an operation name
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 RANDOM_STATE = 15071989
+AS_MB = 1024 * 1024
 
 
 class ExecutionEnvironment(object):
@@ -20,18 +21,20 @@ class ExecutionEnvironment(object):
 
     @staticmethod
     def get_artifacts_size():
-        return ExecutionEnvironment.graph.get_size()
+        return ExecutionEnvironment.graph.get_total_size()
 
     @staticmethod
     def load(loc, nrows=None):
         nextnode = ExecutionEnvironment.Dataset(loc, pd.read_csv(loc, nrows=nrows))
+        size = sum(nextnode.data.memory_usage(index=True, deep=True)) / AS_MB
         ExecutionEnvironment.graph.roots.append(loc)
-        ExecutionEnvironment.graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode, 'loc': loc})
+        ExecutionEnvironment.graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode, 'loc': loc,
+                                                    'size': size})
         return nextnode
 
     class Node(object):
-        def __init__(self, id, data):
-            self.id = id
+        def __init__(self, node_id, data):
+            self.id = node_id
             self.data = data
             self.meta = {}
 
@@ -67,6 +70,7 @@ class ExecutionEnvironment(object):
         def is_empty(self):
             return self.data is None or 0 == len(self.data)
 
+        # TODO: need to implement eager_mode when needed
         def generate_agg_node(self, oper, args={}, v_id=None, eager_mode=0):
             if v_id is None:
                 v_id = self.id

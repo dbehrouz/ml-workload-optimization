@@ -8,6 +8,7 @@ import pandas as pd
 # Do not use combine as an operation name
 # TODO: make file with all the global names
 COMBINE_OPERATION_IDENTIFIER = 'combine'
+AS_MB = 1024.0 * 1024.0
 
 
 class ExecutionGraph(object):
@@ -16,8 +17,8 @@ class ExecutionGraph(object):
     def __init__(self):
         self.graph = nx.DiGraph()
 
-    def add_node(self, id, **meta):
-        self.graph.add_node(id, **meta)
+    def add_node(self, node_id, **meta):
+        self.graph.add_node(node_id, **meta)
 
     def add_edge(self, start_id, end_id, nextnode, meta, ntype):
         for e in self.graph.out_edges(start_id, data=True):
@@ -26,7 +27,7 @@ class ExecutionGraph(object):
                 e[2]['freq'] = e[2]['freq'] + 1
                 return exist
 
-        self.add_node(end_id, **{'type': ntype, 'root': False, 'data': nextnode})
+        self.add_node(end_id, **{'type': ntype, 'root': False, 'data': nextnode, 'size': 0.0})
         meta['freq'] = 1
         self.graph.add_edge(start_id, end_id, **meta)
         return None
@@ -57,19 +58,20 @@ class ExecutionGraph(object):
                                      pos=pos,
                                      edge_labels={(u, v): d["name"] for u, v, d in self.graph.edges(data=True)})
 
-    def get_size(self):
-        def get_mb(df):
-            to_mb = (1024 * 1024)
-            if isinstance(df, pd.DataFrame):
-                return sum(df.memory_usage(index=True, deep=True)) / to_mb
-            elif isinstance(df, pd.Series):
-                return df.memory_usage(index=True, deep=True) / to_mb
-            else:
-                return sys.getsizeof(df) / to_mb
+    @staticmethod
+    def compute_size(data):
+        if isinstance(data, pd.DataFrame):
+            return sum(data.memory_usage(index=True, deep=True)) / AS_MB
+        elif isinstance(data, pd.Series):
+            return data.memory_usage(index=True, deep=True) / AS_MB
+        else:
+            return sys.getsizeof(data) / AS_MB
 
+    def get_total_size(self):
         t_size = 0
         for node in self.graph.nodes(data=True):
-            t_size += get_mb(node[1]['data'].data)
+            t_size += node[1]['size']
+            # t_size += self.compute_size(node[1]['data'].data)
         return t_size
 
     def has_node(self, node_id):
@@ -128,6 +130,9 @@ class ExecutionGraph(object):
 
     def compute_result(self, v_id, verbose=0):
         """ main computation for nodes
+            This functions uses the schedule provided by the scheduler functions
+            (currently: fast_compute_paths, brute_force_compute_paths) to compute
+            the requested node
         """
         # compute_paths = self.brute_force_compute_paths(v_id)
         compute_paths = self.fast_compute_paths(v_id)
@@ -148,6 +153,7 @@ class ExecutionGraph(object):
                 # Assignment wont work since it copies object reference
                 # TODO: check if a shallow copy is enough
                 cur_node['data'].data = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
+                cur_node['size'] = self.compute_size(cur_node['data'].data)
 
         return cur_node['data']
 
@@ -158,7 +164,7 @@ class ExecutionGraph(object):
 
     @staticmethod
     def schedule(path):
-        """schedule the computationg of nodes
+        """schedule the computation of nodes
         receives all the paths that should be computed. Every path starts with
         a node that is already computed.
         It returns a list of tuples which specifies the execution order of the nodes
