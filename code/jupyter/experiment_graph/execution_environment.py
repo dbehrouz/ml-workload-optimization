@@ -25,12 +25,16 @@ class ExecutionEnvironment(object):
 
     @staticmethod
     def load(loc, nrows=None):
-        nextnode = ExecutionEnvironment.Dataset(loc, pd.read_csv(loc, nrows=nrows))
-        size = sum(nextnode.data.memory_usage(index=True, deep=True)) / AS_MB
-        ExecutionEnvironment.graph.roots.append(loc)
-        ExecutionEnvironment.graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode, 'loc': loc,
-                                                    'size': size})
-        return nextnode
+        if ExecutionEnvironment.graph.has_node(loc):
+            print 'Node Exists!!!'
+            return ExecutionEnvironment.graph.get_node(loc)['data']
+        else:
+            nextnode = ExecutionEnvironment.Dataset(loc, pd.read_csv(loc, nrows=nrows))
+            size = sum(nextnode.data.memory_usage(index=True, deep=True)) / AS_MB
+            ExecutionEnvironment.graph.roots.append(loc)
+            ExecutionEnvironment.graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode, 'loc': loc,
+                                                        'size': size})
+            return nextnode
 
     class Node(object):
         def __init__(self, node_id, data):

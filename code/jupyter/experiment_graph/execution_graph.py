@@ -77,6 +77,9 @@ class ExecutionGraph(object):
     def has_node(self, node_id):
         return self.graph.has_node(node_id)
 
+    def get_node(self, node_id):
+        return self.graph.nodes[node_id]
+
     def brute_force_compute_paths(self, vertex):
         """brute force method for computing all the paths
 
