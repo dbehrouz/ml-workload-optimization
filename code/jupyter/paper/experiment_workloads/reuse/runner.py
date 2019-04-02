@@ -9,6 +9,8 @@ from datetime import datetime
 
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 ROOT_DATA_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter/data'
+GRAPH_DATABASE_PATH = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter/data/graph/exp' \
+                      '-reuse.graph'
 
 EXPERIMENT = 'kaggle-home-credit'
 REP = 10
@@ -23,7 +25,8 @@ for i in range(1, REP + 1):
     start = datetime.now()
     print '{}-Start of the Optimized Workload'.format(start)
     os.system(
-        "python {}/optimized/{}.py {} {}".format(EXPERIMENT, WORKLOAD, ROOT_PACKAGE_DIRECTORY, ROOT_DATA_DIRECTORY))
+        "python {}/optimized/{}.py {} {} {}".format(EXPERIMENT, WORKLOAD, ROOT_PACKAGE_DIRECTORY, ROOT_DATA_DIRECTORY,
+                                                    GRAPH_DATABASE_PATH))
     end = datetime.now()
     elapsed = (end - start).total_seconds()
     print '{}-End of Optimized Workload'.format(end)

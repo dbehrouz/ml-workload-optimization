@@ -31,6 +31,12 @@ from experiment_graph.execution_environment import ExecutionEnvironment as ee
 warnings.filterwarnings('ignore')
 
 ROOT_DIRECTORY = sys.argv[2]
+GRAPH_LOCATION = sys.argv[3]
+if os.path.isfile(GRAPH_LOCATION):
+    print 'Load Existing Experiment Graph!!'
+    ee.load_graph(GRAPH_LOCATION)
+else:
+    print 'No Experiment Graph Exists!!!'
 
 print(os.listdir(ROOT_DIRECTORY))
 app_train = ee.load(ROOT_DIRECTORY + '/home-credit-default-risk/application_train.csv')
@@ -568,3 +574,7 @@ def plot_feature_importances(df):
 feature_importances_sorted = plot_feature_importances(feature_importances)
 
 feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
+
+# Save the Graph to Disk
+# TODO: Maybe we need some versioning mechanism later on
+ee.save_graph(GRAPH_LOCATION)

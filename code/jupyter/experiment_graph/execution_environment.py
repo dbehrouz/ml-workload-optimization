@@ -180,14 +180,17 @@ class SuperNode(Node):
         return self.nodes[0].data[self.nodes[1].data]
 
     def p_add_columns(self, col_names):
-        t = self.nodes[0].data
-        t[col_names] = self.nodes[1].data
-        return t
+        if isinstance(col_names, list):
+            return self.nodes[0].data.assign(**dict(zip(col_names, [self.nodes[1].data[a] for a in self.nodes[1].data])))
+        else:
+            return self.nodes[0].data.assign(**dict(zip([col_names], [self.nodes[1].data])))
 
     def p_replace_columns(self, col_names):
-        t = self.nodes[0].data
-        t[col_names] = self.nodes[1].data
-        return t
+        if isinstance(col_names, list):
+            return self.nodes[0].data.assign(
+                **dict(zip(col_names, [self.nodes[1].data[a] for a in self.nodes[1].data])))
+        else:
+            return self.nodes[0].data.assign(**dict(zip([col_names], [self.nodes[1].data])))
 
     def p_corr_with(self):
         return self.nodes[0].data.corr(self.nodes[1].data)
