@@ -6,7 +6,7 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
-
+from datetime import datetime
 import os
 import sys
 import warnings
@@ -32,9 +32,17 @@ warnings.filterwarnings('ignore')
 
 ROOT_DIRECTORY = sys.argv[2]
 GRAPH_LOCATION = sys.argv[3]
+# Output file for writing logs
+OUTPUT_LOGS = sys.argv[4] + '/' + sys.argv[5]
+RUN_ID = sys.argv[6]
 if os.path.isfile(GRAPH_LOCATION):
     print 'Load Existing Experiment Graph!!'
+    start = datetime.now()
     ee.load_graph(GRAPH_LOCATION)
+    load_time = (datetime.now() - start).total_seconds()
+    with open(OUTPUT_LOGS, 'a') as the_file:
+        # TODO: Maybe we should log the size of the graph as well
+        the_file.write('RUN={}, Graph Loading={}s\n'.format(RUN_ID, load_time))
 else:
     print 'No Experiment Graph Exists!!!'
 
@@ -575,6 +583,11 @@ feature_importances_sorted = plot_feature_importances(feature_importances)
 
 feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
+start = datetime.now()
 # Save the Graph to Disk
 # TODO: Maybe we need some versioning mechanism later on
 ee.save_graph(GRAPH_LOCATION)
+save_time = (datetime.now() - start).total_seconds()
+with open(OUTPUT_LOGS, 'a') as the_file:
+    # TODO: Maybe we should log the size of the graph as well
+    the_file.write('RUN={}, Graph Writing={}s\n'.format(RUN_ID, save_time))
