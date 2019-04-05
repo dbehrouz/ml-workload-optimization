@@ -15,7 +15,7 @@ from datetime import datetime
 
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-GRAPH_DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/graph/exp-reuse-same-workload.graph'
+DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment'
 
 OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'
@@ -36,7 +36,7 @@ for i in range(1, REP + 1):
                                                              WORKLOAD,
                                                              ROOT_PACKAGE_DIRECTORY,
                                                              ROOT_DATA_DIRECTORY,
-                                                             GRAPH_DATABASE_PATH,
+                                                             DATABASE_PATH,
                                                              # logs root directory
                                                              RESULT_FOLDER,
                                                              # experiment id for logging
