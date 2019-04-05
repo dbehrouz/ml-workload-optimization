@@ -31,14 +31,14 @@ from experiment_graph.execution_environment import ExecutionEnvironment as ee
 warnings.filterwarnings('ignore')
 
 ROOT_DIRECTORY = sys.argv[2]
-GRAPH_LOCATION = sys.argv[3]
+ENVIRONMENT_LOCATION = sys.argv[3]
 # Output file for writing logs
 OUTPUT_LOGS = sys.argv[4] + '/' + sys.argv[5]
 RUN_ID = sys.argv[6]
-if os.path.isfile(GRAPH_LOCATION):
+if os.path.isdir(ENVIRONMENT_LOCATION):
     print 'Load Existing Experiment Graph!!'
     start = datetime.now()
-    ee.load_graph(GRAPH_LOCATION)
+    ee.load_environment(ENVIRONMENT_LOCATION)
     load_time = (datetime.now() - start).total_seconds()
     with open(OUTPUT_LOGS, 'a') as the_file:
         # TODO: Maybe we should log the size of the graph as well
@@ -48,24 +48,24 @@ else:
 
 print(os.listdir(ROOT_DIRECTORY))
 app_train = ee.load(ROOT_DIRECTORY + '/home-credit-default-risk/application_train.csv')
-print('Training data shape: ', app_train.shape().get())
-app_train.head().get()
+print('Training data shape: ', app_train.shape().data())
+app_train.head().data()
 
 app_test = ee.load(ROOT_DIRECTORY + '/home-credit-default-risk/application_test.csv')
-print('Testing data shape: ', app_test.shape().get())
-app_test.head().get()
+print('Testing data shape: ', app_test.shape().data())
+app_test.head().data()
 
-app_train['TARGET'].value_counts().get()
+app_train['TARGET'].value_counts().data()
 
-app_train['TARGET'].get().astype(int).plot.hist()
+app_train['TARGET'].data().astype(int).plot.hist()
 
 
 # Function to calculate missing values by column# Funct
 def missing_values_table(dataset):
     # Total missing values
-    mis_val = dataset.isnull().sum().get()
+    mis_val = dataset.isnull().sum().data()
 
-    mis_val_percent = 100 * mis_val / len(dataset.get())
+    mis_val_percent = 100 * mis_val / len(dataset.data())
 
     # Make a table with the results
     mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
@@ -80,8 +80,8 @@ def missing_values_table(dataset):
         '% of Total Values', ascending=False).round(1)
 
     # Print some summary information
-    print("Your selected dataframe has " + str(dataset.shape().data[1]) + " columns.\n"
-                                                                          "There are " + str(
+    print("Your selected dataframe has " + str(dataset.shape().data()[1]) + " columns.\n"
+                                                                            "There are " + str(
         mis_val_table_ren_columns.shape[0]) +
           " columns that have missing values.")
 
@@ -92,17 +92,17 @@ def missing_values_table(dataset):
 missing_values = missing_values_table(app_train)
 missing_values.head(20)
 
-app_train.meta['dtypes'].value_counts()
+app_train.dtypes().data().value_counts()
 
-app_train.select_dtypes('object').nunique().get()
+app_train.select_dtypes('object').nunique().data()
 
 # Create a label encoder object
 le = LabelEncoder()
 le_count = 0
 
-for col in app_train.select_dtypes('object').get().columns:
+for col in app_train.select_dtypes('object').data().columns:
     # we are not using nunique because it discard nan
-    if app_train[col].nunique(dropna=False).get() <= 2:
+    if app_train[col].nunique(dropna=False).data() <= 2:
         model = app_train[col].fit_sk_model(le)
 
         transformed_train = model.transform_col(app_train[col], col)
@@ -111,7 +111,7 @@ for col in app_train.select_dtypes('object').get().columns:
 
         transformed_test = model.transform_col(app_test[col], col)
         app_test = app_test.drop(col)
-        app_test = app_test.add_columns(col, transformed_train)
+        app_test = app_test.add_columns(col, transformed_test)
 
         # Keep track of how many columns were label encoded
         le_count += 1
@@ -120,31 +120,33 @@ print('%d columns were label encoded.' % le_count)
 app_train = app_train.onehot_encode()
 app_test = app_test.onehot_encode()
 
-print('Training Features shape: ', app_train.shape().get())
-print('Testing Features shape: ', app_test.shape().get())
+print('Training Features shape: ', app_train.shape().data())
+print('Testing Features shape: ', app_test.shape().data())
 
 train_labels = app_train['TARGET']
-for c in app_train.get().columns:
-    if c not in app_test.get().columns:
+train_columns = app_train.data().columns
+test_columns = app_test.data().columns
+for c in train_columns:
+    if c not in test_columns:
         app_train = app_train.drop(c)
 
 app_train = app_train.add_columns('TARGET', train_labels)
 
-print('Training Features shape: ', app_train.shape().get())
-print('Testing Features shape: ', app_test.shape().get())
+print('Training Features shape: ', app_train.shape().data())
+print('Testing Features shape: ', app_test.shape().data())
 
-(app_train['DAYS_BIRTH'] / 365).describe().get()
+(app_train['DAYS_BIRTH'] / 365).describe().data()
 
-app_train['DAYS_EMPLOYED'].describe().get()
+app_train['DAYS_EMPLOYED'].describe().data()
 
-app_train['DAYS_EMPLOYED'].get().plot.hist(title='Days Employment Histogram')
+app_train['DAYS_EMPLOYED'].data().plot.hist(title='Days Employment Histogram')
 plt.xlabel('Days Employment')
 
 anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
 non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
-print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().get()))
-print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().get()))
-print('There are %d anomalous days of employment' % anom.shape().get()[0])
+print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data()))
+print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data()))
+print('There are %d anomalous days of employment' % anom.shape().data()[0])
 
 days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
 app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
@@ -152,7 +154,7 @@ temp = app_train['DAYS_EMPLOYED'].replace({365243: np.nan})
 app_train = app_train.drop('DAYS_EMPLOYED')
 app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
 
-app_train["DAYS_EMPLOYED"].get().plot.hist(title='Days Employment Histogram');
+app_train["DAYS_EMPLOYED"].data().plot.hist(title='Days Employment Histogram');
 plt.xlabel('Days Employment')
 
 days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
@@ -161,10 +163,10 @@ temp = app_test['DAYS_EMPLOYED'].replace({365243: np.nan})
 app_test = app_test.drop('DAYS_EMPLOYED')
 app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
 print('There are %d anomalies in the test data out of %d entries'
-      % (app_test['DAYS_EMPLOYED_ANOM'].sum().get(),
-         app_test.shape().get()[0]))
+      % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(),
+         app_test.shape().data()[0]))
 
-correlations = app_train.corr().get()
+correlations = app_train.corr().data()
 top = correlations['TARGET'].sort_values()
 # Display correlations
 print('Most Positive Correlations:\n', top.tail(15))
@@ -173,22 +175,22 @@ print('\nMost Negative Correlations:\n', top.head(15))
 abs_age = app_train['DAYS_BIRTH'].abs()
 app_train = app_train.drop('DAYS_BIRTH')
 app_train = app_train.add_columns('DAYS_BIRTH', abs_age)
-app_train['DAYS_BIRTH'].corr(app_train['TARGET']).get()
+app_train['DAYS_BIRTH'].corr(app_train['TARGET']).data()
 
 # Set the style of plots
 plt.style.use('fivethirtyeight')
 
 # Plot the distribution of ages in years
-plt.hist((app_train['DAYS_BIRTH'] / 365).get(), edgecolor='k', bins=25)
+plt.hist((app_train['DAYS_BIRTH'] / 365).data(), edgecolor='k', bins=25)
 plt.title('Age of Client')
 plt.xlabel('Age (years)')
 plt.ylabel('Count')
 
 plt.figure(figsize=(10, 8))
 # KDE plot of loans that were repaid on time
-sns.kdeplot((app_train[app_train['TARGET'] == 0]['DAYS_BIRTH'] / 365).get(), label='target == 0')
+sns.kdeplot((app_train[app_train['TARGET'] == 0]['DAYS_BIRTH'] / 365).data(), label='target == 0')
 # KDE plot of loans which were not repaid on time
-sns.kdeplot((app_train[app_train['TARGET'] == 1]['DAYS_BIRTH'] / 365).get(), label='target == 1')
+sns.kdeplot((app_train[app_train['TARGET'] == 1]['DAYS_BIRTH'] / 365).data(), label='target == 1')
 # Labeling of plot
 plt.xlabel('Age (years)')
 plt.ylabel('Density')
@@ -201,25 +203,24 @@ age_data = age_data.add_columns('YEARS_BIRTH', years_birth)
 binned = age_data['YEARS_BIRTH'].binning(20, 70, 11)
 binned.setname('YEARS_BINNED')
 age_data = age_data.add_columns('YEARS_BINNED', binned)
-age_data.head(10).get()
+age_data.head(10).data()
 
 age_groups = age_data.groupby('YEARS_BINNED').mean()
-age_groups.get()
+age_groups.data()
 
 plt.figure(figsize=(8, 8))
 
 # Graph the age bins and the average of the target as a bar plot
-plt.bar(age_groups.get().index.astype(str), age_groups.get()['TARGET'] * 100)
+plt.bar(age_groups.data().index.astype(str), age_groups.data()['TARGET'] * 100)
 
 # Plot labeling
-plt.xticks(rotation=75);
-plt.xlabel('Age Group (years)');
+plt.xticks(rotation=75)
+plt.xlabel('Age Group (years)')
 plt.ylabel('Failure to Repay (%)')
 plt.title('Failure to Repay by Age Group')
 
 ext_data = app_train[['TARGET', 'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
-ext_data_corrs = ext_data.corr().get()
-ext_data_corrs
+ext_data_corrs = ext_data.corr().data()
 
 plt.figure(figsize=(8, 6))
 
@@ -235,15 +236,15 @@ for i, column in enumerate(['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']):
     plt.subplot(3, 1, i + 1)
     # plot repaid loans
     source_data = app_train[[column, 'TARGET']][app_train['TARGET'] == 0]
-    sns.kdeplot(source_data[app_train[column].notna()][column].get(), label='target == 0')
+    sns.kdeplot(source_data[app_train[column].notna()][column].data(), label='target == 0')
     # plot loans that were not repaid
     source_data = app_train[[column, 'TARGET']][app_train['TARGET'] == 1]
-    sns.kdeplot(source_data[app_train[column].notna()][column].get(), label='target == 1')
+    sns.kdeplot(source_data[app_train[column].notna()][column].data(), label='target == 1')
 
     # Label the plots
     plt.title('Distribution of %s by Target Value' % column)
-    plt.xlabel('%s' % column);
-    plt.ylabel('Density');
+    plt.xlabel('%s' % column)
+    plt.ylabel('Density')
 
 plt.tight_layout(h_pad=2.5)
 
@@ -255,10 +256,10 @@ plot_data = plot_data.add_columns('YEARS_BIRTH', age_data['YEARS_BIRTH'])
 # Drop na values and limit to first 100000 rows
 plot_data = plot_data.head(100000).dropna()
 
-# Create the pairgrid object
-grid = sns.PairGrid(data=plot_data.get(), size=3, diag_sharey=False,
+# Create the pair grid object
+grid = sns.PairGrid(data=plot_data.data(), size=3, diag_sharey=False,
                     hue='TARGET',
-                    vars=[x for x in list(plot_data.get().columns) if x != 'TARGET'])
+                    vars=[x for x in list(plot_data.data().columns) if x != 'TARGET'])
 
 # Upper is a scatter plot
 grid.map_upper(plt.scatter, alpha=0.2)
@@ -300,79 +301,65 @@ poly_transformer_model = poly_features.fit_sk_model(poly_transformer)
 poly_features = poly_transformer_model.transform(poly_features)
 poly_features_test = poly_transformer_model.transform(poly_features_test)
 
-poly_transformer_model.get().get_feature_names(input_features=[
+new_names = poly_transformer_model.data().get_feature_names(input_features=[
     'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH'
 ])
 
-# Call manually before meta data update
-poly_features.get()
-poly_features.set_columns(poly_transformer_model.get().get_feature_names(
-    ['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']))
+poly_features.set_columns(new_names)
 
 # Add in the target
 poly_features = poly_features.add_columns('TARGET', poly_target)
 
 # Find the correlations with the target
-poly_corrs = poly_features.corr().get()['TARGET'].sort_values()
+poly_corrs = poly_features.corr().data()['TARGET'].sort_values()
 
 # Display most negative and most positive
 print(poly_corrs.head(10))
 print(poly_corrs.tail(5))
 
-# Call manually before meta data update
-poly_features_test.get()
-poly_features_test.set_columns(poly_transformer_model.get().get_feature_names(
-    ['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']))
+poly_features_test.set_columns(new_names)
 
 # Merge polynomial features into training dataframe
-poly_features = poly_features.add_columns('SK_ID_CURR',
-                                          app_train['SK_ID_CURR'])
+poly_features = poly_features.add_columns('SK_ID_CURR', app_train['SK_ID_CURR'])
 app_train_poly = app_train.merge(poly_features, on='SK_ID_CURR', how='left')
 
 # Merge polnomial features into testing dataframe
-poly_features_test = poly_features_test.add_columns('SK_ID_CURR',
-                                                    app_test['SK_ID_CURR'])
+poly_features_test = poly_features_test.add_columns('SK_ID_CURR', app_test['SK_ID_CURR'])
 app_test_poly = app_test.merge(poly_features_test, on='SK_ID_CURR', how='left')
 
 # Align the dataframes
-for c in app_train_poly.get().columns:
-    if c not in app_test_poly.get().columns:
+train_columns = app_train_poly.data().columns
+test_columns = app_test_poly.data().columns
+for c in train_columns:
+    if c not in test_columns:
         app_train_poly = app_train_poly.drop(c)
 
-# # Print out the new shapes
+# Print out the new shapes
 print('Training data with polynomial features shape: ',
-      app_train_poly.shape().get())
+      app_train_poly.shape().data())
 print('Testing data with polynomial features shape:  ',
-      app_test_poly.shape().get())
+      app_test_poly.shape().data())
 
 app_train_domain = app_train.copy()
 app_test_domain = app_test.copy()
 
-app_train_domain = app_train_domain.add_columns(
-    'CREDIT_INCOME_PERCENT',
-    app_train_domain['AMT_CREDIT'] / app_train_domain['AMT_INCOME_TOTAL'])
-app_train_domain = app_train_domain.add_columns(
-    'ANNUITY_INCOME_PERCENT',
-    app_train_domain['AMT_ANNUITY'] / app_train_domain['AMT_INCOME_TOTAL'])
-app_train_domain = app_train_domain.add_columns(
-    'CREDIT_TERM',
-    app_train_domain['AMT_ANNUITY'] / app_train_domain['AMT_CREDIT'])
-app_train_domain = app_train_domain.add_columns(
-    'DAYS_EMPLOYED_PERCENT',
-    app_train_domain['DAYS_EMPLOYED'] / app_train_domain['DAYS_BIRTH'])
+app_train_domain = app_train_domain.add_columns('CREDIT_INCOME_PERCENT',
+                                                app_train_domain['AMT_CREDIT'] / app_train_domain['AMT_INCOME_TOTAL'])
+app_train_domain = app_train_domain.add_columns('ANNUITY_INCOME_PERCENT',
+                                                app_train_domain['AMT_ANNUITY'] / app_train_domain['AMT_INCOME_TOTAL'])
+app_train_domain = app_train_domain.add_columns('CREDIT_TERM',
+                                                app_train_domain['AMT_ANNUITY'] / app_train_domain['AMT_CREDIT'])
+app_train_domain = app_train_domain.add_columns('DAYS_EMPLOYED_PERCENT',
+                                                app_train_domain['DAYS_EMPLOYED'] / app_train_domain['DAYS_BIRTH'])
 
-app_test_domain = app_test_domain.add_columns(
-    'CREDIT_INCOME_PERCENT',
-    app_test_domain['AMT_CREDIT'] / app_test_domain['AMT_INCOME_TOTAL'])
-app_test_domain = app_test_domain.add_columns(
-    'ANNUITY_INCOME_PERCENT',
-    app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_INCOME_TOTAL'])
-app_test_domain = app_test_domain.add_columns(
-    'CREDIT_TERM',
-    app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_CREDIT'])
-app_test_domain = app_test_domain.add_columns(
-    'DAYS_EMPLOYED_PERCENT',
-    app_test_domain['DAYS_EMPLOYED'] / app_test_domain['DAYS_BIRTH'])
+app_test_domain = app_test_domain.add_columns('CREDIT_INCOME_PERCENT',
+                                              app_test_domain['AMT_CREDIT'] / app_test_domain['AMT_INCOME_TOTAL'])
+app_test_domain = app_test_domain.add_columns('ANNUITY_INCOME_PERCENT',
+                                              app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_INCOME_TOTAL'])
+app_test_domain = app_test_domain.add_columns('CREDIT_TERM',
+                                              app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_CREDIT'])
+app_test_domain = app_test_domain.add_columns('DAYS_EMPLOYED_PERCENT',
+                                              app_test_domain['DAYS_EMPLOYED'] / app_test_domain['DAYS_BIRTH'])
 
 plt.figure(figsize=(12, 20))
 # iterate through the new features
@@ -385,12 +372,12 @@ for i, column in enumerate([
     # plot repaid loans
     negative = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 0]
     sns.kdeplot(
-        negative[app_train_domain[column].notna()][column].get(),
+        negative[app_train_domain[column].notna()][column].data(),
         label='target == 0')
     # plot loans that were not repaid
     positive = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 1]
     sns.kdeplot(
-        positive[app_train_domain[column].notna()][column].get(),
+        positive[app_train_domain[column].notna()][column].data(),
         label='target == 1')
 
     # Label the plots
@@ -403,13 +390,14 @@ plt.tight_layout(h_pad=2.5)
 from sklearn.preprocessing import MinMaxScaler, Imputer
 
 # Drop the target from the training data
-if 'TARGET' in app_train.get().columns:
+columns = app_train.data().columns
+if 'TARGET' in columns:
     train = app_train.drop(columns=['TARGET'])
 else:
     train = app_train.copy()
 
 # Feature names
-features = list(train.get().columns)
+features = list(train.data().columns)
 
 # Copy of the testing data
 test = app_test.copy()
@@ -432,8 +420,8 @@ scaler = train.fit_sk_model(sk_scaler)
 train = scaler.transform(train)
 test = scaler.transform(test)
 
-print('Training data shape: ', train.shape().get())
-print('Testing data shape: ', test.shape().get())
+print('Training data shape: ', train.shape().data())
+print('Testing data shape: ', test.shape().data())
 
 from sklearn.linear_model import LogisticRegression
 
@@ -450,7 +438,7 @@ log_reg_pred = log_reg.predict_proba(test)[1]
 # Submission data
 log_reg_pred.setname('TARGET')
 submit = app_test['SK_ID_CURR'].concat(log_reg_pred)
-submit.head().get()
+submit.head().data()
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -470,9 +458,9 @@ predictions = random_forest.predict_proba(test)[1]
 # Submission dataframe
 predictions.setname('TARGET')
 submit = app_test['SK_ID_CURR'].concat(predictions)
-submit.head().get()
+submit.head().data()
 
-poly_features_names = list(app_train_poly.get().columns)
+poly_features_names = list(app_train_poly.data().columns)
 
 # Impute the polynomial features
 sk_imputer = Imputer(strategy='median')
@@ -498,11 +486,11 @@ predictions = random_forest_poly.predict_proba(poly_features_test)[1]
 # Submission dataframe
 predictions.setname('TARGET')
 submit = app_test['SK_ID_CURR'].concat(predictions)
-submit.head().get()
+submit.head().data()
 
 app_train_domain = app_train_domain.drop(columns='TARGET')
 
-domain_features_names = list(app_train_domain.get().columns)
+domain_features_names = list(app_train_domain.data().columns)
 
 # Impute the domainnomial features
 sk_imputer = Imputer(strategy='median')
@@ -532,7 +520,7 @@ predictions = random_forest_domain.predict_proba(domain_features_test)[1]
 # Make a submission dataframe
 predictions.setname('TARGET')
 submit = app_test['SK_ID_CURR'].concat(predictions)
-submit.head().get()
+submit.head().data()
 
 
 def plot_feature_importances(df):
@@ -555,20 +543,20 @@ def plot_feature_importances(df):
     df = df.sort_values('importance', ascending=False)
 
     # Normalize the feature importances to add up to one
-    df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().get())
+    df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data())
 
     # Make a horizontal bar chart of feature importances
     plt.figure(figsize=(10, 6))
     ax = plt.subplot()
 
     # Need to reverse the index to plot most important on top
-    ax.barh(list(reversed(list(df.get().index[:15]))),
-            df['importance_normalized'].get().head(15),
+    ax.barh(list(reversed(list(df.data().index[:15]))),
+            df['importance_normalized'].data().head(15),
             align='center', edgecolor='k')
 
     # Set the yticks and labels
-    ax.set_yticks(list(reversed(list(df.get().index[:15]))))
-    ax.set_yticklabels(df['feature'].get().head(15))
+    ax.set_yticks(list(reversed(list(df.data().index[:15]))))
+    ax.set_yticklabels(df['feature'].data().head(15))
 
     # Plot labeling
     plt.xlabel('Normalized Importance');
@@ -586,7 +574,7 @@ feature_importances_domain_sorted = plot_feature_importances(feature_importances
 start = datetime.now()
 # Save the Graph to Disk
 # TODO: Maybe we need some versioning mechanism later on
-ee.save_graph(GRAPH_LOCATION)
+ee.save_environment(environment_folder=ENVIRONMENT_LOCATION, overwrite=True)
 save_time = (datetime.now() - start).total_seconds()
 with open(OUTPUT_LOGS, 'a') as the_file:
     # TODO: Maybe we should log the size of the graph as well

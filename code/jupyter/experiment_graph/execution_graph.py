@@ -101,7 +101,7 @@ class ExecutionGraph(object):
         all_paths = []
         for path in all_simple_paths:
             cur_index = len(path) - 1
-            while self.graph.nodes[path[cur_index]]['data'].is_empty():
+            while not self.graph.nodes[path[cur_index]]['data'].computed:
                 cur_index -= 1
             all_paths.append(path[cur_index:])
 
@@ -122,10 +122,11 @@ class ExecutionGraph(object):
         """
 
         def get_path(source, paths):
-            for v in self.graph.predecessors(source):
-                paths.append((v, source))
-                if self.graph.nodes[v]['data'].is_empty():
-                    get_path(v, paths)
+            if not self.graph.nodes[source]['data'].computed:
+                for v in self.graph.predecessors(source):
+                    paths.append((v, source))
+                    if not self.graph.nodes[v]['data'].computed:
+                        get_path(v, paths)
 
         all_paths = []
         get_path(vertex, all_paths)
@@ -144,7 +145,6 @@ class ExecutionGraph(object):
         schedule = self.schedule(compute_paths)
 
         # execute the computation based on the schedule
-        cur_node = None
         for pair in schedule:
             cur_node = self.graph.nodes[pair[1]]
             edge = self.graph.edges[pair[0], pair[1]]
@@ -153,12 +153,19 @@ class ExecutionGraph(object):
                 print str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1])
                 # combine is logical and we do not execute it
             if edge['oper'] != COMBINE_OPERATION_IDENTIFIER:
-                # Assignment wont work since it copies object reference
-                # TODO: check if a shallow copy is enough
-                cur_node['data'].data = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
-                cur_node['size'] = self.compute_size(cur_node['data'].data)
-
-        return cur_node['data']
+                if not cur_node['data'].computed:
+                    # TODO: Data Storage only stores the data for Dataset and Feature for now
+                    # TODO: Later on maybe we want to consider storing models and aggregates on the data storage as well
+                    if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
+                        # TODO: check if a shallow copy is enough
+                        cur_node['data'].c_name, cur_node['data'].c_hash = copy.deepcopy(
+                            self.compute_next(self.graph.nodes[pair[0]], edge))
+                        cur_node['size'] = cur_node['data'].compute_size()
+                    # all the other node types they contain the data themselves
+                    else:
+                        cur_node['data'].data_obj = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
+                        cur_node['size'] = self.compute_size(cur_node['data'].data_obj)
+                    cur_node['data'].computed = True
 
     @staticmethod
     def compute_next(node, edge):

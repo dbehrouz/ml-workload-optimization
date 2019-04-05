@@ -2,3 +2,9 @@
 7792189B,1,kaggle-home-credit,baseline,workload_1,379.979748
 7792189B,2,kaggle-home-credit,optimized,workload_1,198.290878
 7792189B,2,kaggle-home-credit,baseline,workload_1,367.320868
+39C416F4,1,kaggle-home-credit,optimized,workload_1,434.679381
+39C416F4,1,kaggle-home-credit,baseline,workload_1,357.812333
+CAC43535,1,kaggle-home-credit,optimized,workload_1,119.724037
+CAC43535,1,kaggle-home-credit,baseline,workload_1,357.060188
+CAC43535,2,kaggle-home-credit,optimized,workload_1,106.813096
+CAC43535,2,kaggle-home-credit,baseline,workload_1,340.472448
