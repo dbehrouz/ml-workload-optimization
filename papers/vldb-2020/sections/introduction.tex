@@ -32,13 +32,14 @@ Second, even without storing the non-essential operations, the amount of informa
 Therefore, querying the experiment database may create more overhead than just simply running a new experiment, regardless of whether or not some parts of the experiments are repeated.
 
 % S
-Contrary to the existing work, we propose to store every executed operation and the resulting artifacts (we define artifacts as any raw, preprocessed, and aggregated data and machine learning models).
+Contrary to the existing work, we propose to store every executed operation and the resulting artifacts.
+we define artifacts as any raw, preprocessed, and aggregated data and machine learning models.
 Furthermore, we \textbf{automatically} extract information from the experiment database to optimize the process of design and execution of the future machine learning workloads.
 We limit the scope of our optimizations to the workloads belonging to the same task.
 A task describes what the goal of the machine learning workloads should be (for example, train a classification model on a training dataset that maximizes the $F_1$\footnote{https://en.wikipedia.org/wiki/F1\_score} score on a given evaluation dataset).
 While our solution is applicable to multiple tasks, the information gained from one task does not affect the optimizations applied to other tasks.
 
-In order to extract the necessary information from the experiment database with ease, we represent the data inside the experiment database using a graph (called the experiment graph).
+In order to extract the necessary information from the experiment database with ease, we represent the data inside the experiment database using a graph, called the experiment graph.
 In the graph, data artifacts are represented as vertices and operations that map one artifact to the other as edges.
 
 %Two categories of users typically utilize a machine learning system: expert data scientists and novice users.
@@ -62,7 +63,7 @@ We propose three main optimizations, namely, reuse, warmstarting, and improved h
 In reuse, we look for opportunities to reuse an existing materialized artifact and avoid data reprocessing.
 Reuse decrease the total data processing time and can enable interactive data analysis, especially during the exploratory data analysis that we expect many repetitions of operations.
 In warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.
-Warmstarting reduces the convergence time, resulting in faster training time and in some case in a model with better quality.
+Warmstarting reduces the convergence time, resulting in faster training time and in some cases in a model with better quality.
 Lastly, we propose to utilize the experiment graph to improve the process of hyperparameter tuning.
 There are 3 common hyperparameter tuning techniques, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
 All three methods rely on defining a search space before the process of tuning begins.
@@ -71,7 +72,7 @@ As a result, non-expert users struggle with setting an effective search space.
 We utilize the meta-data in the experiment database to define (or propose) promising search space to the users.
 Moreover, after setting the search space, Bayesian hyperparameter tuning techniques require many initial trials until they start to propose promising hyperparameters.
 We utilize the meta-data in the experiment database to initialize the Bayesian hyperparameter tuning process to skip the trials.
-As a result, we the Bayesian hyperparameter tuning process proposes promising hyperparameters faster.
+As a result, the Bayesian hyperparameter tuning process proposes promising hyperparameters faster.
 
 %Moreover, recent works have extended the ability of the bayesian hyperparameter optimization to design machine learning pipelines from scratch, typically referred to as automatic machine learning (AutoML) \cite{Feurer15} .
 %\todo[inline]{Maybe the highlighted part could be part of the next work}
