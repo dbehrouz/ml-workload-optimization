@@ -15,7 +15,7 @@ DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment'
 
 OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'
-EXPERIMENT = 'kaggle-home-credit'
+EXPERIMENT = 'kaggle_home_credit'
 # TODO: This should change to three different scripts
 WORKLOADS = ['workload_1', 'workload_1', 'workload_1']
 
@@ -51,7 +51,7 @@ for i in range(len(WORKLOADS)):
     # # Running Baseline Workload 1 and storing the run time
     start = datetime.now()
     print '{}-Start of the Baseline Workload'.format(start)
-    os.system("python {}/baseline/workload_1.py {}".format(EXPERIMENT, ROOT_DATA_DIRECTORY))
+    os.system("python {}/baseline/start_here_a_gentle_introduction.py {}".format(EXPERIMENT, ROOT_DATA_DIRECTORY))
     end = datetime.now()
     elapsed = (end - start).total_seconds()
     print '{}-End of Baseline Workload'.format(end)

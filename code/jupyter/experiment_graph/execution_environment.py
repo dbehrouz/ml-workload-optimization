@@ -8,6 +8,7 @@ import cPickle as pickle
 import hashlib
 
 from data_storage import DataStorage
+from datetime import datetime
 from execution_graph import ExecutionGraph
 
 # Reserved word for representing super nodes.
@@ -222,10 +223,13 @@ class SuperNode(Node):
         return new_columns, new_hashes
 
     def p_fit_sk_model_with_labels(self, model, custom_args):
+        start = datetime.now()
         if custom_args is None:
             model.fit(self.nodes[0].data(), self.nodes[1].data())
         else:
             model.fit(self.nodes[0].data(), self.nodes[1].data(), **custom_args)
+        # update the model training time in the graph
+        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
     def p_predict_proba(self, custom_args):
@@ -682,7 +686,9 @@ class Feature(Node):
         return self.generate_sklearn_node('fit_sk_model', {'model': model})
 
     def p_fit_sk_model(self, model):
+        start = datetime.now()
         model.fit(self.data())
+        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
 
@@ -976,7 +982,9 @@ class Dataset(Node):
                                           v_id=supernode.id)
 
     def p_fit_sk_model(self, model):
+        start = datetime.now()
         model.fit(self.data())
+        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
     def replace_columns(self, col_names, features):
@@ -1079,6 +1087,14 @@ class SK_Model(Node):
 class ExecutionEnvironment(object):
     graph = ExecutionGraph()
     data_storage = DataStorage()
+    time_manager = dict()
+
+    @staticmethod
+    def update_time(oper_type, seconds):
+        if oper_type in ExecutionEnvironment.time_manager:
+            ExecutionEnvironment.time_manager[oper_type] = ExecutionEnvironment.time_manager[oper_type] + seconds
+        else:
+            ExecutionEnvironment.time_manager[oper_type] = seconds
 
     @staticmethod
     def save_environment(environment_folder, overwrite=False):
@@ -1099,6 +1115,7 @@ class ExecutionEnvironment(object):
             ExecutionEnvironment.graph = pickle.load(g_input)
         with open(environment_folder + '/storage', 'rb') as d_input:
             ExecutionEnvironment.data_storage = pickle.load(d_input)
+        ExecutionEnvironment.time_manager = dict()
 
     @staticmethod
     def plot_graph(plt):
