@@ -23,7 +23,7 @@ We divide the operations in the ML workloads into 3 categories.
 \caption{List of feature extraction and feature selection operations}\label{feature-engineering-operations}
 \end{table}
 
-\subsubsection{Data and Feature engineering}
+\subsubsection{Data and Feature Engineering}
 This group of operations typically belongs to three categories, i.e., simple data transformations and aggregations, feature selection, and feature extraction.
 All of these operations, receive one or multiple columns of a dataset and return another dataset as result. 
 While different data processing tools may provide specialized data transformation and aggregation operations for dataframe objects, most of them provide the same or similar operations such as map, reduce, group by, concatenation, and join. 
@@ -42,7 +42,7 @@ The budget specifies how many models with different hyperparameter values the op
 We limit our focus to popular search methods, namely, grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
 
 \subsection{Graph Representation}\label{sub-graph-construction}
-To efficiently apply our optimizations, we utilize a graph data structure (called the experiment graph) to store the meta-data and artifacts of the machine learning workloads.
+To efficiently apply our optimizations, we utilize a graph data structure, called the experiment graph, to store the meta-data and artifacts of the machine learning workloads.
 Let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the workload.
 Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
 Let $\mathcal{E}=\{e_i\}, i = 1, \cdots, m$ be a collection of executed operations that exist in the workload.
@@ -55,7 +55,7 @@ When a new machine learning workload is executed, we extend the graph to capture
 If an operation already exists in the graph, we update the frequency and average run-time attributes.
 Otherwise, we add a new edge and vertex to the experiment graph, representing the new operation and the artifact.
 Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing \ref{listing-experiment-graph}.
-To uniquely identify an edge, we utilize a hash function that receives as input the operation and hyperparameters.
+To uniquely identify an edge, we utilize a hash function that receives as input the operation and its hyperparameters (if it has any).
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
 import numpy as np
@@ -108,7 +108,8 @@ We assume the operations project(ad..) and vectorizer.f\_t already exist in the 
 Therefore, when adding the new operations, we must update their frequency to 2.
 In order to represent operations that process multiple input artifacts, e.g., concat and model.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
 First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
-The merge operator is a logical operator which does not incur a cost (run-time of 0 seconds).
+The merge operator is a logical operator which does not incur a cost, i.e., it has run-time of 0 seconds.
+The merged vertex is also a logical vertex with no actual attributes which only contains the vertex id of the merged vertices.
 Then, we draw an edge from the merged vertex which represents the actual operation.
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
 This is a critical step for our materialization algorithm in Section \ref{subsec-materialization} and our optimization strategies discussed in Sections \ref{sec-reuse-and-warmstarting} and \ref{sec-hyperparam-optimization}.
@@ -118,17 +119,16 @@ In the next sections, we assume that the experiment graph contains information a
 
 \subsection{Materialization of the Experiment Graph}\label{subsec-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
-For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, one of the popular scripts that analyzes a dataset of 150 MB, generates up to 10 GB of artifacts.
-\todo[inline]{10 GB is a rough estimate, I need to finish the code to accurately calculate the number}
-Therefore, materializing every artifact is not feasible.
+For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, one of the popular scripts that analyzes a dataset of 150 MB, generates up to 17 GB of artifacts.
+Therefore, materializing every artifact under limited storage is not feasible.
 In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage, a modified version of the algorithm presented by bhattacherjee et al. \cite{bhattacherjee2015principles}.
 The goal of the algorithm is to materialize the artifacts that result in the lowest weighted recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-We define the weighted recreation cost of the graph $\mathcal{G}$ ($WC$), given the set of materialized vertices $\mathcal{MV}$ as 
+We define $WC$ as the function that computes the weighted recreation cost of the graph $\mathcal{G}$, given the set of materialized vertices $\mathcal{MV}$, where  
 \[
 WC(\mathcal{G}, \mathcal{MV}) =  \sum\limits_{e \in \{e' \in \mathcal{E}  \lvert dest(e') \notin \mathcal{MV}\}}  e.f \times e.t
 \]
-where $dest(e)$ represent the destination vertex of the edge $e$.
-The weighted recreation cost indicates how much time do we need to spend to execute all the operations in the graph, since the beginning of time.
+and $dest(e)$ represents the destination vertex of the edge $e$.
+The weighted recreation cost indicates how much time do we need to spend to execute all the operations, taking into account the repeated executions, in the graph.
 For un-materialized artifacts, we must consider the frequency of the operations that produce the artifact.
 For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ and the operation \textit{vectorizer.f\_t} has a frequency of 2, we must consider both executions of the operation when computing the weighted cost.
 Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
@@ -198,7 +198,7 @@ For $v_0$ we do not compute $\rho$ as $v_0$ is always materialized.
 
 \subsubsection{The Effect of Model Quality on the Materialization Decision}
 \todo[inline]{For this I need to design experiments to check if it has a positive impact. If we don't have space, then this will be moved to future work.}
-Since the goal of all the workloads in the experiment graph is to solve the same task (as described in \ref{sec-introduction}), all the machine learning models will be evaluated using the same quality metric.
+Since the goal of all the workloads in the experiment graph is to solve the same task (as described in Section \ref{sec-introduction}), all the machine learning models will be evaluated using the same quality metric.
 Therefore, we can utilize the quality of the model in the materialization algorithm.
 We propose a simple method for utilizing the model quality in the materialization decision algorithm.
 We start by adding a new attribute, $q$, to every edge.

@@ -1,8 +1,8 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
-In this section, we propose two optimizations, namely, \textit{Reuse}, \textit{Warmstarting}.
+In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
 
-\subsection{Reuse Optimization ML Operations}
+\subsection{Reuse ML Operations}
 We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
 If an operation already exists in the experiment graph, we directly access the resulting artifact in the experiment graph instead of executing the operation.
 Before executing a workload, we first transform it into its graph representation, which results in a directed graph, called $\mathcal{WG}$.
@@ -17,7 +17,7 @@ Figure \ref{fig-reuse}a shows the workload graph ($\mathcal{WG}$) of the code in
 As described in the Reuse procedure, we traverse the experiment graph, starting at $v_0$, with the edges of $\mathcal{WG}$ which results in the common subgraph, $\mathcal{SG}$, in Figure \ref{fig-reuse}b.
 In the subgraph $\mathcal{SG}$, the furthest vertices in each path originating at $v_0$ are $v_5$ and $v_3$.
 The Reuse procedure selects $v_2$ as the candidate since $v_5$ is not materialized.
-The Reuse procedure results in an optimized graph that skips operations p2 and p3 are skipped (Figure \ref{fig-reuse}c).
+The Reuse procedure results in an optimized graph which skips operations p2 and p3 (Figure \ref{fig-reuse}c).
 
 \begin{lstlisting}[language=Python, firstnumber = 8,caption=New workload script (Imports are omitted),captionpos=b,label = {listing-reuse}]
 train = pd.read_csv('../input/train.csv') 
@@ -54,17 +54,18 @@ model.fit(top_features, train['y'])
 \label{fig-reuse}
 \end{figure}
 
-\subsection{Warmstarting Optimization For Model Training Operations}
+\subsection{Warmstart Model Training Operations}
 Model training operations include extra hyperparameters that must be set before the training procedure begins.
 Two training operations on the same data artifact using the same training algorithm could potentially have very different results based on the values of the hyperparameters.
 Therefore, we cannot apply the Reuse optimization in cases the hyperparameters of model training operations are different.
 Instead, we apply the \textit{Warmstarting} optimization.
 We first need to describe the concept of model groups.
-We refer to the set of every machine learning model trained on the same data artifact but only differs in hyperparameters, as a model group.
-If a workload contains a model training operation, $e_{m}$, on a vertex, $v_{m}$, before executing the workload, we proceed as follows.
-First, using the same traversal strategy as explained in the Reuse procedure, we look for $v_{t}$ in the experiment graph.
-If $v_{t}$ is in the experiment graph, then, we find the model group containing all the models  trained on $v_{t}$.
-Finally, if the model group is not empty, we warmstart the operation $e_{t}$ with the best performing model from the model group.
+For a vertex $v$, the model group $\mathcal{MG}_v$ refers to the set of all the machine learning models and their hyperparameters that are trained on $v$.
+If a workload contains the model training operation $e_{m}$ on the vertex $v_{m}$, before executing the workload, we proceed as follows.
+First, using the same traversal strategy as explained in the Reuse procedure, we look for $v_{m}$ in the experiment graph.
+If operation $e_{m}$ also exists in the experiment graph, then the Reuse procedure will return the resulting node as the result.
+However, if $e_{m}$ does not exist in the experiment graph, then we find the model group $\mathcal{MG}_{v_m}$.
+If $\mathcal{MG}_{v_m}$ is not empty, we warmstart the operation $e_{m}$ with the best performing model from the model group.
 
 To demonstrate with an example, after executing both the code in Listings \ref{listing-experiment-graph} and \ref{listing-reuse}, a new users submits the same code as in Listing \ref{listing-reuse}, with a different model hyperparameters (Line 12) shown in Listing \ref{listing-warmstarting}.
 \begin{lstlisting}[language=Python, firstnumber=12, caption= Workload with different hyperparameters,captionpos=b,label = {listing-warmstarting}]
