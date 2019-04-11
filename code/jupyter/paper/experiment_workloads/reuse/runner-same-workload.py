@@ -21,12 +21,12 @@ sys.path.append(ROOT_PACKAGE_DIRECTORY)
 from experiment_graph.execution_environment import ExecutionEnvironment as ee
 
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_same_workload'
+DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
 
 OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'
 EXPERIMENT = 'kaggle_home_credit'
-REP = 2
+REP = 1
 WORKLOAD = 'start_here_a_gentle_introduction'
 
 # unique identifier for the experiment run

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import cPickle as pickle
 import hashlib
+import gc
 
 from data_storage import DataStorage
 from datetime import datetime
@@ -50,7 +51,8 @@ class Node(object):
     def reapply_meta(self):
         raise Exception('Node class should not have been instantiated')
 
-    def getNotNone(self, nextnode, exist):
+    @staticmethod
+    def get_not_none(nextnode, exist):
         if exist is not None:
             return exist
         else:
@@ -71,7 +73,7 @@ class Node(object):
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=Agg.__name__)
-        return self.getNotNone(nextnode, exist)
+        return self.get_not_none(nextnode, exist)
 
     def generate_groupby_node(self, oper, args={}, v_id=None):
         if v_id is None:
@@ -84,7 +86,7 @@ class Node(object):
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=GroupBy.__name__)
-        return self.getNotNone(nextnode, exist)
+        return self.get_not_none(nextnode, exist)
 
     def generate_sklearn_node(self, oper, args={}, v_id=None):
         if v_id is None:
@@ -97,7 +99,7 @@ class Node(object):
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=SK_Model.__name__)
-        return self.getNotNone(nextnode, exist)
+        return self.get_not_none(nextnode, exist)
 
     def generate_dataset_node(self, oper, args={}, v_id=None, c_name=[], c_hash=[]):
         if v_id is None:
@@ -110,7 +112,7 @@ class Node(object):
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=Dataset.__name__)
-        return self.getNotNone(nextnode, exist)
+        return self.get_not_none(nextnode, exist)
 
     def generate_feature_node(self, oper, args={}, v_id=None, c_name='', c_hash=''):
         if v_id is None:
@@ -123,7 +125,7 @@ class Node(object):
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=type(nextnode).__name__)
-        return self.getNotNone(nextnode, exist)
+        return self.get_not_none(nextnode, exist)
 
     def generate_super_node(self, nodes, args={}):
         nextid = ''
@@ -276,10 +278,24 @@ class SuperNode(Node):
 
     def p_replace_columns(self, col_names):
         if isinstance(col_names, list):
-            return self.nodes[0].data().assign(
-                **dict(zip(col_names, [self.nodes[1].data()[a] for a in self.nodes[1].data()])))
+            assert len(col_names) == len(self.nodes[1].c_name)
+            c_names = copy.deepcopy(self.nodes[0].c_name)
+            c_hashes = copy.deepcopy(self.nodes[0].c_hash)
+            for i in range(len(col_names)):
+                if col_names[i] not in c_names:
+                    raise Exception('column {} does not exist in the dataset'.format(col_names[i]))
+                index = self.nodes[0].find_column_index(col_names[i])
+                c_hashes[index] = self.nodes[1].c_hash[i]
+            return c_names, c_hashes
         else:
-            return self.nodes[0].data().assign(**dict(zip([col_names], [self.nodes[1].data()])))
+            assert isinstance(self.nodes[1], Feature)
+            c_names = copy.deepcopy(self.nodes[0].c_name)
+            c_hashes = copy.deepcopy(self.nodes[0].c_hash)
+            if col_names not in c_names:
+                raise Exception('column {} does not exist in the dataset'.format(col_names))
+            index = self.nodes[0].find_column_index(col_names)
+            c_hashes[index] = self.nodes[1].c_hash
+            return c_names, c_hashes
 
     def p_corr_with(self):
         return self.nodes[0].data().corr(self.nodes[1].data())
@@ -345,6 +361,18 @@ class SuperNode(Node):
         new_columns = list(df.columns)
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
         ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        return new_columns, new_hashes
+
+    def p_align(self):
+        new_columns = []
+        new_hashes = []
+        current_columns = self.nodes[0].c_name
+        current_hashes = self.nodes[0].c_hash
+        for i in range(len(current_columns)):
+            if current_columns[i] in self.nodes[1].c_name:
+                new_columns.append(current_columns[i])
+                new_hashes.append(current_hashes[i])
+
         return new_columns, new_hashes
 
     # TODO: There may be a better way of hashing these so if the columns are copied and same operations are applied
@@ -561,6 +589,12 @@ class Feature(Node):
     def p_head(self, size=5):
         return self.hash_and_store_series('head{}'.format(size), self.data().head(size))
 
+    def fillna(self, value):
+        return self.generate_feature_node('fillna', {'value': value})
+
+    def p_fillna(self, value):
+        return self.hash_and_store_series('fill{}'.format(value), self.data().fillna(value))
+
     # combined node
     def concat(self, nodes):
         if type(nodes) == list:
@@ -603,6 +637,12 @@ class Feature(Node):
 
     def p_mean(self):
         return self.data().mean()
+
+    def median(self):
+        return self.generate_agg_node('median')
+
+    def p_median(self):
+        return self.data().median()
 
     def min(self):
         return self.generate_agg_node('min')
@@ -772,6 +812,20 @@ class Dataset(Node):
 
         else:
             raise Exception('Unsupported operation. Only project (column index) is supported')
+
+    def reset_index(self):
+        return self.generate_dataset_node('reset_index')
+
+    def p_reset_index(self):
+        df = self.data().reset_index()
+        new_column = df.columns[0]
+        new_column_data = df.iloc[0]
+        new_c_hash = self.md5(self.generate_uuid())
+        ExecutionEnvironment.data_storage.store_column(new_c_hash, new_column_data)
+        del df
+        del new_column_data
+        gc.collect()
+        return [new_column] + self.c_name, [new_c_hash] + self.c_hash
 
     def copy(self):
         return self.generate_dataset_node('copy', c_name=self.c_name, c_hash=self.c_hash)
@@ -952,13 +1006,32 @@ class Dataset(Node):
     def p_corr(self):
         return self.data().corr()
 
-    # TODO: Do we need to create special grouped nodes?
+    # TODO: is it OK to assume as_index is always false?
+    # we can recreate the original one anyway
     # For now we materialize the result as an aggregate node so everything will be stored inside the graph
     def groupby(self, col_names):
-        return self.generate_groupby_node('groupby', {'col_names': col_names})
+        return self.generate_groupby_node('groupby', {'col_names': col_names, 'as_index': False})
 
-    def p_groupby(self, col_names):
-        return self.data().groupby(col_names)
+    def p_groupby(self, col_names, as_index):
+        df = self.data().groupby(col_names, as_index=as_index)
+        if isinstance(col_names, str):
+            col_names = [col_names]
+        key = self.md5("".join(col_names))
+        new_key_columns = []
+        new_key_hashes = []
+        for c in col_names:
+            new_key_columns.append(c)
+            new_key_hashes.append(self.md5(self.get_c_hash(c) + 'groupkey' + key))
+
+        new_group_columns = []
+        new_group_hashes = []
+        for c in self.c_name:
+            # if it is , it's been added as part of the group key
+            if c not in col_names:
+                new_group_columns.append(c)
+                new_group_hashes.append(self.md5(self.get_c_hash(c) + 'group' + key))
+
+        return [df, new_key_columns, new_key_hashes, new_group_columns, new_group_hashes]
 
     # combined node
     def concat(self, nodes):
@@ -967,6 +1040,11 @@ class Dataset(Node):
         else:
             supernode = self.generate_super_node([self] + [nodes])
         return self.generate_dataset_node('concat', v_id=supernode.id)
+
+    # removes the columns that do not exist in the other dataframe
+    def align(self, other):
+        supernode = self.generate_super_node([self, other])
+        return self.generate_dataset_node('align', v_id=supernode.id)
 
     # dataframe merge operation operation of dataframes
     def merge(self, other, on, how='left'):
@@ -996,10 +1074,41 @@ class Dataset(Node):
         return self.generate_dataset_node('replace_columns', {'col_names': col_names}, v_id=supernode.id)
 
 
+# TODO: for now we are always generating randomized hashes for the generated aggregate columns
+# However, there should be a better way since we are losing some deduplication opportunities
+# e.g., if user performs groupby().count() on the same columns on two datasets, the results will be
+# duplicated and stored twice with different hashes
+# We should find a way to also store groupby nodes inside the data storage
+# this way we can generate consistent hashes
 class GroupBy(Node):
+
     def __init__(self, node_id, data_obj=None):
         Node.__init__(self, node_id)
+        # of the form (df, c_key_name, c_key_hash, c_group_name, c_group_hash)
         self.data_obj = data_obj
+
+    def project(self, columns):
+        return self.generate_groupby_node('project', {'columns': columns})
+
+    def p_project(self, columns):
+        data_object = self.data()
+        df = data_object[0]
+        key_columns = copy.deepcopy(data_object[1])
+        key_hashes = copy.deepcopy(data_object[2])
+        c_group_names = data_object[3]
+        c_group_hashes = data_object[4]
+        new_group_columns = []
+        new_group_hashes = []
+        if isinstance(columns, str):
+            columns = [columns]
+        for i in range(len(c_group_names)):
+            if c_group_names[i] in columns:
+                new_group_columns.append(c_group_names[i])
+                new_group_hashes.append(c_group_hashes[i])
+        return df[columns], key_columns, key_hashes, new_group_columns, new_group_hashes
+
+    def __getitem__(self, index):
+        return self.project(index)
 
     def data(self, verbose=0):
         if not self.computed:
@@ -1007,11 +1116,71 @@ class GroupBy(Node):
             self.computed = True
         return self.data_obj
 
+    def count(self):
+        return self.generate_dataset_node('count')
+
+    def p_count(self):
+        data_object = self.data()
+        df = data_object[0].count()
+        new_columns = copy.deepcopy(data_object[1])
+        new_hashes = copy.deepcopy(data_object[2])
+
+        c_group_names = data_object[3]
+        c_group_hashes = data_object[4]
+
+        # find the selected subset
+        for i in range(len(c_group_names)):
+            new_columns.append(c_group_names[i])
+            new_hashes.append(self.md5(c_group_hashes[i] + 'count'))
+        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        return new_columns, new_hashes
+
+    def agg(self, functions):
+        return self.generate_dataset_node('agg', {'functions': functions})
+
+    def p_agg(self, functions):
+        data_object = self.data()
+        # .reset_index() is essential as groupby (as_index=False) has no effect for agg function
+        df = self.data()[0].agg(functions).reset_index()
+        new_columns = copy.deepcopy(data_object[1])
+        new_hashes = copy.deepcopy(data_object[2])
+
+        c_group_names = data_object[3]
+        c_group_hashes = data_object[4]
+
+        # find the selected subset
+        for i in range(len(c_group_names)):
+            # Seems pandas automatically removes categorical variables for aggregations such as
+            # mean, sum, and ...
+            if c_group_names[i] in df.columns.levels[0]:
+                for level2column in df.columns.levels[1]:
+                    if level2column != '':
+                        new_columns.append(c_group_names[i] + '_' + level2column)
+                        new_hashes.append(self.md5(c_group_hashes[i] + level2column))
+
+        df.columns = new_columns
+        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df)
+        return new_columns, new_hashes
+
     def mean(self):
-        return self.generate_agg_node('mean')
+        return self.generate_dataset_node('mean')
 
     def p_mean(self):
-        return self.data().mean()
+        data_object = self.data()
+        df = data_object[0].mean()
+        new_columns = copy.deepcopy(data_object[1])
+        new_hashes = copy.deepcopy(data_object[2])
+
+        c_group_names = data_object[3]
+        c_group_hashes = data_object[4]
+
+        # find the selected subset
+        for i in range(len(c_group_names)):
+            new_columns.append(c_group_names[i])
+            new_hashes.append(self.md5(c_group_hashes[i] + 'mean'))
+
+        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        return new_columns, new_hashes
 
 
 class Agg(Node):

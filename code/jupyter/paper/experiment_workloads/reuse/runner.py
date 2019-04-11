@@ -7,56 +7,70 @@ The rest of the scripts will use the experiment graph constructed so far to for 
 """
 import os
 import uuid
+import sys
 from datetime import datetime
+from importlib import import_module
 
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
-ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment'
+sys.path.append(ROOT_PACKAGE_DIRECTORY)
+# Experiment Graph
+from experiment_graph.execution_environment import ExecutionEnvironment as ee
 
-OUTPUT_CSV = 'results/run_times_same_workload.csv'
+ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
+DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
+
+OUTPUT_CSV = 'results/run_times_different_workload.csv'
 RESULT_FOLDER = 'results'
 EXPERIMENT = 'kaggle_home_credit'
 # TODO: This should change to three different scripts
-WORKLOADS = ['workload_1', 'workload_1', 'workload_1']
+WORKLOADS = ['start_here_a_gentle_introduction', 'introduction_to_manual_feature_engineering']
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 
 for i in range(len(WORKLOADS)):
-    run_number = i+1
-    print 'Run Number {}'.format(run_number)
+    print 'Run Number {}'.format(i+1)
+
+    if os.path.isdir(DATABASE_PATH):
+        print 'Load Existing Experiment Graph!!'
+        execution_start = datetime.now()
+        ee.load_environment(DATABASE_PATH)
+        load_time = (datetime.now() - execution_start).total_seconds()
+    else:
+        load_time = 0
+        print 'No Experiment Graph Exists!!!'
     # Running Optimized Workload 1 and storing the run time
-    start = datetime.now()
-    print '{}-Start of the Optimized Workload'.format(start)
-    os.system(
-        "python {}/optimized/{}.py {} {} {} {} {} {}".format(EXPERIMENT,
-                                                             WORKLOADS[i],
-                                                             ROOT_PACKAGE_DIRECTORY,
-                                                             ROOT_DATA_DIRECTORY,
-                                                             DATABASE_PATH,
-                                                             # logs root directory
-                                                             RESULT_FOLDER,
-                                                             # experiment id for logging
-                                                             e_id,
-                                                             # run id for logging
-                                                             run_number))
-    end = datetime.now()
-    elapsed = (end - start).total_seconds()
-    print '{}-End of Optimized Workload'.format(end)
+    execution_start = datetime.now()
+    print '{}-Start of the Optimized Workload'.format(execution_start)
+    optimized_workload = import_module(EXPERIMENT + '.optimized.' + WORKLOADS[i])
+    model_training_time = optimized_workload.run(ee, ROOT_DATA_DIRECTORY)
+    execution_end = datetime.now()
+    elapsed = (execution_end - execution_start).total_seconds()
 
-    with open(OUTPUT_CSV, 'a') as the_file:
-        the_file.write('{},{},{},optimized,{},{}\n'.format(e_id, run_number, EXPERIMENT, WORKLOADS[i], elapsed))
-    # End of Optimized Workload 1
-
-    # # Running Baseline Workload 1 and storing the run time
     start = datetime.now()
-    print '{}-Start of the Baseline Workload'.format(start)
-    os.system("python {}/baseline/start_here_a_gentle_introduction.py {}".format(EXPERIMENT, ROOT_DATA_DIRECTORY))
-    end = datetime.now()
-    elapsed = (end - start).total_seconds()
-    print '{}-End of Baseline Workload'.format(end)
+    # Save the Graph to Disk
+    # TODO: Maybe we need some versioning mechanism later on
+    ee.save_environment(environment_folder=DATABASE_PATH, overwrite=True)
+    save_time = (datetime.now() - start).total_seconds()
+
+    print '{}-End of Optimized Workload'.format(execution_end)
 
     with open(OUTPUT_CSV, 'a') as the_file:
         the_file.write(
-            '{},{},{},baseline,{},{}\n'.format(e_id, run_number, EXPERIMENT, WORKLOADS[i], elapsed))
+            '{},{},{},{},optimized,{},{},{},{}\n'.format(e_id, i, EXPERIMENT, WORKLOADS[i],
+                                                         elapsed, model_training_time, load_time, save_time))
+    # End of Optimized Workload 1
+
+    # # Running Baseline Workload 1 and storing the run time
+    execution_start = datetime.now()
+    print '{}-Start of the Baseline Workload'.format(execution_start)
+    baseline_workload = import_module(EXPERIMENT + '.baseline.' + WORKLOADS[i])
+    baseline_workload.run(ROOT_DATA_DIRECTORY)
+    execution_end = datetime.now()
+    elapsed = (execution_end - execution_start).total_seconds()
+    print '{}-End of Baseline Workload'.format(execution_end)
+
+    with open(OUTPUT_CSV, 'a') as the_file:
+        the_file.write(
+            '{},{},{},{},baseline,{}\n'.format(e_id, i, EXPERIMENT, WORKLOADS[i], elapsed))
     # End of Baseline Workload 1

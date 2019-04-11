@@ -547,7 +547,132 @@ def run(execution_environment, root_data):
 
     feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
+    import lightgbm as lgb
+
+    def model(lgb_featres, test_features, encoding='ohe'):
+
+        """Train and test a light gradient boosting model using
+        cross validation.
+
+        Parameters
+        --------
+            features (pd.DataFrame):
+                dataframe of training features to use
+                for training a model. Must include the TARGET column.
+            test_features (pd.DataFrame):
+                dataframe of testing features to use
+                for making predictions with the model.
+            encoding (str, default = 'ohe'):
+                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label encoding
+                n_folds (int, default = 5): number of folds to use for cross validation
+
+        Return
+        --------
+            submission (pd.DataFrame):
+                dataframe with `SK_ID_CURR` and `TARGET` probabilities
+                predicted by the model.
+            feature_importances (pd.DataFrame):
+                dataframe with the feature importances from the model.
+            valid_metrics (pd.DataFrame):
+                dataframe with training and validation metrics (ROC AUC) for each fold and overall.
+
+        """
+
+        # Extract the ids
+        train_ids = lgb_featres['SK_ID_CURR']
+        test_ids = test_features['SK_ID_CURR']
+
+        # Extract the labels for training
+        labels = lgb_featres['TARGET']
+
+        # Remove the ids and target
+        lgb_featres = lgb_featres.drop(columns=['SK_ID_CURR', 'TARGET'])
+        test_features = test_features.drop(columns=['SK_ID_CURR'])
+
+        # One Hot Encoding
+        if encoding == 'ohe':
+            lgb_featres = lgb_featres.onehot_encode()
+            test_features = test_features.onehot_encode()
+
+            features_columns = lgb_featres.data().columns
+            test_features_columns = test_features.data().columns
+            for c in features_columns:
+                if c not in test_features_columns:
+                    lgb_featres = lgb_featres.drop(c)
+
+            # No categorical indices to record
+            cat_indices = 'auto'
+
+        # # Integer label encoding
+        # elif encoding == 'le':
+        #
+        #     # Create a label encoder
+        #     label_encoder = LabelEncoder()
+        #
+        #     # List for storing categorical indices
+        #     cat_indices = []
+        #
+        #     # Iterate through each column
+        #     for i, col in enumerate(lgb_featres):
+        #         if lgb_featres[col].dtype == 'object':
+        #             # Map the categorical features to integers
+        #             lgb_featres[col] = label_encoder.fit_transform(np.array(lgb_featres[col].astype(str)).reshape((-1,)))
+        #             test_features[col] = label_encoder.transform(
+        #                 np.array(test_features[col].astype(str)).reshape((-1,)))
+        #
+        #             # Record the categorical indices
+        #             cat_indices.append(i)
+
+        # Catch error if label encoding scheme is not valid
+        else:
+            raise ValueError("Encoding must be either 'ohe' or 'le'")
+
+        print('Training Data Shape: ', lgb_featres.shape().data())
+        print('Testing Data Shape: ', test_features.shape().data())
+
+        # Extract feature names
+        feature_names = list(lgb_featres.data().columns)
+
+        # Create the model
+        lgb_model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
+                                       class_weight='balanced', learning_rate=0.05,
+                                       reg_alpha=0.1, reg_lambda=0.1,
+                                       subsample=0.8, n_jobs=-1, random_state=50)
+
+        model = lgb_featres.fit_sk_model_with_labels(lgb_model, labels, custom_args={'eval_metric': 'auc',
+                                                                                     'categorical_feature': cat_indices,
+                                                                                     'verbose': 200})
+
+        # Record the best iteration
+        best_iteration = model.data().best_iteration_
+
+        # Make predictions
+        test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]
+
+        test_predictions.setname('TARGET')
+        # Make the submission dataframe
+        submission = test_ids.concat(test_predictions)
+
+        feature_importances = model.feature_importances(feature_names)
+
+        return feature_importances
+
+    fi = model(app_train, app_test)
+    fi_sorted = plot_feature_importances(fi)
+
+    app_train_domain = app_train_domain.add_columns('TARGET', train_labels)
+
+    # Test the domain knowledge features
+    fi_domain = model(app_train_domain, app_test_domain)
+    fi_sorted = plot_feature_importances(fi_domain)
 
     # the total time is captured by the profiler,
     # here we return the graph load, save, and the total time the system spent in training models
-    return execution_environment.time_manager['model-training']
+    return execution_environment.time_manager.get('model-training', 0)
+
+
+from experiment_graph.execution_environment import ExecutionEnvironment as ee
+
+ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+run(ee, root_data)

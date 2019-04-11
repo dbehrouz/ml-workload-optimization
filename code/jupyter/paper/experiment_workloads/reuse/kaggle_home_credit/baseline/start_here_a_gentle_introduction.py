@@ -512,6 +512,124 @@ def run(root_data):
 
     feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
+    import lightgbm as lgb
+
+    def model(features, test_features, encoding='ohe', n_folds=5):
+
+        """Train and test a light gradient boosting model using
+        cross validation.
+
+        Parameters
+        --------
+            features (pd.DataFrame):
+                dataframe of training features to use
+                for training a model. Must include the TARGET column.
+            test_features (pd.DataFrame):
+                dataframe of testing features to use
+                for making predictions with the model.
+            encoding (str, default = 'ohe'):
+                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label encoding
+                n_folds (int, default = 5): number of folds to use for cross validation
+
+        Return
+        --------
+            submission (pd.DataFrame):
+                dataframe with `SK_ID_CURR` and `TARGET` probabilities
+                predicted by the model.
+            feature_importances (pd.DataFrame):
+                dataframe with the feature importances from the model.
+            valid_metrics (pd.DataFrame):
+                dataframe with training and validation metrics (ROC AUC) for each fold and overall.
+
+        """
+
+        # Extract the ids
+        train_ids = features['SK_ID_CURR']
+        test_ids = test_features['SK_ID_CURR']
+
+        # Extract the labels for training
+        labels = features['TARGET']
+
+        # Remove the ids and target
+        features = features.drop(columns=['SK_ID_CURR', 'TARGET'])
+        test_features = test_features.drop(columns=['SK_ID_CURR'])
+
+        # One Hot Encoding
+        if encoding == 'ohe':
+            features = pd.get_dummies(features)
+            test_features = pd.get_dummies(test_features)
+
+            # Align the dataframes by the columns
+            features, test_features = features.align(test_features, join='inner', axis=1)
+
+            # No categorical indices to record
+            cat_indices = 'auto'
+
+        # Integer label encoding
+        elif encoding == 'le':
+
+            # Create a label encoder
+            label_encoder = LabelEncoder()
+
+            # List for storing categorical indices
+            cat_indices = []
+
+            # Iterate through each column
+            for i, col in enumerate(features):
+                if features[col].dtype == 'object':
+                    # Map the categorical features to integers
+                    features[col] = label_encoder.fit_transform(np.array(features[col].astype(str)).reshape((-1,)))
+                    test_features[col] = label_encoder.transform(
+                        np.array(test_features[col].astype(str)).reshape((-1,)))
+
+                    # Record the categorical indices
+                    cat_indices.append(i)
+
+        # Catch error if label encoding scheme is not valid
+        else:
+            raise ValueError("Encoding must be either 'ohe' or 'le'")
+
+        print('Training Data Shape: ', features.shape)
+        print('Testing Data Shape: ', test_features.shape)
+
+        # Extract feature names
+        feature_names = list(features.columns)
+
+        # Convert to np arrays
+        # features = np.array(features)
+        # test_features = np.array(test_features)
+
+        # Create the model
+        model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
+                                   class_weight='balanced', learning_rate=0.05,
+                                   reg_alpha=0.1, reg_lambda=0.1,
+                                   subsample=0.8, n_jobs=-1, random_state=50)
+
+        # Train the model
+        model.fit(features, labels, eval_metric='auc',
+                  categorical_feature=cat_indices,
+                  verbose=200)
+
+        # Record the best iteration
+        best_iteration = model.best_iteration_
+        predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
+
+        # Record the feature importances
+        feature_importance_values = model.feature_importances_
+
+        feature_importances = pd.DataFrame({'feature': feature_names, 'importance': feature_importance_values})
+
+        return feature_importances
+
+    fi = model(app_train, app_test)
+    fi_sorted = plot_feature_importances(fi)
+
+    app_train_domain['TARGET'] = train_labels
+
+    # Test the domain knowledge features
+    fi_domain = model(app_train_domain, app_test_domain)
+    fi_sorted = plot_feature_importances(fi_domain)
+
     # it's difficult to capture model training time
     # as many of the operations are fit_transform
     return 0

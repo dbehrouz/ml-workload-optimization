@@ -12,3 +12,7 @@ CAC43535,2,kaggle-home-credit,baseline,workload_1,340.472448
 68F9F622,1,kaggle_home_credit,workload_1,baseline,360.336187
 68F9F622,2,kaggle_home_credit,workload_1,optimized,71.991079,245.905068,19.404105,19.648497
 68F9F622,2,kaggle_home_credit,workload_1,baseline,392.226145
+A50A2943,1,kaggle_home_credit,start_here_a_gentle_introduction,optimized,103.427679,16.168963,19.929353,33.997686
+DAD859FB,1,kaggle_home_credit,optimized,start_here_a_gentle_introduction,1.658852
+DAD859FB,1,kaggle_home_credit,baseline,start_here_a_gentle_introduction,1.328579
+DAD859FB,2,kaggle_home_credit,optimized,introduction_to_manual_feature_engineering,1.231548
