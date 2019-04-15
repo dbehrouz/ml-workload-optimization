@@ -1,13 +1,27 @@
 \begin{abstract}
-Machine learning workloads have varying characteristics.
-Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.
-Some involve fewer users, typically experts, working together to solve a task.
-For example, a team of data scientists in a company trying to design a recommender system based on the available training data.
-Both workloads are interactive and require many iterations to improve the solution.
-In such scenarios, communication between the users involved is not optimal and as a result, many repetitions may occur.
-Repetitions can be of the form of repeated data preprocessing, hyperparameter search, and model training.
+Collaborative data science platforms, such as Google Colaboratory and Kaggle, affected the way users solve machine learning tasks.
+Instead of solving a machine learning task in isolation, users write their machine learning workloads and execute them on these platforms and share the workloads with other users.
+This enables other users to learn from, modify, and make improvements to the existing workloads.
+However, this collaborative approach suffers from two bottlenecks. 
+First, only the scripts, the final model, or the final preprocessed data is made available for other users. 
+All the intermediate data artifacts, i.e., generated features, transformed data columns, and models with underperforming hyperparameters can only be retrieved by re-executing the scripts to reconstruct the desired artifact. 
+Second, storing all the intermediate artifacts for quick access will require massive storage units.
 
-Using experiment databases, where a log of previous machine learning experiments is stored, we propose a solution that utilizes the information in the experiment database to improve the process of design and execution of machine learning workloads.
-Specifically, we utilize the logs in the experiment databases to reduce the data processing and model training time by caching and reusing the preprocessed data and trained models.
-Moreover, we leverage the logs to enhance the hyperparameter optimization process and provide the users (both expert and novice) with better hyperparameter settings in a shorter amount of time.
+The contributions of this paper are two-fold.
+First, we propose an algorithm for selecting and materializing the promising artifacts in a graph that captures the relationship between the artifacts.
+The algorithm combines general and machine learning specific metrics to decide on what artifact to materialize.
+General metrics include the run-time of the operations and access frequency of the artifacts.
+Machine learning specific metrics include the \hl{quality of the features in the artifact} and the quality of the machine learning model resulting from the artifact.
+Second, using the graph, we propose three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads.
+%Machine learning workloads have varying characteristics.
+%Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.
+%Some involve fewer users, typically experts, working together to solve a task.
+%For example, a team of data scientists in a company trying to design a recommender system based on the available training data.
+%Both workloads are interactive and require many iterations to improve the solution.
+%In such scenarios, communication between the users involved is not optimal and as a result, many repetitions may occur.
+%Repetitions can be of the form of repeated data preprocessing, hyperparameter search, and model training.
+%
+%Using experiment databases, where a log of previous machine learning experiments is stored, we propose a solution that utilizes the information in the experiment database to improve the process of design and execution of machine learning workloads.
+%Specifically, we utilize the logs in the experiment databases to reduce the data processing and model training time by caching and reusing the preprocessed data and trained models.
+%Moreover, we leverage the logs to enhance the hyperparameter optimization process and provide the users (both expert and novice) with better hyperparameter settings in a shorter amount of time.
 \end{abstract}
