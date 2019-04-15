@@ -481,10 +481,10 @@ class Feature(Node):
     #     self.update_meta()
     #
     def setname(self, name):
-        # we should materialize the data before we can change the column name
-        # TODO: Is this the best way?
-        self.data()
-        self.c_name = name
+        return self.generate_feature_node('setname', {'name': name})
+
+    def p_setname(self, name):
+        return name, self.c_hash
 
     def math(self, oper, other):
         # If other is a Feature Column
@@ -770,9 +770,10 @@ class Dataset(Node):
         #     self.update_meta()
 
     def set_columns(self, columns):
-        self.data()
-        assert len(columns) == len(self.c_name)
-        self.c_name = columns
+        return self.generate_dataset_node('set_columns', {'columns': columns})
+
+    def p_set_columns(self, columns):
+        return columns, self.c_hash
 
     def project(self, columns):
         if type(columns) in [str, int]:

@@ -16,3 +16,9 @@ A50A2943,1,kaggle_home_credit,start_here_a_gentle_introduction,optimized,103.427
 DAD859FB,1,kaggle_home_credit,optimized,start_here_a_gentle_introduction,1.658852
 DAD859FB,1,kaggle_home_credit,baseline,start_here_a_gentle_introduction,1.328579
 DAD859FB,2,kaggle_home_credit,optimized,introduction_to_manual_feature_engineering,1.231548
+2912CC0C,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,319.386427,24.988717,0,64.029419
+2912CC0C,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,506.976957
+C6EB2EDF,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,340.663461,26.304265,0,75.935918
+C6EB2EDF,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,503.557252
+C6EB2EDF,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,28.030433,0,68.455228,81.981286
+C6EB2EDF,2,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,257.94372

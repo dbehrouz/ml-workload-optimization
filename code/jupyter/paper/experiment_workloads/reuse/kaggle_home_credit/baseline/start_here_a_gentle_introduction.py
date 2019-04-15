@@ -13,6 +13,8 @@ import os
 import warnings
 
 # plotting libraries
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
 import numpy as np
@@ -387,7 +389,7 @@ def run(root_data):
     from sklearn.ensemble import RandomForestClassifier
 
     # Make the random forest classifier
-    random_forest = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
+    random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
 
     # Train on the training data
     random_forest.fit(train, train_labels)
@@ -633,3 +635,15 @@ def run(root_data):
     # it's difficult to capture model training time
     # as many of the operations are fit_transform
     return 0
+
+
+execution_start = datetime.now()
+
+ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+run(root_data)
+
+execution_end = datetime.now()
+elapsed = (execution_end - execution_start).total_seconds()
+
+print('finished execution in {} seconds'.format(elapsed))

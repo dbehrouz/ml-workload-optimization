@@ -10,6 +10,8 @@ import os
 import warnings
 
 # matplotlib and seaborn for plotting
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
 # numpy and pandas for data manipulation
@@ -281,7 +283,7 @@ def run(execution_environment, root_data):
         'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH'
     ])
 
-    poly_features.set_columns(new_names)
+    poly_features = poly_features.set_columns(new_names)
 
     # Add in the target
     poly_features = poly_features.add_columns('TARGET', poly_target)
@@ -293,7 +295,7 @@ def run(execution_environment, root_data):
     print(poly_corrs.head(10))
     print(poly_corrs.tail(5))
 
-    poly_features_test.set_columns(new_names)
+    poly_features_test = poly_features_test.set_columns(new_names)
 
     # Merge polynomial features into training dataframe
     poly_features = poly_features.add_columns('SK_ID_CURR', app_train['SK_ID_CURR'])
@@ -421,7 +423,7 @@ def run(execution_environment, root_data):
     from sklearn.ensemble import RandomForestClassifier
 
     # Make the random forest classifier
-    sk_random_forest = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
+    sk_random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
 
     # Train on the training data
     random_forest = train.fit_sk_model_with_labels(sk_random_forest, train_labels)
@@ -649,7 +651,7 @@ def run(execution_environment, root_data):
         # Make predictions
         test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]
 
-        test_predictions.setname('TARGET')
+        test_predictions = test_predictions.setname('TARGET')
         # Make the submission dataframe
         submission = test_ids.concat(test_predictions)
 
@@ -673,6 +675,15 @@ def run(execution_environment, root_data):
 
 from experiment_graph.execution_environment import ExecutionEnvironment as ee
 
+execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+DATABASE_PATH = root_data + '/environment_different_workload'
+# ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
+# ee.save_environment(DATABASE_PATH)
+
+execution_end = datetime.now()
+elapsed = (execution_end - execution_start).total_seconds()
+
+print('finished execution in {} seconds'.format(elapsed))

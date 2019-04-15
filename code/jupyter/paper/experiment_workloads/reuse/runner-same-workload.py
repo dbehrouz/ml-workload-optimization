@@ -26,8 +26,8 @@ DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
 OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'
 EXPERIMENT = 'kaggle_home_credit'
-REP = 1
-WORKLOAD = 'start_here_a_gentle_introduction'
+REP = 2
+WORKLOAD = 'introduction_to_manual_feature_engineering'
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]

@@ -9,6 +9,8 @@
 import warnings
 
 # matplotlib and seaborn for plotting
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
 import pandas as pd
@@ -27,15 +29,14 @@ def run(execution_environment, root_data):
     bureau.head().data()
 
     previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count()
-    previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
+    previous_loan_counts = previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
     previous_loan_counts.head().data()
 
     # Join to the training dataframe
     train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
     train = train.merge(previous_loan_counts, on='SK_ID_CURR', how='left')
 
-    train = train.replace_columns('previous_loan_counts',
-                                  train['previous_loan_counts'].fillna(0))
+    train = train.replace_columns('previous_loan_counts', train['previous_loan_counts'].fillna(0))
     train.head().data()
 
     # Plots the distribution of a variable colored by value of the target
@@ -78,7 +79,7 @@ def run(execution_environment, root_data):
             columns.append('bureau_{}'.format(c))
         else:
             columns.append(c)
-    bureau_agg.set_columns(columns)
+    bureau_agg = bureau_agg.set_columns(columns)
     bureau_agg.head().data()
 
     # Merge with the training data
@@ -143,8 +144,7 @@ def run(execution_environment, root_data):
         for c in columns:
             if c != group_var:
                 column_names.append('{}_{}'.format(df_name, c))
-        agg.set_columns(column_names)
-        return agg
+        return agg.set_columns(column_names)
 
     bureau_agg_new = agg_numeric(bureau.drop(columns=['SK_ID_BUREAU']), group_var='SK_ID_CURR', df_name='bureau')
     bureau_agg_new.head().data()
@@ -224,8 +224,7 @@ def run(execution_environment, root_data):
             if c != group_var:
                 column_names.append('{}_{}'.format(df_name, c))
 
-        categorical.set_columns(column_names)
-        return categorical
+        return categorical.set_columns(column_names)
 
     bureau_counts = count_categorical(bureau, group_var='SK_ID_CURR', df_name='bureau')
     bureau_counts.head().data()
@@ -525,7 +524,7 @@ def run(execution_environment, root_data):
         # Make predictions
         test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]
 
-        test_predictions.setname('TARGET')
+        test_predictions = test_predictions.setname('TARGET')
         # Make the submission dataframe
         submission = test_ids.concat(test_predictions)
 
@@ -600,9 +599,15 @@ def run(execution_environment, root_data):
 
 from experiment_graph.execution_environment import ExecutionEnvironment as ee
 
+execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = root_data + '/environment_different_workload'
-ee.load_environment(DATABASE_PATH)
+# ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
-#ee.save_environment(DATABASE_PATH)
+# ee.save_environment(DATABASE_PATH)
+
+execution_end = datetime.now()
+elapsed = (execution_end - execution_start).total_seconds()
+
+print('finished execution in {} seconds'.format(elapsed))
