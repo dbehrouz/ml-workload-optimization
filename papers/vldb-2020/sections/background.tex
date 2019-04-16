@@ -52,23 +52,3 @@ As a result, users can avoid executing data transformations or model training op
 Moreover, experiment databases enable reproducibility and validation of results.
 For example, users can query information about the environment and list of operations in a specific workload.
 As a result, users can re-execute the workload and compare the results.
-
-\subsection{Improved Use Case}
-By utilizing an experiment database, we plan to optimize a new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{../images/improved-use-case}
-\caption{Utilizing Experiment Databases in the infrastructure of Kaggle}
-\label{improved-use-case}
-\end{figure}
-
-Figure \ref{improved-use-case} shows how we utilize the experiment database in the Kaggle Infrastructure. 
-The workflow is as follows.
-Before executing a kernel (workload), first, an optimizer component analyzes the workload.
-Then, the optimizer searches for optimization opportunities by querying the experiment database.
-For example, if a new kernel is trying to standardize the dataset or perform a model training, 
-the optimizer queries the experiment database to find out if other users have already executed the operations.
-Based on the result of the query, the optimizer then decides whether to retrieve the standardized data or the model from the experiment database or execute the operations in the kernel.
-
-In the next sections, we first describe how we utilize the experiment database and what types of optimizations an experiment database enables us to perform.

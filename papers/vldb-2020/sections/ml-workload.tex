@@ -1,4 +1,4 @@
-\section{Machine Learning Workloads} \label{sec-ml-workloads}
+\section{ML Workload Optimizations} \label{sec-ml-workloads}
 In this section, we first describe the common types of operations in machine learning workloads.
 Then, we discuss how to capture and store the operations in the experiment database.
 We also introduce a materialization strategy for only storing the generated data artifacts during the execution of a workload.
@@ -41,7 +41,7 @@ A hyperparameter tuning operation is defined by a budget and a search method.
 The budget specifies how many models with different hyperparameter values the operation should train and the search method specifies what search strategy should be incorporated.
 We limit our focus to popular search methods, namely, grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
 
-\subsection{Graph Representation}\label{sub-graph-construction}
+\subsection{Experiment Graph Representation}\label{sub-graph-construction}
 To efficiently apply our optimizations, we utilize a graph data structure, called the experiment graph, to store the meta-data and artifacts of the machine learning workloads.
 Let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the workload.
 Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
@@ -117,97 +117,27 @@ This is a critical step for our materialization algorithm in Section \ref{subsec
 It is important to note that based our definition of a task in Section \ref{sec-introduction} we the workloads belong to multiple different tasks, the constructed graph will contain one connected component for every task.
 In the next sections, we assume that the experiment graph contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
 
-\subsection{Materialization of the Experiment Graph}\label{subsec-materialization}
-Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
-For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, one of the popular scripts that analyzes a dataset of 150 MB, generates up to 17 GB of artifacts.
-Therefore, materializing every artifact under limited storage is not feasible.
-In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage, a modified version of the algorithm presented by bhattacherjee et al. \cite{bhattacherjee2015principles}.
-The goal of the algorithm is to materialize the artifacts that result in the lowest weighted recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-We define $WC$ as the function that computes the weighted recreation cost of the graph $\mathcal{G}$, given the set of materialized vertices $\mathcal{MV}$, where  
-\[
-WC(\mathcal{G}, \mathcal{MV}) =  \sum\limits_{e \in \{e' \in \mathcal{E}  \lvert dest(e') \notin \mathcal{MV}\}}  e.f \times e.t
-\]
-and $dest(e)$ represents the destination vertex of the edge $e$.
-The weighted recreation cost indicates how much time do we need to spend to execute all the operations, taking into account the repeated executions, in the graph.
-For un-materialized artifacts, we must consider the frequency of the operations that produce the artifact.
-For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ and the operation \textit{vectorizer.f\_t} has a frequency of 2, we must consider both executions of the operation when computing the weighted cost.
-Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
-%\todo[inline]{show that it is NP hard and cite \cite{bhattacherjee2015principles} and state the differences in their work and solution and ours}
-%Bhattacherjee et al. \cite{bhattacherjee2015principles} tackle a similar problem and prove that the problem is NP-hard.
-%They provide a greedy solution for the problem as well.
-%However, there differences in both the use cases and problem formulation that make their solution not feasible in our case.
-
-\begin{algorithm}[h]
-\caption{Materialization of Artifacts}\label{algorithm-materialization}
-\begin{algorithmic}[1]
-\Require  $\mathcal{G(V,E)}=$ experiment graph, $\mathcal{B}=$ storage limit
-\Ensure $\mathcal{MV}=$ set of materialized artifacts
-\State $T=v_0.size$, $\mathcal{MV} =\{v_0\}$
-\Do 
-	\State $\mathcal{CV} = \{v \in \mathcal{V} \lvert v \notin \mathcal{MV}, T + v.s \leq \mathcal{B}\}$
-	\State $v^* = \argmax\limits_{v \in \mathcal{CV}} \tfrac{\rho(\mathcal{G}, v)}{v.s}$
-	\State $\mathcal{MV} = \mathcal{MV} \cup \{v^*\}$
-	\State $T = T + v^*.size$
-\DoWhile{$\mathcal{CV} \neq \emptyset$}
-\end{algorithmic}
-\end{algorithm}
-Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
-First, we start by initializing the materialized vertices set ($\mathcal{MV}$) to contain the root artifact ($v_0$) which represents the raw dataset.
-This is essential as many of the feature engineering and model building operations are not invertible.
-As a result, we cannot reconstruct the raw dataset if it is not materialized.
-Then, while the storage limit is not reached, we materialize vertices with the maximum value of weighted recreation cost over size.
-We compute the weighted recreation cost ($\rho$) of the vertex $v$ as, 
-\[
-\rho(\mathcal{G}, v) = \alpha(\mathcal{G}, v) \times \sum\limits_{e \in path(\mathcal{G}, v_0, v)}  e.t
-\]
-where $\alpha(\mathcal{G}, v)$ represents the access frequency of the vertex $v$ which is the same as frequency of the edge (or any of the edges in case of merge operation) connected to $v$.
-The set $path(\mathcal{G}, v_0, v)$ represents the set of all edges from the root node to the vertex $v$. 
-For example, in Figure \ref{fig-materialization-example}a, the recreation cost of $v_4$ is $3 \times (0 + 0 + 25 + 1 + 1) = 81$.
-The ratio of the weighted recreation cost over size has the unit second per megabyte.
-For example, the ratio 10 s/mb for an artifact, indicates that we need to spend 10 seconds to recreate 1 megabyte of the artifact.
-Figure \ref{fig-materialization-example} shows an example of the materialization process when the storage capacity is 55.
-For $v_0$ we do not compute $\rho$ as $v_0$ is always materialized.
+\subsection{Workload Optimization through Experiment Graph}
+By utilizing an experiment database, we plan to optimize a new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
 
 \begin{figure}
-\begin{subfigure}{0.5\linewidth}
 \centering
-\input{../images/tikz/graph-mat-step-1.tex}
-\caption{Original Graph}
-\end{subfigure}%
-\begin{subfigure}{0.5\linewidth}
-\centering
-\input{../images/tikz/graph-mat-step-2.tex}
-\caption{Materialized Graph}
-\end{subfigure}
-\begin{subfigure}{\linewidth}
-\setlength\tabcolsep{3.5pt} % This is to ensure the table does not go out of bound
-\begin{tabular}{l | | >{\bfseries}r | r  |>{\bfseries}r | r | r | >{\bfseries}r | >{\bfseries}r | >{\bfseries}r |>{\bfseries}r }
-\hline
-\textbf{vertex} & $\boldsymbol{v_0}$ & $v_1$ & $\boldsymbol{v_2}$ & $v_3$ & $v_4$ & $\boldsymbol{v_5}$ & $\boldsymbol{v_6}$ & $\boldsymbol{v_7}$ &$\boldsymbol{v_8}$ \\
-\hline
-\textbf{size (MB)}    & 10 & 8 & 2 & 40 & 42 & 1 & 30 & 2   & 3        \\
-\textbf{$\boldsymbol{\rho}$ (s)} & ---   & 3 & 3 & 78 & 81 & 52 & 141 & 107 & 154	  \\
-\textbf{ratio}& ---   & 0.37 & 1.5 & 1.95 & 1.93 & 52 & 4.7 & 53.5 & 51.3	\\
-\hline
-\end{tabular}
-\caption{List of vertices, their sizes, recreation costs, and the cost over size ratio (Bold vertices are materialized).}
-\end{subfigure}
-\caption{Artifact materialization based on Algorithm \ref{algorithm-materialization} when storage capacity is 55 (MB)}
-\label{fig-materialization-example}
+\includegraphics[width=\columnwidth]{../images/improved-use-case}
+\caption{Utilizing Experiment Databases in the infrastructure of Kaggle}
+\label{improved-use-case}
 \end{figure}
 
-\subsubsection{The Effect of Model Quality on the Materialization Decision}
-\todo[inline]{For this I need to design experiments to check if it has a positive impact. If we don't have space, then this will be moved to future work.}
-Since the goal of all the workloads in the experiment graph is to solve the same task (as described in Section \ref{sec-introduction}), all the machine learning models will be evaluated using the same quality metric.
-Therefore, we can utilize the quality of the model in the materialization algorithm.
-We propose a simple method for utilizing the model quality in the materialization decision algorithm.
-We start by adding a new attribute, $q$, to every edge.
-The new attribute is computed as follows.
-If the edge $e$ belongs to no path that leads to a predictive model, we assign $q$ to the average quality of all the predictive models in the experiment graph.
-If $e$ belongs to only one path that leads to a predictive model, then we assign $q$ to the quality of the model.
-If $e$ belongs to multiple paths that lead to different predictive models, we assign $q$ to the quality of the model with the maximum quality among all the models.
-After computing $q$, we include it in the computation of $\rho$, by multiplying $e.q$ by $e.t$ in the summation. 
+Figure \ref{improved-use-case} shows how we utilize the experiment database in the Kaggle Infrastructure. 
+The workflow is as follows.
+Before executing a kernel (workload), first, an optimizer component analyzes the workload.
+Then, the optimizer searches for optimization opportunities by querying the experiment database.
+For example, if a new kernel is trying to standardize the dataset or perform a model training, 
+the optimizer queries the experiment database to find out if other users have already executed the operations.
+Based on the result of the query, the optimizer then decides whether to retrieve the standardized data or the model from the experiment database or execute the operations in the kernel.
 
+In the next sections, we first describe how we utilize the experiment database and what types of optimizations an experiment database enables us to perform.
+
+\todo[inline]{should be merged with previous section}
 \subsection{Optimization Workflow}
 Figure \ref{fig-system-workflow} shows the workflow of our system.
 First, we transform the workload into its graph representation.
