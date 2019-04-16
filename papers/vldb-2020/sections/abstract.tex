@@ -1,18 +1,16 @@
 \begin{abstract}
 Collaborative data science platforms, such as Google Colaboratory and Kaggle, affected the way users solve machine learning tasks.
-Instead of solving a machine learning task in isolation, users write their machine learning workloads and execute them on these platforms and share the workloads with other users.
+Instead of solving a task in isolation, users write their machine learning workloads and execute them on these platforms and share the workloads with others.
 This enables other users to learn from, modify, and make improvements to the existing workloads.
 However, this collaborative approach suffers from two bottlenecks. 
-First, only the scripts, the final model, or the final preprocessed data is made available for other users. 
-All the intermediate data artifacts, i.e., generated features, transformed data columns, and models with underperforming hyperparameters can only be retrieved by re-executing the scripts to reconstruct the desired artifact. 
-Second, storing all the intermediate artifacts for quick access will require massive storage units.
+First, storing all the artifacts, such as raw datasets, generated features, and models with their hyperparameters, requires massive storage units.
+As a result, only some of artifacts such as, scripts, operations, and models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
+Second, even if all the artifacts are stored, manually looking for specific artifacts is time-consuming.
 
 The contributions of this paper are two-fold.
-First, we propose an algorithm for selecting and materializing the promising artifacts in a graph that captures the relationship between the artifacts.
-The algorithm combines general and machine learning specific metrics to decide on what artifact to materialize.
-General metrics include the run-time of the operations and access frequency of the artifacts.
-Machine learning specific metrics include the \hl{quality of the features in the artifact} and the quality of the machine learning model resulting from the artifact.
-Second, using the graph, we propose three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads.
+First, we propose algorithms for selecting and materializing the artifacts with a high expected rate of future reuse and store all the artifacts in a graph.
+The algorithms combine general metrics, such as access frequency and size, and machine learning specific metrics, such as feature and model quality, to decide on what artifact to materialize.
+Second, using the graph, we propose three optimizations, namely reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads.
 %Machine learning workloads have varying characteristics.
 %Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.
 %Some involve fewer users, typically experts, working together to solve a task.
