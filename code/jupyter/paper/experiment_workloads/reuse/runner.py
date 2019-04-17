@@ -14,7 +14,7 @@ from importlib import import_module
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 sys.path.append(ROOT_PACKAGE_DIRECTORY)
 # Experiment Graph
-from experiment_graph.execution_environment import ExecutionEnvironment as ee
+from experiment_graph.execution_environment import ExecutionEnvironment
 
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
@@ -29,8 +29,8 @@ WORKLOADS = ['start_here_a_gentle_introduction', 'introduction_to_manual_feature
 e_id = uuid.uuid4().hex.upper()[0:8]
 
 for i in range(len(WORKLOADS)):
-    print 'Run Number {}'.format(i+1)
-
+    print 'Run Number {}'.format(i + 1)
+    ee = ExecutionEnvironment()
     if os.path.isdir(DATABASE_PATH):
         print 'Load Existing Experiment Graph!!'
         execution_start = datetime.now()

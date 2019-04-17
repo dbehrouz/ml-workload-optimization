@@ -8,7 +8,7 @@ import cPickle as pickle
 import hashlib
 import gc
 
-from data_storage import DataStorage
+from data_storage import DedupedStorageManager, NaiveStorageManager, StorageManager
 from datetime import datetime
 from execution_graph import ExecutionGraph
 
@@ -155,7 +155,7 @@ class Node(object):
 
     @staticmethod
     def store_dataframe(columns, df):
-        ExecutionEnvironment.data_storage.store_dataframe(columns, df)
+        ExecutionEnvironment.data_storage.store_dataset(columns, df)
 
     @staticmethod
     def store_feature(column, series):
@@ -177,7 +177,7 @@ class Node(object):
         if c_hash is None:
             c_hash = self.c_hash
         new_c_hash = [(self.md5(v + func_name)) for v in c_hash]
-        ExecutionEnvironment.data_storage.store_dataframe(new_c_hash, df[c_name])
+        ExecutionEnvironment.data_storage.store_dataset(new_c_hash, df[c_name])
         return c_name, new_c_hash
 
     def hash_and_store_series(self, func_name, series, c_name=None, c_hash=None):
@@ -221,7 +221,7 @@ class SuperNode(Node):
         df = pd.DataFrame(model.transform(dataset_data))
         new_columns = df.columns
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def p_fit_sk_model_with_labels(self, model, custom_args):
@@ -246,7 +246,7 @@ class SuperNode(Node):
             c_name = [i for i in range(df.shape[1])]
             c_hash = [self.md5(self.generate_uuid()) for c in c_name]
         d = pd.DataFrame(df, columns=c_name)
-        ExecutionEnvironment.data_storage.store_dataframe(c_hash, d)
+        ExecutionEnvironment.data_storage.store_dataset(c_hash, d)
         return c_name, c_hash
 
     def p_filter_with(self):
@@ -254,8 +254,6 @@ class SuperNode(Node):
                                       self.nodes[0].data()[self.nodes[1].data()], self.nodes[0].c_name,
                                       self.nodes[0].c_hash)
 
-    # TODO: seems this function is being called more than once
-    # Maybe for every function it's the case. I should investiage this
     def p_add_columns(self, col_names):
         # # already exists on the data storage
         # current_map = self.nodes[0].map
@@ -273,7 +271,8 @@ class SuperNode(Node):
         c_names.append(col_names)
         c_hash = copy.deepcopy(self.nodes[0].c_hash)
         c_hash.append(copy.deepcopy(self.nodes[1].c_hash))
-
+        data = pd.concat([self.nodes[0].data(), self.nodes[1].data()], axis=1)
+        ExecutionEnvironment.data_storage.store_dataset(c_hash, data)
         return c_names, c_hash
 
     def p_replace_columns(self, col_names):
@@ -286,7 +285,6 @@ class SuperNode(Node):
                     raise Exception('column {} does not exist in the dataset'.format(col_names[i]))
                 index = self.nodes[0].find_column_index(col_names[i])
                 c_hashes[index] = self.nodes[1].c_hash[i]
-            return c_names, c_hashes
         else:
             assert isinstance(self.nodes[1], Feature)
             c_names = copy.deepcopy(self.nodes[0].c_name)
@@ -295,7 +293,11 @@ class SuperNode(Node):
                 raise Exception('column {} does not exist in the dataset'.format(col_names))
             index = self.nodes[0].find_column_index(col_names)
             c_hashes[index] = self.nodes[1].c_hash
-            return c_names, c_hashes
+        d1 = self.nodes[0].data()
+        d2 = self.nodes[1].data()
+        d1[col_names] = d2
+        ExecutionEnvironment.data_storage.store_dataset(c_hashes, d1[c_names])
+        return c_names, c_hashes
 
     def p_corr_with(self):
         return self.nodes[0].data().corr(self.nodes[1].data())
@@ -312,6 +314,8 @@ class SuperNode(Node):
                 c_hash = c_hash + d.c_hash
             else:
                 raise 'Cannot concatane object of type: {}'.format(type(d))
+        data = pd.concat([self.nodes[0].data(), self.nodes[1].data()], axis=1)
+        ExecutionEnvironment.data_storage.store_dataset(c_hash, data)
         return c_name, c_hash
 
     # TODO: This can be done better
@@ -360,7 +364,7 @@ class SuperNode(Node):
         # generate new hashes and store everything on disk
         new_columns = list(df.columns)
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def p_align(self):
@@ -452,7 +456,7 @@ class Feature(Node):
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True
         # TODO: Remove index [0] after the column_map input is changed from dictionary to a better data structure
-        return ExecutionEnvironment.data_storage.get_feature(self.c_name, self.c_hash)
+        return ExecutionEnvironment.data_storage.get_column(self.c_name, self.c_hash)
 
     def compute_size(self):
         if self.size == -1:
@@ -773,6 +777,8 @@ class Dataset(Node):
         return self.generate_dataset_node('set_columns', {'columns': columns})
 
     def p_set_columns(self, columns):
+        df = self.data()
+        ExecutionEnvironment.data_storage.store_dataset(self.c_hash, df)
         return columns, self.c_hash
 
     def project(self, columns):
@@ -783,15 +789,15 @@ class Dataset(Node):
 
     def p_project(self, columns):
         if isinstance(columns, list):
-            # only returns the map containing the key in the column
-            # since it is a projection, the hash of the columns do not change
             p_columns = []
             p_hashes = []
             for c in columns:
                 p_columns.append(c)
                 p_hashes.append(self.get_c_hash(c))
+            ExecutionEnvironment.data_storage.store_dataset(p_hashes, self.data()[p_columns])
             return p_columns, p_hashes
         else:
+            ExecutionEnvironment.data_storage.store_column(self.get_c_hash(columns), self.data()[columns])
             return columns, self.get_c_hash(columns)
 
     # overloading the indexing operator similar operation to project
@@ -939,8 +945,7 @@ class Dataset(Node):
         for c in df.columns:
             c_names.append(c)
             c_hashes.append(self.get_c_hash(c))
-
-        ExecutionEnvironment.data_storage.store_dataframe(c_hashes, df[c_names])
+        ExecutionEnvironment.data_storage.store_dataset(c_hashes, df[c_names])
         return c_names, c_hashes
 
     # If drop column results in one column the return type should be a Feature
@@ -956,6 +961,7 @@ class Dataset(Node):
             if c not in columns:
                 new_c.append(c)
                 new_hash.append(self.get_c_hash(c))
+        ExecutionEnvironment.data_storage.store_dataset(new_hash, self.data()[new_c])
         return new_c, new_hash
         # return self.hash_and_store_df(self.map, 'drop{}'.format(columns), self.data().drop(columns=columns))
 
@@ -998,7 +1004,7 @@ class Dataset(Node):
                 # column name does not result in the same column hash
                 new_hash.append(self.md5(self.generate_uuid() + c))
 
-        ExecutionEnvironment.data_storage.store_dataframe(new_hash, df[new_column])
+        ExecutionEnvironment.data_storage.store_dataset(new_hash, df[new_column])
         return new_column, new_hash
 
     def corr(self):
@@ -1133,7 +1139,7 @@ class GroupBy(Node):
         for i in range(len(c_group_names)):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'count'))
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def agg(self, functions):
@@ -1160,7 +1166,7 @@ class GroupBy(Node):
                         new_hashes.append(self.md5(c_group_hashes[i] + level2column))
 
         df.columns = new_columns
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df)
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df)
         return new_columns, new_hashes
 
     def mean(self):
@@ -1180,7 +1186,7 @@ class GroupBy(Node):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'mean'))
 
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
 
@@ -1246,7 +1252,7 @@ class SK_Model(Node):
         new_columns = ['feature', 'importance']
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
 
-        ExecutionEnvironment.data_storage.store_dataframe(new_hashes, df[new_columns])
+        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def predict_proba(self, test, custom_args=None):
@@ -1256,8 +1262,14 @@ class SK_Model(Node):
 
 class ExecutionEnvironment(object):
     graph = ExecutionGraph()
-    data_storage = DataStorage()
+    data_storage = StorageManager()
     time_manager = dict()
+
+    def __init__(self, storage_type='dedup'):
+        if storage_type == 'dedup':
+            ExecutionEnvironment.data_storage = DedupedStorageManager()
+        elif storage_type == 'naive':
+            ExecutionEnvironment.data_storage = NaiveStorageManager()
 
     @staticmethod
     def update_time(oper_type, seconds):
@@ -1311,7 +1323,7 @@ class ExecutionEnvironment(object):
                 # Adding the loc to make sure different datasets with the same column names do not mix
                 c_hash.append(Node.md5(loc + c))
 
-            ExecutionEnvironment.data_storage.store_dataframe(c_hash, initial_data[c_name])
+            ExecutionEnvironment.data_storage.store_dataset(c_hash, initial_data[c_name])
             nextnode = Dataset(loc, c_name=c_name, c_hash=c_hash)
             size = ExecutionEnvironment.data_storage.get_size(c_hash)
             ExecutionEnvironment.graph.roots.append(loc)

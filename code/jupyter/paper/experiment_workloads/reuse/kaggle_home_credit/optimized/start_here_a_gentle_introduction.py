@@ -673,15 +673,16 @@ def run(execution_environment, root_data):
     return execution_environment.time_manager.get('model-training', 0)
 
 
-from experiment_graph.execution_environment import ExecutionEnvironment as ee
+from experiment_graph.execution_environment import ExecutionEnvironment
 
+ee = ExecutionEnvironment('dedup')
 execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/environment_different_workload'
+DATABASE_PATH = root_data + '/environment_dedup'
 # ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
-# ee.save_environment(DATABASE_PATH)
+ee.save_environment(DATABASE_PATH)
 
 execution_end = datetime.now()
 elapsed = (execution_end - execution_start).total_seconds()
