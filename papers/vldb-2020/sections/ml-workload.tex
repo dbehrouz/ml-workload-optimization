@@ -1,8 +1,7 @@
 \section{ML Workload Optimizations} \label{sec-ml-workloads}
 In this section, we first describe the common types of operations in machine learning workloads.
-Then, we discuss how to capture and store the operations in the experiment database.
-We also introduce a materialization strategy for only storing the generated data artifacts during the execution of a workload.
-Lastly, we discuss how do we utilize the experiment database to optimize new workloads.
+Then, we discuss how to capture and store the operations in the experiment graph.
+Lastly, we discuss how do we utilize the experiment graph to optimize new workloads.
 
 \subsection{Operations in ML Workloads}
 We assume the main units of work are dataframe (e.g., Pandas, R Data Frames, and Spark DataFrames) like objects that contain one or many columns, where all the data items in one column are of the same data type.
@@ -112,40 +111,26 @@ The merge operator is a logical operator which does not incur a cost, i.e., it h
 The merged vertex is also a logical vertex with no actual attributes which only contains the vertex id of the merged vertices.
 Then, we draw an edge from the merged vertex which represents the actual operation.
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
-This is a critical step for our materialization algorithm in Section \ref{subsec-materialization} and our optimization strategies discussed in Sections \ref{sec-reuse-and-warmstarting} and \ref{sec-hyperparam-optimization}.
+This is a critical step for the materialization algorithms and optimization strategies.
 
-It is important to note that based our definition of a task in Section \ref{sec-introduction} we the workloads belong to multiple different tasks, the constructed graph will contain one connected component for every task.
-In the next sections, we assume that the experiment graph contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
+%It is important to note that based our definition of a task in Section \ref{sec-introduction}, the workloads belong to multiple different tasks, the constructed graph will contain one connected component for every task.
+%In the next sections, we assume that the experiment graph contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
+\subsection{Workload Optimizer for Kaggle Use Case}
+By utilizing an experiment graph, we can improve the execution of the kernels in Kaggle.
+This results in faster execution of the kernels and less time spent in the queue.
 
-\subsection{Workload Optimization through Experiment Graph}
-By utilizing an experiment database, we plan to optimize a new workload by automatically removing redundant operations, speed up the model training, and perform more efficient hyperparameter tuning.
-
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{../images/improved-use-case}
-\caption{Utilizing Experiment Databases in the infrastructure of Kaggle}
-\label{improved-use-case}
-\end{figure}
-
-Figure \ref{improved-use-case} shows how we utilize the experiment database in the Kaggle Infrastructure. 
+Figure \ref{improved-use-case} shows how we utilize the experiment graph in the Kaggle Infrastructure. 
 The workflow is as follows.
-Before executing a kernel (workload), first, an optimizer component analyzes the workload.
-Then, the optimizer searches for optimization opportunities by querying the experiment database.
-For example, if a new kernel is trying to standardize the dataset or perform a model training, 
-the optimizer queries the experiment database to find out if other users have already executed the operations.
-Based on the result of the query, the optimizer then decides whether to retrieve the standardized data or the model from the experiment database or execute the operations in the kernel.
+First, we parse a workload (i.e., a kernel) and construct the workload graph.
+Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph and look for optimization opportunities, namely, reusing the existing operations, warm starting the model training, and for workloads that contain a hyperparameter tuning operation, an improved tuning.
+The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models, and proper search space and/or an initialized Bayesian hyperparameter search process.
+After executing the optimized workload, we return the result to the user.
+After the execution, we update the experiment graph using original workload graph.
+Finally, to ensure the we can store the experiment graph given our storage limit, we run our materialization algorithms to decide what artifacts to materialize and what artifacts to remove.
 
-In the next sections, we first describe how we utilize the experiment database and what types of optimizations an experiment database enables us to perform.
-
-\todo[inline]{should be merged with previous section}
-\subsection{Optimization Workflow}
-Figure \ref{fig-system-workflow} shows the workflow of our system.
-First, we transform the workload into its graph representation.
-Then we utilize the experiment graph to optimize the workload using the techniques in Sections \ref{sec-reuse-and-warmstarting} and \ref{sec-hyperparam-optimization}.
-This results in a new workload graph which depending on the types of optimizations may have a fewer number of operations, faster operations, or operation configurations that lead to higher quality machine learning models.
 \begin{figure}
 \centering
-\input{../images/tikz/system-workflow.tex}
-\caption{System workflow}
-\label{fig-system-workflow}
+\includegraphics[width=\columnwidth]{../images/kaggle-workload-optimizer}
+\caption{Improving the execution of Kaggle Kernels with Workload Optimizer}
+\label{improved-use-case}
 \end{figure}
