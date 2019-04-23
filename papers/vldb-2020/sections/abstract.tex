@@ -2,15 +2,15 @@
 Collaborative data science platforms, such as Google Colaboratory and Kaggle, affected the way users solve machine learning tasks.
 Instead of solving a task in isolation, users write their machine learning workloads and execute them on these platforms and share the workloads with others.
 This enables other users to learn from, modify, and make improvements to the existing workloads.
-However, this collaborative approach suffers from two bottlenecks. % Tilmann: I would rather say inefficiencies than bottlenecks.
+However, this collaborative approach suffers from two inefficiencies.
 First, storing all the artifacts, such as raw datasets, generated features, and models with their hyperparameters, requires massive amounts of storage.
 As a result, only some of artifacts such as, scripts, operations, and models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
-Second, even if all the artifacts are stored, manually looking for specific artifacts is time-consuming. % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar...
+\hl{Second, even if all the artifacts are stored, manually looking for specific artifacts is time-consuming.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar...
 
 The contributions of this paper are two-fold.
-First, we propose algorithms for selecting and materializing the artifacts with a high expected rate of future reuse and store all the artifacts in a graph. % Tilmann: store the artifacts or the metadata of artifacts in a graph? Make sure you are precise with the terminology: What is the materilized artifact, what is the metadata.
+\hl{First, we propose algorithms for selecting and materializing the artifacts with a high expected rate of future reuse and store all the artifacts in a graph.} % Tilmann: store the artifacts or the metadata of artifacts in a graph? Make sure you are precise with the terminology: What is the materilized artifact, what is the metadata.
 The algorithms combine general metrics, such as access frequency and size, and machine learning specific metrics, such as feature and model quality, to decide on what artifact to materialize.
-Second, using the graph, we propose three optimizations, namely reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads. % Tilmann: Is it only speeding up future executions that you optimize? I would say it is the efficiency of collaborative data science platforms.
+Second, using the graph, we propose three optimizations, namely reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads and increase the efficiency of collaborative data science platforms.
 
 %Machine learning workloads have varying characteristics.
 %Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.

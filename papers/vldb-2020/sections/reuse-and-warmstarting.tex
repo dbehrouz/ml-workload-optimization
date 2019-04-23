@@ -18,6 +18,7 @@ As described in the Reuse procedure, we traverse the experiment graph, starting 
 In the subgraph $\mathcal{SG}$, the furthest vertices in each path originating at $v_0$ are $v_5$ and $v_3$.
 The Reuse procedure selects $v_2$ as the candidate since $v_5$ is not materialized.
 The Reuse procedure results in an optimized graph which skips operations p2 and p3 (Figure \ref{fig-reuse}c).
+% Tilmann: Can you elaborate the benefits? Also, what do the new reused nodes help? There does not seem to be a path to the final result from them. 
 
 \begin{lstlisting}[language=Python, firstnumber = 8,caption=New workload script (Imports are omitted),captionpos=b,label = {listing-reuse}]
 train = pd.read_csv('../input/train.csv') 
@@ -66,6 +67,7 @@ First, using the same traversal strategy as explained in the Reuse procedure, we
 If operation $e_{m}$ also exists in the experiment graph, then the Reuse procedure will return the resulting node as the result.
 However, if $e_{m}$ does not exist in the experiment graph, then we find the model group $\mathcal{MG}_{v_m}$.
 If $\mathcal{MG}_{v_m}$ is not empty, we warmstart the operation $e_{m}$ with the best performing model from the model group.
+% Tilmann: Does this always make sense? or do we get stuck in local minima this way?
 
 To demonstrate with an example, after executing both the code in Listings \ref{listing-experiment-graph} and \ref{listing-reuse}, a new users submits the same code as in Listing \ref{listing-reuse}, with a different model hyperparameters (Line 12) shown in Listing \ref{listing-warmstarting}.
 \begin{lstlisting}[language=Python, firstnumber=12, caption= Workload with different hyperparameters,captionpos=b,label = {listing-warmstarting}]
@@ -89,7 +91,7 @@ The training operation f1 has a different hash from the existing operations sinc
 \begin{figure}[t]
 \centering
 \input{../images/tikz/warmstarting-example-final-eg.tex}
-\caption{Experiment graph after warmstarting}
+\caption{Experiment graph after warmstarting} % Tilmann: Again, if v9 is the result, how does vx-vz contribute to this?
 \label{fig-warmstarting}
 \end{figure}
 

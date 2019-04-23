@@ -32,7 +32,7 @@ Specifically, we provide three optimizations, namely, reuse, model warmstarting,
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
 Reuse decreases the data processing time and enables interactive data analysis, especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
 In model warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.
-\hl{Warmstarting speeds up the convergence rate, resulting in shorter training time.}
+\hl{Warmstarting speeds up the convergence rate, resulting in shorter training time.} %Tilmann: Do we have a reference?
 Lastly, we propose to utilize the experiment graph to improve the process of hyperparameter tuning.
 There are 3 common hyperparameter tuning techniques, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
 All three methods rely on defining a search space before the process of tuning begins.
