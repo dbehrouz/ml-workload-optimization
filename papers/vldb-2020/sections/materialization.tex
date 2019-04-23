@@ -1,9 +1,10 @@
 \section{Artifact Materialization}\label{sec-materialization}
-\subsection{ML-Based Materialization}
+\todo[inline]{Describe the need for materialization, move it from \ref{subsec-ml-based-materialization} and then mention the two algorithms ml-based and storage-aware}
+\subsection{ML-Based Materialization}\label{subsec-ml-based-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
 For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, one of the popular scripts that analyzes a dataset of 150 MB, generates up to 17 GB of artifacts.
 Therefore, materializing every artifact under limited storage is not feasible.
-In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage, a modified version of the algorithm presented by bhattacherjee et al. \cite{bhattacherjee2015principles}.
+In this section, we discuss our algorithm for materializing a subset of the artifacts under limited storage, a modified version of the algorithm presented by Bhattacherjee et al. \cite{bhattacherjee2015principles}.
 The goal of the algorithm is to materialize the artifacts that result in the lowest weighted recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
 We define $WC$ as the function that computes the weighted recreation cost of the graph $\mathcal{G}$, given the set of materialized vertices $\mathcal{MV}$, where  
 \[
@@ -18,7 +19,7 @@ Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no
 %Bhattacherjee et al. \cite{bhattacherjee2015principles} tackle a similar problem and prove that the problem is NP-hard.
 %They provide a greedy solution for the problem as well.
 %However, there differences in both the use cases and problem formulation that make their solution not feasible in our case.
-
+\todo[inline]{Tilmann: The abbreviations are hard to remember, can you use a consistent pattern (instead of mix of greek and other symbols)?}
 \begin{algorithm}[h]
 \caption{Materialization of Artifacts}\label{algorithm-materialization}
 \begin{algorithmic}[1]
@@ -47,7 +48,7 @@ The set $path(\mathcal{G}, v_0, v)$ represents the set of all edges from the roo
 For example, in Figure \ref{fig-materialization-example}a, the recreation cost of $v_4$ is $3 \times (0 + 0 + 25 + 1 + 1) = 81$.
 The ratio of the weighted recreation cost over size has the unit second per megabyte.
 For example, the ratio 10 s/mb for an artifact, indicates that we need to spend 10 seconds to recreate 1 megabyte of the artifact.
-Figure \ref{fig-materialization-example} shows an example of the materialization process when the storage capacity is 55.
+Figure \ref{fig-materialization-example} shows an example of the materialization process when the storage capacity is 55 MB.
 For $v_0$ we do not compute $\rho$ as $v_0$ is always materialized.
 
 \begin{figure}
@@ -80,7 +81,6 @@ For $v_0$ we do not compute $\rho$ as $v_0$ is always materialized.
 
 \todo[inline]{this and feature quality should be combined}
 \subsubsection{The Effect of Model Quality on the Materialization Decision}
-\todo[inline]{For this I need to design experiments to check if it has a positive impact. If we don't have space, then this will be moved to future work.}
 Since the goal of all the workloads in the experiment graph is to solve the same task (as described in Section \ref{sec-introduction}), all the machine learning models will be evaluated using the same quality metric.
 Therefore, we can utilize the quality of the model in the materialization algorithm.
 We propose a simple method for utilizing the model quality in the materialization decision algorithm.
