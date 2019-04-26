@@ -43,10 +43,10 @@ We limit our focus to popular search methods, namely, grid search, random search
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
 To efficiently apply our optimizations, we utilize a graph data structure, called the experiment graph, to store the meta-data and artifacts of the machine learning workloads.
-Let $\mathcal{V}=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the workload.
+Let $V=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the workload.
 Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
-Let $\mathcal{E}=\{e_i\}, i = 1, \cdots, m$ be a collection of executed operations that exist in the workload.
-A directed edge $e$ from $v_i$ to $v_j$ in $\mathcal{G}(\mathcal{V},\mathcal{E})$ indicates that the artifact $v_j$ is (fully or partially) derived from the artifact $v_i$ by applying the operation in $e$.
+Let $E=\{e_i\}, i = 1, \cdots, m$ be a collection of executed operations that exist in the workload.
+A directed edge $e$ from $v_i$ to $v_j$ in $G(V,E)$ indicates that the artifact $v_j$ is (fully or partially) derived from the artifact $v_i$ by applying the operation in $e$.
 Every vertex $v$ has the attribute $\langle s \rangle$ (accessed by $v.s$), which represents the storage size of artifact when materialized.
 Every edge $e$ has the attributes $\langle f, t\rangle$ (accessed by $e.f$ and $e.t$), where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represents the average run-time (in seconds) of the operation.
 Each vertex contains meta-data about the artifacts, such as the name and type of the columns for datasets and name, size, the value of parameters and hyperparameters, and the error metric of the models.
@@ -140,5 +140,5 @@ It is important to note that we restrict the scope of our optimizations and mate
 In Kaggle, each competition defines the machine learning task, i.e., one or multiple raw training datasets, a validation data set, and an evaluation function which computes the quality/error rate of the model on the validation dataset.
 While the experiment graph contains artifacts from all the tasks, each task corresponds to a unique connected component of the experiment graph.
 All the artifacts in a task's connected component are reachable from the raw training datasets defined in the task.
-When optimizing a new workload (i.e., a Kaggle kernel), we only utilize the connected component the task the workload is trying to solve (i.e., the Kaggle competition) and do not utilize the rest of the graph for optimization.
+When optimizing a new workload (i.e., a Kaggle kernel), we only utilize the connected component of the task which the workload is trying to solve (i.e., the Kaggle competition) and do not utilize the rest of the graph for optimization.
 
