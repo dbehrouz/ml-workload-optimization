@@ -137,8 +137,9 @@ Finally, to ensure the we can store the experiment graph given our storage limit
 \end{figure}
 
 It is important to note that we restrict the scope of our optimizations and materialization algorithms to one machine learning task. 
-In Kaggle, each competition defines the machine learning task, i.e., one or multiple raw training datasets, a validation data set, and an evaluation function which computes the quality/error rate of the model on the validation dataset.
-While the experiment graph contains artifacts from all the tasks, each task corresponds to a unique connected component of the experiment graph.
-All the artifacts in a task's connected component are reachable from the raw training datasets defined in the task.
-When optimizing a new workload (i.e., a Kaggle kernel), we only utilize the connected component of the task which the workload is trying to solve (i.e., the Kaggle competition) and do not utilize the rest of the graph for optimization.
+In Kaggle, each competition defines the machine learning task, i.e., one or multiple raw training datasets (we refer to as root datasets), a validation data set, and an evaluation function which computes the quality/error rate of the model on the validation dataset.
+While the experiment graph contains artifacts from all the tasks, each task corresponds to a unique connected component in the experiment graph.
+When optimizing a new workload, we only utilize the connected relevant connected component.
+In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, namely, A, B, and C which are rooted at 2, 2, and 1 root training datasets, depicted as hollow vertices, respectively.
+When optimizing a new Kaggle kernel from competition A, we only look for optimization opportunities in the connected component A of the experiment graph.
 
