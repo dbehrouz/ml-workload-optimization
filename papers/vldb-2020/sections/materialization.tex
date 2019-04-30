@@ -63,14 +63,16 @@ As a result, existing solutions are not suitable for artifact materializations o
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
 
 \begin{algorithm}[h]
-\caption{Materialization of Artifacts}\label{algorithm-materialization}
+\caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
 \Require  $G(V,E)=$ experiment graph, root\_nodes = set of root artifacts, $\mathcal{B}=$ storage budget
 \Ensure experiment graph with materialized vertices
 \State $T= 0$ \Comment {current size of the materialized artifacts}
 \For  {$v$ in root\_nodes} \Comment{materialize all the root nodes}
-	\State $v.m = 1$
-	\State $T = T + v.s$
+	\If{$v.m = 0$}
+		\State $v.m = 1$
+		\State $T = T + v.s$
+	\EndIf
 \EndFor
 \State $S = $ empty priority queue
 \For {$v$ in $V$}
@@ -101,7 +103,7 @@ feasbility(G,v) = 	& \mid v.out\_edges \mid \times\\
 								& recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where, $\mid v.out\_edges \mid$ indicates the number of outgoing edges (fan-out) of the artifact $v$, $estimated\_quality(v)$ computes the quality impact of artifact $v$, and $recreation\_factor(G,v)$ indicates the weighted cost of recreating the artifact $v$ which is computed as:
+where \textit{\mid v.out\_edges \mid} indicates the number of outgoing edges (fan-out) of the artifact $v$, $estimated\_quality(v)$ computes the quality impact of artifact $v$, and $recreation\_factor(G,v)$ indicates the weighted cost of recreating the artifact $v$ which is computed as:
 \[
 \text{recreation\_factor}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
 The value of the estimated quality and recreation cost functions of an artifact directly impact that weighted recreation cost and estimated quality of the experiment graph.
@@ -149,5 +151,32 @@ A simple storage manager tracks the hash and column contents of all the artifact
 When a specific artifact is requested, the storage manager, looks up the hash of all the columns, combines all the columns, and returns the resulting artifact.
 This result in large decrease in the storage size (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifact, deduplication result in only 8 GB of storage).
 
-\textbf{Fractional Greedy Algorithm}
-\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. 1. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. 2. We can use the previous algorithm in an inner loop, where we first run it, get the result, now based on the actual storage, we see how much space we have, and run it for another iteration. We do this until we're actually sure the storage budget of the deduplicated data is exhausted.}
+% maybe a better name
+\textbf{Greedy Meta-Algorithm.}
+We propose a meta-algorithm, that iteratively calls Algorithm \ref{algorithm-materialization}.
+We slightly modify Algorithm \ref{algorithm-materialization}, where instead of initializing the current size, $T$, to 0 on Line 3, we pass the current size as an input to the algorithm. 
+Algorithm \ref{algorithm-compression-aware-materialization} shows the detail of our storage-aware algorithm.
+Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage requirement by calling the compress method of the storage manager.
+The compress method of the storage manager performs the removes the duplicated columns of the different artifacts of the experiment graph and returns the actual storage size of the graph.
+While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the argument.
+\begin{algorithm}[h]
+\caption{Compression-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
+\begin{algorithmic}[1]
+\Require  $G(V,E)=$ experiment graph, root\_nodes = set of root artifacts, $\mathcal{B}=$ storage budget
+\Ensure experiment graph with materialized vertices
+\State $G\_mat$ = \textit{Artifact-Materialization}($G, \mathcal{B}, 0$)
+\State $T$ = $storage\_manager.compress(G\_mat)$
+\While {$T < \mathcal{B}$}
+	\State $G\_mat^\prime$  = \textit{Artifact-Materialization}($G\_mat, \mathcal{B}, T$)
+	\State $T$ = $storage\_manager.compress(G\_mat^\prime)$
+	\If  {$T \geq \mathcal{B}$}
+		\State return $G\_mat$
+	\Else
+		 \State $G\_mat = G\_mat^\prime$
+	\EndIf
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Fractional Greedy Algorithm.}
+\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. }
