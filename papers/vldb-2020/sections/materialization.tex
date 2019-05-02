@@ -1,21 +1,20 @@
 \section{Artifact Materialization}\label{sec-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
-For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, one of the popular scripts that analyzes a dataset of 150 MB, generates up to 17 GB of artifacts.
-Therefore, materializing every artifact under limited storage is not feasible.
+For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, a popular script which analyzes a dataset of 160 MB, generates up to 17 GB of artifacts.
+Therefore, materializing every artifact under limited a storage budget is not feasible.
 In this section, we discuss two algorithms for materializing the artifacts of the experiment graph under limited storage.
 The first algorithm utilizes both general metrics, such as the size and access frequency of vertices and execution time of the edges, and a machine learning specific metric, i.e., the quality of the existing model artifacts, to decide what artifacts to materialize.
-\todo[inline]{needs some more thinking.}
 The second algorithm is an extension of the first algorithm which also considers how the artifacts are stored on the file system.
-Since many of the existing operations in the experiment graph are operating on one or small group of columns inside a dataframe, the resulting artifact has many duplicated columns.
-We device a simple compression strategy which avoid storing duplicated columns.
-The second algorithm takes the duplication information into account while making the decision on what artifacts to materialize.
+Since many of the existing operations in the experiment graph are operating on one or a small group of columns inside a data frame, the resulting artifacts have many duplicated columns.
+We devise a simple compression strategy which avoids storing duplicated columns.
+The second algorithm takes the duplication information into account when making the decision on what artifacts to materialize.
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
 Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
 The goal of the algorithm is to materialize the artifacts that result in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
 However, their approach only considers access frequency and reconstruction cost of an artifact.
-For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workload, i.e., materialize artifacts that result in high-quality machine learning models.
-We formulate the problem of materialization as an multi-objective optimization problem, with the goal of minimizing two functions given the storage requirement constraint.
+For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workload, i.e., materialize artifacts which result in high-quality machine learning models.
+We formulate the problem of materialization as a multi-objective optimization problem, with the goal of minimizing two functions given the storage requirement constraint.
 
 \textbf{Weighted Recreation Cost Function.} 
 The first function computes the weighted recreation cost of the graph:
@@ -23,7 +22,9 @@ The first function computes the weighted recreation cost of the graph:
 WC(G) =  \sum\limits_{v \in V}  (1-v.m) \times v.f \times \sum\limits_{e \in in\_edges(G,v)} e.t
 \]
 where $v.m = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the access frequency of the artifact $v$, $in_edges(G,v)$ returns the set of edges with destination $v$, and $e.t$ is the execution time of the edge $e$.
-Intuitively, artifacts that are materialized incur no cost, while non-materialized artifacts incur a cost equal to the recreation time multiply by their frequency.
+Intuitively, the weighted recreation cost indicates the total amount of execution time required to recompute all the vertices multiplied by their access frequencies.
+Materialized artifacts incur no cost since they are stored.
+Non-materialized artifacts incur a cost equal to the execution time of the proceeding operations multiplied by their frequency.
 For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ with access frequency of 2, we must consider both executions of the operation \textit{vectorizer.f\_t}  when computing the weighted cost.
 Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
 
@@ -32,18 +33,24 @@ The second function computes the estimated gain in quality:
 \[
 EQ(G) =  \sum\limits_{v \in V}  v.m \times estimated\_quality(v)
 \]
-where $estimated\_quality(v)$ computes the estimated quality of an artifact.
 To define the function $estimated\_quality$, we first define the two following sets.
-$M(G) = \{v \in V \mid \text{v is a machine learning model}\}$ is the set of all models in the experiment graph.
-For every vertex $v$ in the graph, $M(v) = \{m \in M(G) \mid v = m \text{or v is connected to m}\}$ is the set of all machine learning models that are connected to an artifact.
-Now, we define the quality of an artifact as:
+\[
+M(G) = \{v \in V \mid \text{v is a machine learning model}\}
+\]
+is the set of all models in the experiment graph.
+For every vertex $v$ in the graph, 
+\[
+M(v) = \{m \in M(G) \mid (v = m) \vee \text{(v is connected to m)}\}
+\]
+is the set of all machine learning models to which $v$ is connected.
+Now, we define the estimated quality of an artifact as:
 \[
 estimated\_quality(v) = \sum\limits_{m \in M(v)} m.q \times \dfrac{1}{1 + \mid path(v,m) \mid}
 \]
-where $m.q$ is the quality metric of a model artifact defined as part of the task (e.g., accuracy and AUC for classification tasks and coefficient of determination for regression tasks).
-The denominator $1 + \mid path(v,m) \mid$ is the number of hops between the vertex $v$ and the model $m$.
-If $v$ itself is a model, then $M(v)$ only contains $v$ itself, as there are no outgoing edges from model artifacts, which indicates $\forall m \in M, estimated\_quality(m) = m.q$.
-When $v$ is not a model artifact, the further $v$ is from a model artifact the larger the denominator becomes, which reduces the estimated quality gained by materializing the artifact $v$.
+where $m.q$ is the quality metric of a model artifact defined as part of the task (e.g., accuracy or AUC for classification tasks and coefficient of determination for regression tasks).
+The multiplier $\tfrac{1}{1+\mid path(v,m) \mid}$ is the discount factor of the estimated quality which decreases as the distance between $v$ and $m$ increases.
+If $v$ itself is a model, then $M(v)$ only contains $v$ itself, as there are no outgoing edges from model artifacts, i.e., $\forall m \in M,\text{ }estimated\_quality(m) = m.q$.
+When $v$ is not a model artifact, the further $v$ is from a model artifact the smaller the discount factor becomes, which reduces the estimated quality gained by materializing the artifact $v$.
 
 \textbf{Multi-Objective Optimization.}
 Given the two functions, we would like to find the optimal set of vertices to materialize which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$ (for ease of representation, we instead try to minimize the inverse of the estimated quality function):
@@ -54,10 +61,10 @@ Given the two functions, we would like to find the optimal set of vertices to ma
 \end{split}
 \end{equation}
 
-There are different strategies for solving multi-objective problems \cite{coello2007evolutionary}.
-However, existing solutions require a long amount of time to find a (approximate) solution.
+There are different strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}.
+However, existing solutions are time-consuming.
 Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
-As a result, existing solutions are not suitable for artifact materializations of the experiment graph.
+As a result, existing solutions to multi-objective optimization problems are not suitable for artifact materializations of the experiment graph.
 
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
@@ -90,28 +97,29 @@ We propose a greedy heuristic-based algorithm for materializing the artifacts in
 \end{algorithmic}
 \end{algorithm}
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
+% is the definition of root artifact clear? I defined it in Section 3.3 Workload Optimizer for Kaggle Use Cases
 First, we start by materializing all the root artifacts.
 This is essential as many of the feature engineering and model building operations are not invertible.
 As a result, we cannot reconstruct the raw datasets if they are not materialized.
-Then, for every non-materialized artifact, we compute the feasibility ratio, which is define as the value of the function feasibility of an artifact divided by its size.
+Then, for every non-materialized artifact, we compute the feasibility ratio, which is defined as the value of the $feasibility$ function of an artifact divided by its size.
 Then, we start materializing all the artifacts, sorted by their feasibility ratio, until the storage budget is exhausted.
 The feasibility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
 \begin{equation}
 \begin{split}
-feasbility(G,v) = 	& \mid v.out\_edges \mid \times\\
+feasbility(G,v) = 	& v.out\_degree \times\\
 								&	estimated\_quality(v) \times \\
 								& recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where \textit{\mid v.out\_edges \mid} indicates the number of outgoing edges (fan-out) of the artifact $v$, $estimated\_quality(v)$ computes the quality impact of artifact $v$, and $recreation\_factor(G,v)$ indicates the weighted cost of recreating the artifact $v$ which is computed as:
+where $v.out\_degree$ indicates the number of outgoing edges of the artifact $v$, $estimated\_quality(v)$ computes the estimated quality of artifact $v$, and $recreation\_factor(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
 \[
 \text{recreation\_factor}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
-The value of the estimated quality and recreation cost functions of an artifact directly impact that weighted recreation cost and estimated quality of the experiment graph.
-Intuitively, we would like to materialize vertices which are costly to recompute and have a big impact on the overall quality of the experiment graph.
+, i.e., executing all the operations from the root nodes to $v$ multiplied by the access frequency of $v$.
+Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
 The impact of the number of outgoing edges of an artifact is more implicit.
 Intuitively, an artifact with high fan-out indicates the artifact has appeared in several different machine learning workloads and pipeline.
-Some examples of these types of artifacts, are cleaned and preprocessed datasets with high-quality features, where users utilize them to train several different models.
-Therefore, in presence in equal estimated quality, recreation cost, and size, we are prioritizing artifacts with higher fan-outs.
+An example of these types of artifacts is cleaned and preprocessed datasets with high-quality features, where users utilize them to train several different models.
+Therefore, in the presence of equal estimated quality, recreation cost, and size, we are prioritizing artifacts with larger out\_degrees.
 
 %\begin{figure}
 %\begin{subfigure}{0.5\linewidth}
@@ -141,24 +149,24 @@ Therefore, in presence in equal estimated quality, recreation cost, and size, we
 %\label{fig-materialization-example}
 %\end{figure}
 \subsection{Storage-Aware Artifact Materialization}
-Since many machine learning operations perform on one or a few columns of a dataset, the resulting artifact of an operation may have a large number exactly similar columns to the input artifact.
-As a result, even after materialization, there are many duplicated columns across the different artifacts.
+Since many feature engineering operations only operate on one or a few columns of a dataset, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.
+As a result, after materialization, there are many duplicated columns across different artifacts.
 To further reduce the storage cost, we implement a simple deduplication mechanism.
 We assign a unique hash to every columns of the artifacts.
-When executing an operation on an artifact, all the columns of the resulting artifact, except for the ones affected by the operation carry the same unique.
-When storing an artifact, we examine the hash of every column, and only store the columns that do not exist in the storage unit.
-A simple storage manager tracks the hash and column contents of all the artifacts in the experiment graph.
-When a specific artifact is requested, the storage manager, looks up the hash of all the columns, combines all the columns, and returns the resulting artifact.
-This result in large decrease in the storage size (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifact, deduplication result in only 8 GB of storage).
+When executing an operation on an artifact, all the columns of the resulting artifact, except for the ones affected by the operation carry the same hash value.
+When storing an artifact, a storage manager unit examines the hash of every column, and only stores the columns that do not exist in the storage unit.
+The storage manager tracks the hash and column contents of all the artifacts in the experiment graph.
+When a specific artifact is requested, the storage manager combines all the columns which belong to the artifact into a data frame and returns the data frame.
+This results in a large decrease in the storage cost (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifacts, deduplication result in only 8 GB of storage).
 
 % maybe a better name
 \textbf{Greedy Meta-Algorithm.}
-We propose a meta-algorithm, that iteratively calls Algorithm \ref{algorithm-materialization}.
-We slightly modify Algorithm \ref{algorithm-materialization}, where instead of initializing the current size, $T$, to 0 on Line 3, we pass the current size as an input to the algorithm. 
-Algorithm \ref{algorithm-compression-aware-materialization} shows the detail of our storage-aware algorithm.
-Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage requirement by calling the compress method of the storage manager.
-The compress method of the storage manager performs the removes the duplicated columns of the different artifacts of the experiment graph and returns the actual storage size of the graph.
-While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the argument.
+We propose a meta-algorithm which iteratively calls Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
+We slightly modify the Artifact-Materialization algorithm, where instead of initializing the current size, $T$, to 0 MB on Line 1, we pass the current size as an input to the algorithm. 
+Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage-aware algorithm.
+Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage cost by calling the compress method of the storage manager (Lines 1 and 2).
+The compress method of the storage manager removes the duplicated columns of the different artifacts of the experiment graph and returns the storage size of the graph after compression.
+While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the initial size argument.
 \begin{algorithm}[h]
 \caption{Compression-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
