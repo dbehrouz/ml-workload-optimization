@@ -4,9 +4,9 @@ Then, we discuss how to capture and store the operations in the experiment graph
 Lastly, we discuss how do we utilize the experiment graph to optimize new workloads.
 
 \subsection{Operations in ML Workloads}
-We assume the main units of work are dataframe (e.g., Pandas, R Data Frames, and Spark DataFrames) like objects that contain one or many columns, where all the data items in one column are of the same data type.
+We assume the main units of work are data frame (e.g., Pandas, R Data Frames, and Spark Data Frames) like objects that contain one or many columns, where all the data items in one column are of the same data type.
 \hl{We divide the operations in the ML workloads into 3 categories.}
-% Tilmann: Are these balanced? It seems to me that Hyper parameter training is part of the model training
+% Tilmann: Are these balanced? It seems to me that Hyper parameter training is part of the model training. Behrouz: The point I'm trying to make is that hyperparameter tuning are repeated model training operations. So technically, when there are opportunities for reuse and warmstarting inside hyperparameter tuning, our optimizer will use them. But, there are still two other opportunities that are specific to hyperparameter tuning. 1) Hyperparameter tuning require search space definition, using the experiment graph, we can automatically define the space 2) Bayesian/Sequential hyperparameter tuning requires past knowledge in form of many initial model training to perform better, using the experiment graph we can provide this 'past knowledge' without actually executing the initial model training.
 \begin{table}
 \centering
 \begin{tabular}{ll}
@@ -26,7 +26,7 @@ We assume the main units of work are dataframe (e.g., Pandas, R Data Frames, and
 \subsubsection{Data and Feature Engineering}
 This group of operations typically belongs to three categories, i.e., simple data transformations and aggregations, feature selection, and feature extraction.
 All of these operations, receive one or multiple columns of a dataset and return another dataset as result. 
-While different data processing tools may provide specialized data transformation and aggregation operations for dataframe objects, most of them provide the same or similar operations such as map, reduce, group by, concatenation, and join. 
+While different data processing tools may provide specialized data transformation and aggregation operations for data frame objects, most of them provide the same or similar operations such as map, reduce, group by, concatenation, and join. 
 In Table \ref{feature-engineering-operations}, we show a list of the most common feature extraction and feature selection operations.
 
 \subsubsection{Model Training}
@@ -36,24 +36,28 @@ The result of model training operations can either be used in other data and fea
 \subsubsection{Hyperparameter Tuning}
 Before training a machine learning model, one has to set the hyperparameters of the model to appropriate values.
 Typically, the best values for the hyperparameters of a model vary across different datasets.
-The goal of hyperparameter tuning operations is to find the machine learning models with the best performance.
-A hyperparameter tuning operation is defined by a budget and a search method.
-The budget specifies how many models with different hyperparameter values the operation should train and the search method specifies what search strategy should be incorporated.
-We limit our focus to popular search methods, namely, grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
+The goal of hyperparameter tuning operations is to find the set of hyperparameters that yield the model with the best performance on a dataset.
+A hyperparameter tuning operation is defined by a budget, a search method, and a search space.
+The budget specifies how many models with different hyperparameter values, within the specified search space, should be trained and the search method specifies what search strategy should to incorporate.
+The most common search methods are grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
 To efficiently apply our optimizations, we utilize a graph data structure, called the experiment graph, to store the meta-data and artifacts of the machine learning workloads.
 Let $V=\{v_i\}, i = 1, \cdots, n$ be a collection of artifacts that exist in the workload.
 Each artifact is either a raw dataset, a pre-processed dataset resulting from a feature engineering operation, or a model resulting from a model training operation.
 Let $E=\{e_i\}, i = 1, \cdots, m$ be a collection of executed operations that exist in the workload.
-A directed edge $e$ from $v_i$ to $v_j$ in $G(V,E)$ indicates that the artifact $v_j$ is (fully or partially) derived from the artifact $v_i$ by applying the operation in $e$.
-Every vertex $v$ has the attribute $\langle s \rangle$ (accessed by $v.s$), which represents the storage size of artifact when materialized.
-Every edge $e$ has the attributes $\langle f, t\rangle$ (accessed by $e.f$ and $e.t$), where $f$ represents the frequency of the operation (the number of times the operation has been executed) and $t$ represents the average run-time (in seconds) of the operation.
-Each vertex contains meta-data about the artifacts, such as the name and type of the columns for datasets and name, size, the value of parameters and hyperparameters, and the error metric of the models.
-Each edge contains the meta-data about the operation, such as the function name, training algorithm, hyperparameters, and in some cases even the source code of the operation.
+A directed edge $e$ from $v_i$ to $v_j$ in $G(V,E)$ indicates that the artifact $v_j$ is derived from the artifact $v_i$ by applying the operation in $e$.
+Every vertex $v$ has the attributes $\langle f, s \rangle$ (accessed by $v.f$ and $v.s$), which represent the access frequency and storage size of artifact.
+Every edge $e$ has the attributes $\langle f, t \rangle$ (accessed by $e.f$ and $e.t$), which represent the execution frequency and the average run-time (in seconds) of the operation.
+In many cases, the vertex access frequency is equal to the execution frequency of its incoming edge.
+However, we make the distinction between the two in cases where users explicitly access the content of the vertex, either by printing them or saving them to disk.
+
+Each vertex contains the data (inside the data frame) and meta-data of the artifacts, such as the name and type of the columns for datasets and name, size, the value of parameters and hyperparameters, and the error metric of the models.
+Each edge contains the meta-data of the operation, such as the function name, training algorithm, hyperparameters, and in some cases even the source code of the operation.
 When a new machine learning workload is executed, we extend the graph to capture the new operations and artifacts.
 If an operation already exists in the graph, we update the frequency and average run-time attributes.
 Otherwise, we add a new edge and vertex to the experiment graph, representing the new operation and the artifact.
+Similarly, if users print or save the content of an existing vertex to disk, we update the access frequency of the vertex.
 Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing \ref{listing-experiment-graph}.
 To uniquely identify an edge, we utilize a hash function that receives as input the operation and its hyperparameters (if it has any).
 
@@ -72,9 +76,9 @@ count_vectorized = vectorizer.fit_transform(train['ad_desc'])
 selector =  SelectKBest(k=2)
 top_features = selector.fit_transform(train[['ts','u_id','price']], 
 				      train['y'])
+top_features # print the content of the data frame			     
 X = pd.concat([count_vectorized,top_features], axis = 1)
-model = svm.SVC()
-model.fit(X, train['y'])
+model = svm.SVC().fit(X, train['y'])
 \end{lstlisting}
 
 \begin{figure}
@@ -88,14 +92,14 @@ model.fit(X, train['y'])
 \hline
 operation & label &  hash \\
 \hline
-project(ad..) & $\langle 2, 2\rangle$ &p1 \\
+project(ad..) & $\langle 1, 2\rangle$ &p1 \\
 project(ts, ..) & $\langle 1, 6\rangle$ & p2\\
 project(y) & $\langle 1, 2\rangle$ & p3\\
-vectorizer.f\_t & $\langle 2, 40\rangle$ & v1 \\
+vectorizer.f\_t & $\langle 1, 40\rangle$ & v1 \\
 selector.f\_t & $\langle 1, 60\rangle$ & s1 \\
 concat & $\langle 1, 10\rangle$ & c1 \\
 merge & $\langle 1, 0 \rangle$ & m\\
-model.fit & $\langle 1, 100\rangle$ & f\\
+svm.fit & $\langle 1, 100\rangle$ & f\\
 \hline
 \end{tabular}
 \caption{}
@@ -104,30 +108,31 @@ model.fit & $\langle 1, 100\rangle$ & f\\
 \label{fig-experiment-graph}
 \end{figure}
 Table \ref{fig-experiment-graph}b shows both the label of every edge operation, i.e., frequency and time, and the hash of the operations and their hyperparameters.
-We assume the operations project(ad..) and vectorizer.f\_t already exist in the experiment graph.
-Therefore, when adding the new operations, we must update their frequency to 2.
-In order to represent operations that process multiple input artifacts, e.g., concat and model.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
+Since at the time of the execution of the script, the experiment graph is empty, all the edges have an execution frequency of 1.
+Similarly, all the vertices, except for $v_5$ has access frequency of 1.
+$v_5$ which represents the \textit{top\_features} data frame in the script has a frequency of 2, since Line 15 prints its content.
+In order to represent operations that process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
 First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
-The merge operator is a logical operator which does not incur a cost, i.e., it has run-time of 0 seconds.
+The merge operator is a logical operator which does not incur a cost, i.e., it has a run-time of 0 seconds.
 The merged vertex is also a logical vertex with no actual attributes which only contains the vertex id of the merged vertices.
 Then, we draw an edge from the merged vertex which represents the actual operation.
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
-This is a critical step for the materialization algorithms and optimization strategies.
+%TODO Do I need to explain why we're doing this? 
+%This is a critical step for the materialization algorithms and optimization strategies.
 
-%It is important to note that based our definition of a task in Section \ref{sec-introduction}, the workloads belong to multiple different tasks, the constructed graph will contain one connected component for every task.
-%In the next sections, we assume that the experiment graph contains information about 1 task, although, all the methods described can be applied to multiple tasks as well.
 \subsection{Workload Optimizer for Kaggle Use Case}
-By utilizing an experiment graph, we can improve the execution of the kernels in Kaggle.
-This results in faster execution of the kernels and less time spent in the queue.
+By utilizing an experiment graph, we design a workload optimizer framework.
+We integrate the workload optimizer into collaborative data science platform to improve the execution of the workloads.
+Here, we describe the integration process of the workload optimizer for optimizing and executing kernels in the Kaggle use case (our motivating example).
 
-Figure \ref{improved-use-case} shows how we utilize the experiment graph in the Kaggle Infrastructure. 
+Figure \ref{improved-use-case} shows the process of the workload optimization the Kaggle Infrastructure. 
 The workflow is as follows.
 First, we parse a workload (i.e., a kernel) and construct the workload graph.
-Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph and look for optimization opportunities, namely, reusing the existing operations, warm starting the model training, and for workloads that contain a hyperparameter tuning operation, an improved tuning.
+Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training, and for workloads that contain a hyperparameter tuning operation, faster hyperparameter search.
 The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models, and proper search space and/or an initialized Bayesian hyperparameter search process.
 After executing the optimized workload, we return the result to the user.
-After the execution, we update the experiment graph using original workload graph.
-Finally, to ensure the we can store the experiment graph given our storage limit, we run our materialization algorithms to decide what artifacts to materialize and what artifacts to remove.
+After the execution, we update the experiment graph using the original workload graph (the result of step 1-Parse Workload).
+Finally, to ensure that we can store the experiment graph given our storage budget, we run our materialization algorithms to decide what artifacts to materialize.
 
 \begin{figure}
 \centering
@@ -138,8 +143,7 @@ Finally, to ensure the we can store the experiment graph given our storage limit
 
 It is important to note that we restrict the scope of our optimizations and materialization algorithms to one machine learning task. 
 In Kaggle, each competition defines the machine learning task, i.e., one or multiple raw training datasets (we refer to as root datasets), a validation data set, and an evaluation function which computes the quality/error rate of the model on the validation dataset.
-While the experiment graph contains artifacts from all the tasks, each task corresponds to a unique connected component in the experiment graph.
-When optimizing a new workload, we only utilize the connected relevant connected component.
-In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, namely, A, B, and C which are rooted at 2, 2, and 1 root training datasets, depicted as hollow vertices, respectively.
+While the experiment graph contains artifacts from all the competitions (tasks), each task corresponds to a unique connected component in the experiment graph.
+When optimizing a new workload, we only utilize the relevant connected component.
+In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which are rooted at 2, 2, and 1 root training datasets, depicted as hollow vertices, respectively.
 When optimizing a new Kaggle kernel from competition A, we only look for optimization opportunities in the connected component A of the experiment graph.
-

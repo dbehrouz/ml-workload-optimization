@@ -1,38 +1,38 @@
 \section{Introduction} \label{sec-introduction}
 % Opening
-Machine learning is the process of analyzing training datasets to extract features and build a model using these features to solve a specific task, such as automatically labeling images based on the image content.
+Machine learning is the process of analyzing training datasets to extract features and build a machine learning model using these features to solve a specific task, such as automatically labeling images based on the image content.
 To solve machine learning tasks, a data scientist designs and executes a machine learning workload consisting of a set of exploratory data transformation steps and one or multiple model building steps.
 Recent collaborative data science platforms facilitate workload sharing.
 As a result, data scientists can study other workloads, learn from them, and improve upon them to train better machine learning models.
 Some platforms such as Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} provide an intuitive way of sharing scripts and raw data and allow execution of the scripts on the platform using Jupyter notebooks \cite{Kluyver:2016aa}. 
 Other platforms such as OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and ProvDB \cite{miao2018provdb} enable the data scientists to store the operations and artifacts of their machine learning workloads, i.e., raw datasets, intermediate datasets resulting from the operations, and models with their hyperparameters.
 These platforms are typically referred to as experiment databases \cite{Vanschoren2012}.
-Data scientists can then query other users' operations and artifacts to search for more detailed information such as the types of operations, models, hyperparameters, and evaluation metrics for specific machine learning tasks.
+Data scientists can then query other users' operations and artifacts to search for more detailed information such as the types of operations, preprocessed datasets, models, hyperparameters, and evaluation metrics for specific machine learning tasks.
 
 % P
 While collaborative approaches lead to better performing machine learning models, they introduce two problems.
 First, since storing all the artifacts requires a massive storage unit, existing platforms only allow the storage of raw datasets, the operations or the scripts, final models with their hyperparameters, and a limited number of intermediate artifacts.
-For example, a popular script on the \textbf{Home Credit Default Risk}\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} competition in the Kaggle platform that processes a training dataset of 160 MBs in size generates up to 17 GBs of artifacts.
+For example, a popular script on the \textbf{Home Credit Default Risk}\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} competition in the Kaggle platform which processes a training dataset of 160 MBs in size generates up to 17 GBs of artifacts.
 However, one common usage pattern in the collaborative data science platforms is for users to select an existing intermediate artifact (e.g., a preprocessed dataset) and continue their own analysis and model training on the artifact. 
-Since the intermediate artifact is not available, the user must rerun the script to generate the artifact.
+Since the intermediate artifact is not available, the user must rerun the script to generate the desired artifact.
 
 Second, even if all the artifacts are stored, going through the available scripts or manually querying the experiment databases is time-consuming. 
 As a result, many data scientists execute their machine learning workload without checking if they can reuse part of the workload from the existing ones. 
 
 % S
-We propose a solution for efficiently storing the artifacts inside a graph, where vertices are the artifacts and edges are the operations connecting the artifacts and automatically using the graph to optimize new workloads.
-We propose two algorithms that select promising artifacts to materialize.
+We propose a solution for efficiently storing the artifacts inside a graph, where vertices are the artifacts and edges are the operations connecting the artifacts and automatically optimize new workloads using the graph.
+We propose two algorithms to select promising artifacts and store them in memory for quick access, a process which we refer to as the artifact materialization.
 The first algorithm utilizes two different types of metrics for materializing the artifacts, i.e., general and machine learning specific metrics.
 The general metrics include the size and access frequency of the artifacts and the run-time of the operations.
-The machine learning specific metrics include the combined score of the features inside the artifacts and the quality score of the machine learning models resulting from the artifact.
-Since many of the artifacts have overlapping data columns, we perform column deduplication before storing them.
+The machine learning specific metric consists of the quality score of the machine learning models resulting from the artifact.
+Since many of the artifacts have overlapping data columns, we perform column deduplication and remove duplicated columns before storing them.
 The second algorithm is storage-aware, i.e., it takes into account the deduplication information before deciding on what artifacts to materialize.
-Using the graph of the materialized artifacts and operations, which we refer to as the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
+Using the graph of the materialized artifacts, which we refer to as the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
 Specifically, we provide three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
 Reuse decreases the data processing time and enables interactive data analysis, especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
 In model warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.
-\hl{Warmstarting speeds up the convergence rate, resulting in shorter training time.} %Tilmann: Do we have a reference?
+\hl{Warmstarting speeds up the convergence rate, resulting in shorter training time.}  %Tilmann: Do we have a reference? Behrouz: I cannot find specific papers studying the effect of warmstarting, though there are several that mention they are doing warmstarting because it is useful. I can cite some of those maybe? 
 Lastly, we propose to utilize the experiment graph to improve the process of hyperparameter tuning.
 There are 3 common hyperparameter tuning techniques, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
 All three methods rely on defining a search space before the process of tuning begins.

@@ -4,12 +4,14 @@ Instead of solving a task in isolation, users write their machine learning workl
 This enables other users to learn from, modify, and make improvements to the existing workloads.
 However, this collaborative approach suffers from two inefficiencies.
 First, storing all the artifacts, such as raw datasets, generated features, and models with their hyperparameters, requires massive amounts of storage.
-As a result, only some of artifacts such as, scripts, operations, and models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
-\hl{Second, even if all the artifacts are stored, manually looking for specific artifacts is time-consuming.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar...
+As a result, only some of the artifacts such as scripts, operations, and models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
+\hl{Second, even if all the artifacts are stored, manually finding desired artifacts is a time-consuming process.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar... *Behrouz: I wanted to use the word manually (or something equal) to contrast between the current 'manual' querying or reading the scripts vs our way of reuse or warmstarting that doesn't require user's intervention.
 
 The contributions of this paper are two-fold.
-\hl{First, we propose algorithms for selecting and materializing the artifacts with a high expected rate of future reuse and store all the artifacts in a graph.} % Tilmann: store the artifacts or the metadata of artifacts in a graph? Make sure you are precise with the terminology: What is the materilized artifact, what is the metadata.
-The algorithms combine general metrics, such as access frequency and size, and machine learning specific metrics, such as feature and model quality, to decide on what artifact to materialize.
+First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges respectively. 
+Since storing all the artifacts is not feasible, we propose two algorithms for selecting the artifacts with high expected rates of future reuse.
+We then store the selected artifacts in memory for quick access, a process which we call artifact materialization.
+The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning model artifacts to decide what artifacts to materialize.
 Second, using the graph, we propose three optimizations, namely reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads and increase the efficiency of collaborative data science platforms.
 
 %Machine learning workloads have varying characteristics.
