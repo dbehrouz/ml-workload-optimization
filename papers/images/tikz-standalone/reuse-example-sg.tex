@@ -1,0 +1,30 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc}
+\usegdlibrary{trees}
+\begin{document}
+\begin{tikzpicture}
+%\draw[help lines]  (-2,0) grid (6,6);
+\tikzstyle{every node}=[inner sep=0.02cm]
+\node (train) [circle, draw] at (2,6) {$v_0$};
+% layer 1
+\node (forselection) [circle, draw] at (2,5.2) {$v_2$};
+\node (y) [circle, draw] at (3,5.2) {$v_3$};
+% layer 2
+\node(sk) [circle, draw] at (2, 4.3) {$v_5$};
+% layer 3
+\node (merged) [circle] at (3, 4.3) {};
+% layer 4
+\node (model) [circle] at (3, 3.4) {};
+
+
+\graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\small}]{
+(train) 
+-> [anchor=east,align=center, "p2"] (forselection)
+-> [anchor=east,auto=false,align=center,"s1"] (sk);
+
+(train) 
+-> [anchor=south, align=right,"p3"]   (y);
+};
+\end{tikzpicture}
+\end{document}
