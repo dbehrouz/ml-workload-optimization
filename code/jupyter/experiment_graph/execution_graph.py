@@ -3,6 +3,7 @@ import sys
 
 import networkx as nx
 import pandas as pd
+from datetime import datetime
 
 # Reserved word for representing super nodes.
 # Do not use combine as an operation name
@@ -56,7 +57,8 @@ class ExecutionGraph(object):
                 node_size=100)
         nx.draw_networkx_edge_labels(self.graph,
                                      pos=pos,
-                                     edge_labels={(u, v): d["name"] for u, v, d in self.graph.edges(data=True)})
+                                     edge_labels={(u, v): (d["name"], d["execution_time"]) for u, v, d in
+                                                  self.graph.edges(data=True)})
 
     @staticmethod
     def compute_size(data):
@@ -158,14 +160,21 @@ class ExecutionGraph(object):
                     # TODO: Later on maybe we want to consider storing models and aggregates on the data storage as well
                     if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
                         # TODO: check if a shallow copy is enough
+                        start_time = datetime.now()
                         cur_node['data'].c_name, cur_node['data'].c_hash = copy.deepcopy(
                             self.compute_next(self.graph.nodes[pair[0]], edge))
+                        total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = cur_node['data'].compute_size()
                     # all the other node types they contain the data themselves
                     else:
+                        start_time = datetime.now()
                         cur_node['data'].data_obj = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
+                        total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = self.compute_size(cur_node['data'].data_obj)
                     cur_node['data'].computed = True
+                    edge['execution_time'] = total_time
+            else:
+                edge['execution_time'] = 0.0
 
     @staticmethod
     def compute_next(node, edge):

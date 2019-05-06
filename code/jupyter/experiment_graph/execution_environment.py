@@ -97,6 +97,7 @@ class Node(object):
                                                     {'name': oper,
                                                      'oper': 'p_' + oper,
                                                      'args': args,
+                                                     'execution_time': -1,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
@@ -109,6 +110,7 @@ class Node(object):
         exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                     {'name': oper,
                                                      'oper': 'p_' + oper,
+                                                     'execution_time': -1,
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
                                                     ntype=Dataset.__name__)
@@ -121,6 +123,7 @@ class Node(object):
         nextnode = Feature(nextid, c_name, c_hash)
         exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
                                                     {'name': oper,
+                                                     'execution_time': -1,
                                                      'oper': 'p_' + oper,
                                                      'args': args,
                                                      'hash': self.e_hash(oper, args)},
@@ -145,6 +148,7 @@ class Node(object):
                                                     # combine is a reserved word
                                                     {'name': COMBINE_OPERATION_IDENTIFIER,
                                                      'oper': COMBINE_OPERATION_IDENTIFIER,
+                                                     'execution_time': 0,
                                                      'args': {},
                                                      'hash': self.e_hash(COMBINE_OPERATION_IDENTIFIER, args)},
                                                     ntype=type(nextnode).__name__)
