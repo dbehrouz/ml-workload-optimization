@@ -23,6 +23,13 @@ class Node(object):
         self.id = node_id
         self.meta = {}
         self.computed = False
+        self.access_freq = 0
+
+    def update_freq(self):
+        self.access_freq += 1
+
+    def get_freq(self):
+        return self.access_freq
 
     # TODO: when params are a dictionary with multiple keys the order may not be the same in str conversion
     @staticmethod
@@ -456,6 +463,7 @@ class Feature(Node):
     """
 
     def data(self, verbose=0):
+        self.update_freq()
         if not self.computed:
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True
@@ -752,6 +760,7 @@ class Dataset(Node):
     """
 
     def data(self, verbose=0):
+        self.update_freq()
         if not self.computed:
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True
@@ -1122,6 +1131,7 @@ class GroupBy(Node):
         return self.project(index)
 
     def data(self, verbose=0):
+        self.update_freq()
         if not self.computed:
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True
@@ -1221,6 +1231,7 @@ class SK_Model(Node):
         self.data_obj = data_obj
 
     def data(self, verbose=0):
+        self.update_freq()
         if not self.computed:
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True
