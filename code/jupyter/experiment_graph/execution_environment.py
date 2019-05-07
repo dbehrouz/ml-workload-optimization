@@ -1210,6 +1210,7 @@ class Agg(Node):
         self.data_obj = data_obj
 
     def data(self, verbose=0):
+        self.update_freq()
         if not self.computed:
             ExecutionEnvironment.graph.compute_result(self.id, verbose)
             self.computed = True

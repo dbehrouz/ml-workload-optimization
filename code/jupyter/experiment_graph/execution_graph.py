@@ -1,9 +1,10 @@
 import copy
 import sys
+from datetime import datetime
 
 import networkx as nx
+import numpy as np
 import pandas as pd
-from datetime import datetime
 
 # Reserved word for representing super nodes.
 # Do not use combine as an operation name
@@ -34,31 +35,56 @@ class ExecutionGraph(object):
         return None
 
     def plot_graph(self, plt):
-        plt.figure(figsize=(12, 12))
-        pos = nx.spring_layout(self.graph)
-        # pos = graphviz_layout(ee.graph.graph, prog='twopi', args='')
-        color_map = []
+        from networkx.drawing.nx_agraph import graphviz_layout
+        f = plt.figure(figsize=(12, 12))
+        ax = f.add_subplot(1, 1, 1)
+        pos = graphviz_layout(self.graph, prog='dot', args='')
+        self.compute_frequencies()
+        freqs = {}
+        types = []
+        # Color mapping
+
         for node in self.graph.nodes(data=True):
+            if node[1]['type'] not in types:
+                types.append(node[1]['type'])
+            freqs[node[0]] = node[1]['freq']
 
-            if node[1]['root']:
-                color_map.append('green')
-            elif node[1]['type'] == 'Dataset' or node[1]['type'] == 'Feature':
-                color_map.append('red')
-            elif node[1]['type'] == 'Agg' or node[1]['type'] == 'SK_Model':
-                color_map.append('blue')
-            elif node[1]['type'] == 'SuperNode':
-                color_map.append('grey')
-            else:
-                color_map.append('black')
+        jet = plt.get_cmap('prism')
+        colors = jet(np.linspace(0, 1, len(types)))
+        color_map = dict(zip(types, colors))
+        for label in color_map:
+            ax.scatter(None, None, color=color_map[label], label=label)
 
-        nx.draw(self.graph,
-                node_color=color_map,
-                pos=pos,
-                node_size=100)
-        nx.draw_networkx_edge_labels(self.graph,
-                                     pos=pos,
-                                     edge_labels={(u, v): (d["name"], d["execution_time"]) for u, v, d in
-                                                  self.graph.edges(data=True)})
+        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True)]
+        nx.draw_networkx(
+            self.graph,
+            cmap=jet,
+            vmin=0,
+            vmax=len(types),
+            node_color=all_colors,
+            pos=pos,
+            with_labels=False,
+            ax=ax)
+
+        nx.draw_networkx_labels(self.graph,
+                                pos=pos,
+                                labels=freqs,
+                                font_size=14)
+        nx.draw_networkx_edge_labels(
+            self.graph,
+            pos=pos,
+            edge_labels={(u, v): (d["name"], d["execution_time"])
+                         for u, v, d in self.graph.edges(data=True)})
+        plt.axis('off')
+        f.set_facecolor('w')
+        leg = ax.legend(markerscale=4, loc='best', fontsize=12, scatterpoints=1)
+
+        for line in leg.get_lines():
+            line.set_linewidth(4.0)
+
+    def compute_frequencies(self):
+        for node in self.graph.nodes(data=True):
+            node[1]['freq'] = node[1]['data'].get_freq()
 
     @staticmethod
     def compute_size(data):
