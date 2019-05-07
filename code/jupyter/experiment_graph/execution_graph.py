@@ -34,24 +34,34 @@ class ExecutionGraph(object):
         self.graph.add_edge(start_id, end_id, **meta)
         return None
 
-    def plot_graph(self, plt):
+    def plot_graph(self, plt, vertex_freq=True, edge_oper=False, edge_time=False):
+        """
+        plot the graph using the graphvix dot layout
+        :param plt: matlibplot object
+        :param vertex_freq: boolean flag for hiding vertex frequencies (default True)
+        :param edge_oper: boolean flag for hiding operation names on the edges (default False)
+        :param edge_time: boolean flag for hiding operation execution time on edges (default Flase)
+        """
         from networkx.drawing.nx_agraph import graphviz_layout
         f = plt.figure(figsize=(12, 12))
         ax = f.add_subplot(1, 1, 1)
         pos = graphviz_layout(self.graph, prog='dot', args='')
+        # TODO we should find a way to automatically update the frequencies currently, they are updated
+        # TODO inside the Node subclasses and there is no direct access to the graph from inside the
+        # TODO Node subclasses, that's why we are manually calling this function to compute teh actual
+        # TODO frequencies
         self.compute_frequencies()
+        # get the list of available types and frequency of each node
         freqs = {}
-        types = []
-        # Color mapping
-
+        unique_types = []
         for node in self.graph.nodes(data=True):
-            if node[1]['type'] not in types:
-                types.append(node[1]['type'])
+            if node[1]['type'] not in unique_types:
+                unique_types.append(node[1]['type'])
             freqs[node[0]] = node[1]['freq']
 
         jet = plt.get_cmap('prism')
-        colors = jet(np.linspace(0, 1, len(types)))
-        color_map = dict(zip(types, colors))
+        colors = jet(np.linspace(0, 1, len(unique_types)))
+        color_map = dict(zip(unique_types, colors))
         for label in color_map:
             ax.scatter(None, None, color=color_map[label], label=label)
 
@@ -60,21 +70,33 @@ class ExecutionGraph(object):
             self.graph,
             cmap=jet,
             vmin=0,
-            vmax=len(types),
+            vmax=len(unique_types),
             node_color=all_colors,
             pos=pos,
             with_labels=False,
             ax=ax)
 
-        nx.draw_networkx_labels(self.graph,
-                                pos=pos,
-                                labels=freqs,
-                                font_size=14)
+        if vertex_freq:
+            nx.draw_networkx_labels(self.graph,
+                                    pos=pos,
+                                    labels=freqs,
+                                    font_size=14)
+
+        def construct_label(edge_data, oper, ti):
+            if oper and ti:
+                return edge_data['name'], edge_data['execution_time']
+            if oper:
+                return edge_data['name']
+            if ti:
+                return edge_data['execution_time']
+            return ''
+
         nx.draw_networkx_edge_labels(
             self.graph,
             pos=pos,
-            edge_labels={(u, v): (d["name"], d["execution_time"])
+            edge_labels={(u, v): construct_label(d, edge_oper, edge_time)
                          for u, v, d in self.graph.edges(data=True)})
+
         plt.axis('off')
         f.set_facecolor('w')
         leg = ax.legend(markerscale=4, loc='best', fontsize=12, scatterpoints=1)
@@ -175,6 +197,7 @@ class ExecutionGraph(object):
         # execute the computation based on the schedule
         for pair in schedule:
             cur_node = self.graph.nodes[pair[1]]
+            prev_node = self.graph.nodes[pair[0]]
             edge = self.graph.edges[pair[0], pair[1]]
             # print the path while executing
             if verbose == 1:
