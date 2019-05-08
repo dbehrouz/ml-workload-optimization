@@ -2,11 +2,11 @@
 
 """Reuse Experiments Runner script
 
-Run the same workloads 2 times. The first time no experiment graph exists so both baseline and optimized
-version will be long. The second run should be faster for optimized since the graph is
+Run the same workloads 2 times. The first time no experiment experiment_graphs exists so both baseline and optimized
+version will be long. The second run should be faster for optimized since the experiment_graphs is
 populated.
 
-TODO: Currently the load and save time of the graph are also reported in the result
+TODO: Currently the load and save time of the experiment_graphs are also reported in the result
 
 """
 import os

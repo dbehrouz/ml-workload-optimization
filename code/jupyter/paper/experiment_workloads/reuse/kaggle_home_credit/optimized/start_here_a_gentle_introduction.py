@@ -669,7 +669,7 @@ def run(execution_environment, root_data):
     fi_sorted = plot_feature_importances(fi_domain)
 
     # the total time is captured by the profiler,
-    # here we return the graph load, save, and the total time the system spent in training models
+    # here we return the experiment_graphs load, save, and the total time the system spent in training models
     return execution_environment.time_manager.get('model-training', 0)
 
 
@@ -679,7 +679,7 @@ ee = ExecutionEnvironment('dedup')
 execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/environment_dedup'
+DATABASE_PATH = root_data + 'experiment_graphs/home-credit-default-risk/environment_dedup'
 # ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
 ee.save_environment(DATABASE_PATH)

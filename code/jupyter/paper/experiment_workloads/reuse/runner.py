@@ -2,8 +2,8 @@
 
 """Reuse Experiments Runner script
 Executes multiple scripts (currently 3) after each other.
-For optimized execution, the first script is running in normal mode as no experiment graph is constructed yet.
-The rest of the scripts will use the experiment graph constructed so far to for operation and model reuse.
+For optimized execution, the first script is running in normal mode as no experiment experiment_graphs is constructed yet.
+The rest of the scripts will use the experiment experiment_graphs constructed so far to for operation and model reuse.
 """
 import os
 import uuid
@@ -17,7 +17,7 @@ sys.path.append(ROOT_PACKAGE_DIRECTORY)
 from experiment_graph.execution_environment import ExecutionEnvironment
 
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
+DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/graphs/home-credit-default-risk/environment_different_workload'
 
 OUTPUT_CSV = 'results/run_times_different_workload.csv'
 RESULT_FOLDER = 'results'

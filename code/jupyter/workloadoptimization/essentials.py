@@ -128,10 +128,10 @@ class ExperimentGraph:
     def __init__(self):
         self.graph = nx.DiGraph()
 
-    # construct the directed graph (for now we only support acyclic graphs)
+    # construct the directed experiment_graphs (for now we only support acyclic graphs)
     graph = None
 
-    # Update the graph by add the experiment object
+    # Update the experiment_graphs by add the experiment object
     def insertExperimentObject(self, experimentObject):
         import uuid
         if not self.graph.has_node(experimentObject.task):
