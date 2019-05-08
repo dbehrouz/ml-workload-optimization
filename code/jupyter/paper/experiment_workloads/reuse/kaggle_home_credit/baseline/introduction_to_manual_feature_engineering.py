@@ -7,15 +7,13 @@
 # File system management
 # Suppress warnings
 import warnings
-
 # numpy and pandas for data manipulation
 from datetime import datetime
 
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 # plotting libraries
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 warnings.filterwarnings('ignore')
 
@@ -483,8 +481,6 @@ def run(root_data):
     # train_corrs_removed.to_csv('train_bureau_corrs_removed.csv', index=False)
     # test_corrs_removed.to_csv('test_bureau_corrs_removed.csv', index=False)
 
-    from sklearn.preprocessing import LabelEncoder
-
     import lightgbm as lgb
 
     def model(features, test_features, encoding='ohe', n_folds=5):
@@ -539,24 +535,24 @@ def run(root_data):
             cat_indices = 'auto'
 
         # Integer label encoding
-        elif encoding == 'le':
-
-            # Create a label encoder
-            label_encoder = LabelEncoder()
-
-            # List for storing categorical indices
-            cat_indices = []
-
-            # Iterate through each column
-            for i, col in enumerate(features):
-                if features[col].dtype == 'object':
-                    # Map the categorical features to integers
-                    features[col] = label_encoder.fit_transform(np.array(features[col].astype(str)).reshape((-1,)))
-                    test_features[col] = label_encoder.transform(
-                        np.array(test_features[col].astype(str)).reshape((-1,)))
-
-                    # Record the categorical indices
-                    cat_indices.append(i)
+        # elif encoding == 'le':
+        #
+        #     # Create a label encoder
+        #     label_encoder = LabelEncoder()
+        #
+        #     # List for storing categorical indices
+        #     cat_indices = []
+        #
+        #     # Iterate through each column
+        #     for i, col in enumerate(features):
+        #         if features[col].dtype == 'object':
+        #             # Map the categorical features to integers
+        #             features[col] = label_encoder.fit_transform(np.array(features[col].astype(str)).reshape((-1,)))
+        #             test_features[col] = label_encoder.transform(
+        #                 np.array(test_features[col].astype(str)).reshape((-1,)))
+        #
+        #             # Record the categorical indices
+        #             cat_indices.append(i)
 
         # Catch error if label encoding scheme is not valid
         else:

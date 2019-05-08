@@ -17,7 +17,6 @@ import pandas as pd
 import seaborn as sns
 
 # Experiment Graph
-# sklearn preprocessing for dealing with categorical variables
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -423,7 +422,8 @@ def run(execution_environment, root_data):
     print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data())
     print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data())
 
-    import lightgbm as lgb
+    from sklearn_helper.sklearn_connectors import LGBMClassifier
+
     def model(lgb_featres, test_features, encoding='ohe'):
 
         """Train and test a light gradient boosting model using
@@ -509,17 +509,18 @@ def run(execution_environment, root_data):
         feature_names = list(lgb_featres.data().columns)
 
         # Create the model
-        lgb_model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
-                                       class_weight='balanced', learning_rate=0.05,
-                                       reg_alpha=0.1, reg_lambda=0.1,
-                                       subsample=0.8, n_jobs=-1, random_state=50)
+        model = LGBMClassifier(n_estimators=10, objective='binary',
+                               class_weight='balanced', learning_rate=0.05,
+                               reg_alpha=0.1, reg_lambda=0.1,
+                               subsample=0.8, n_jobs=-1, random_state=50)
 
-        model = lgb_featres.fit_sk_model_with_labels(lgb_model, labels, custom_args={'eval_metric': 'auc',
-                                                                                     'categorical_feature': cat_indices,
-                                                                                     'verbose': 200})
+        # Train the model
+        model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
+                                                 'categorical_feature': cat_indices,
+                                                 'verbose': 200})
 
         # Record the best iteration
-        best_iteration = model.data().best_iteration_
+        best_iteration = model.best_iteration()
 
         # Make predictions
         test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]

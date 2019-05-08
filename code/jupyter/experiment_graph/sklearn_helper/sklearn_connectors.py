@@ -18,7 +18,7 @@ class SimpleModel:
         self.trained_node = data.fit_sk_model(self.underlying_sk_model)
 
     def transform(self, data):
-        return self.trained_node.trasform(data)
+        return self.trained_node.transform(data)
 
     def fit_transform(self, data):
         self.fit(data)
@@ -64,7 +64,7 @@ class PredictiveModel:
         return self.trained_node.predict_proba(test, custom_args)
 
     def feature_importances(self, features):
-        self.trained_node.feature_importances(features)
+        return self.trained_node.feature_importances(features)
 
 
 class LogisticRegression(PredictiveModel):
