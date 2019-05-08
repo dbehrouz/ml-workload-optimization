@@ -18,8 +18,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 # Experiment Graph
-# sklearn preprocessing for dealing with categorical variables
-from sklearn.preprocessing import LabelEncoder
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -74,6 +72,7 @@ def run(execution_environment, root_data):
 
     app_train.select_dtypes('object').nunique().data()
 
+    from sklearn_helper.sklearn_connectors import LabelEncoder
     # Create a label encoder object
     le = LabelEncoder()
     le_count = 0
@@ -81,15 +80,9 @@ def run(execution_environment, root_data):
     for col in app_train.select_dtypes('object').data().columns:
         # we are not using nunique because it discard nan
         if app_train[col].nunique(dropna=False).data() <= 2:
-            model = app_train[col].fit_sk_model(le)
-
-            transformed_train = model.transform_col(app_train[col], col)
-            app_train = app_train.drop(col)
-            app_train = app_train.add_columns(col, transformed_train)
-
-            transformed_test = model.transform_col(app_test[col], col)
-            app_test = app_test.drop(col)
-            app_test = app_test.add_columns(col, transformed_test)
+            le.fit(app_train[col])
+            app_train = app_train.replace_columns(col, le.transform(app_train[col]))
+            app_test = app_test.replace_columns(col, le.transform(app_test[col]))
 
             # Keep track of how many columns were label encoded
             le_count += 1
@@ -255,7 +248,7 @@ def run(execution_environment, root_data):
     poly_features_test = app_test[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
 
     # imputer for handling missing values
-    from sklearn.preprocessing import Imputer
+    from sklearn_helper.sklearn_connectors import Imputer
 
     imputer = Imputer(strategy='median')
 
@@ -264,24 +257,24 @@ def run(execution_environment, root_data):
     poly_features = poly_features.drop(columns=['TARGET'])
 
     # Need to impute missing values
-    imputer_model = poly_features.fit_sk_model(imputer)
-    poly_features = imputer_model.transform(poly_features)
-    poly_features_test = imputer_model.transform(poly_features_test)
+    poly_features = imputer.fit_transform(poly_features)
+    poly_features_test = imputer.transform(poly_features_test)
 
-    from sklearn.preprocessing import PolynomialFeatures
+    from sklearn_helper.sklearn_connectors import PolynomialFeatures
 
     # Create the polynomial object with specified degree
     poly_transformer = PolynomialFeatures(degree=3)
 
     # Train the polynomial features
-    poly_transformer_model = poly_features.fit_sk_model(poly_transformer)
+    poly_transformer.fit(poly_features)
 
-    poly_features = poly_transformer_model.transform(poly_features)
-    poly_features_test = poly_transformer_model.transform(poly_features_test)
+    # Transform the features
+    poly_features = poly_transformer.transform(poly_features)
+    poly_features_test = poly_transformer.transform(poly_features_test)
+    print('Polynomial Features shape: ', poly_features.shape)
 
-    new_names = poly_transformer_model.data().get_feature_names(input_features=[
-        'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH'
-    ])
+    new_names = poly_transformer.get_feature_names(input_features=['EXT_SOURCE_1', 'EXT_SOURCE_2',
+                                                                   'EXT_SOURCE_3', 'DAYS_BIRTH'])
 
     poly_features = poly_features.set_columns(new_names)
 
@@ -367,7 +360,7 @@ def run(execution_environment, root_data):
 
     plt.tight_layout(h_pad=2.5)
 
-    from sklearn.preprocessing import MinMaxScaler, Imputer
+    from sklearn_helper.sklearn_connectors import MinMaxScaler, Imputer
 
     # Drop the target from the training data
     columns = app_train.data().columns
@@ -383,33 +376,33 @@ def run(execution_environment, root_data):
     test = app_test.copy()
 
     # Median imputation of missing values
-    sk_imputer = Imputer(strategy='median')
+    imputer = Imputer(strategy='median')
 
     # Scale each feature to 0-1
-    sk_scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler = MinMaxScaler(feature_range=(0, 1))
 
     # Fit on the training data
-    imputer = train.fit_sk_model(sk_imputer)
+    imputer.fit(train)
 
     # Transform both training and testing data
     train = imputer.transform(train)
     test = imputer.transform(test)
 
     # Repeat with the scaler
-    scaler = train.fit_sk_model(sk_scaler)
+    scaler.fit(train)
     train = scaler.transform(train)
     test = scaler.transform(test)
 
     print('Training data shape: ', train.shape().data())
     print('Testing data shape: ', test.shape().data())
 
-    from sklearn.linear_model import LogisticRegression
+    from sklearn_helper.sklearn_connectors import LogisticRegression
 
     # Make the model with the specified regularization parameter
-    sk_log_reg = LogisticRegression(C=0.0001)
+    log_reg = LogisticRegression(C=0.0001)
 
     # Train on the training data
-    log_reg = train.fit_sk_model_with_labels(sk_log_reg, train_labels)
+    log_reg.fit(train, train_labels)
 
     # Make predictions
     # Make sure to select the second column only
@@ -420,15 +413,15 @@ def run(execution_environment, root_data):
     submit = app_test['SK_ID_CURR'].concat(log_reg_pred)
     submit.head().data()
 
-    from sklearn.ensemble import RandomForestClassifier
+    from sklearn_helper.sklearn_connectors import RandomForestClassifier
 
     # Make the random forest classifier
-    sk_random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
+    random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
 
     # Train on the training data
-    random_forest = train.fit_sk_model_with_labels(sk_random_forest, train_labels)
+    random_forest.fit(train, train_labels)
 
-    # Extract feature importances
+    # Extract feature importance
     feature_importances = random_forest.feature_importances(features)
 
     # Make predictions on the test data
@@ -443,21 +436,19 @@ def run(execution_environment, root_data):
     poly_features_names = list(app_train_poly.data().columns)
 
     # Impute the polynomial features
-    sk_imputer = Imputer(strategy='median')
-    imputer = app_train_poly.fit_sk_model(sk_imputer)
+    imputer = Imputer(strategy='median')
 
-    poly_features = imputer.transform(app_train_poly)
+    poly_features = imputer.fit_transform(app_train_poly)
     poly_features_test = imputer.transform(app_test_poly)
 
     # Scale the polynomial features
-    sk_scaler = MinMaxScaler(feature_range=(0, 1))
-    scaler = poly_features.fit_sk_model(sk_scaler)
+    scaler = MinMaxScaler(feature_range=(0, 1))
 
-    poly_features = scaler.transform(poly_features)
+    poly_features = scaler.fit_transform(poly_features)
     poly_features_test = scaler.transform(poly_features_test)
 
-    sk_random_forest_poly = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
-    random_forest_poly = poly_features.fit_sk_model_with_labels(sk_random_forest_poly, train_labels)
+    random_forest_poly = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
+    random_forest_poly.fit(poly_features, train_labels)
 
     # Make predictions on the test data
     predictions = random_forest_poly.predict_proba(poly_features_test)[1]
@@ -473,22 +464,20 @@ def run(execution_environment, root_data):
     domain_features_names = list(app_train_domain.data().columns)
 
     # Impute the domainnomial features
-    sk_imputer = Imputer(strategy='median')
-    imputer = app_train_domain.fit_sk_model(sk_imputer)
+    imputer = Imputer(strategy='median')
 
-    domain_features = imputer.transform(app_train_domain)
+    domain_features = imputer.fit_transform(app_train_domain)
     domain_features_test = imputer.transform(app_test_domain)
 
     # Scale the domainnomial features
-    sk_scaler = MinMaxScaler(feature_range=(0, 1))
-    scaler = domain_features.fit_sk_model(sk_scaler)
+    scaler = MinMaxScaler(feature_range=(0, 1))
 
-    domain_features = scaler.transform(domain_features)
+    domain_features = scaler.fit_transform(domain_features)
     domain_features_test = scaler.transform(domain_features_test)
 
     # Train on the training data
-    sk_random_forest_domain = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
-    random_forest_domain = domain_features.fit_sk_model_with_labels(sk_random_forest_domain, train_labels)
+    random_forest_domain = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
+    random_forest_domain.fit(domain_features, train_labels)
 
     # Extract feature importances
     feature_importances_domain = random_forest_domain.feature_importances(domain_features_names)
@@ -549,7 +538,7 @@ def run(execution_environment, root_data):
 
     feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
-    import lightgbm as lgb
+    from sklearn_helper.sklearn_connectors import LGBMClassifier
 
     def model(lgb_featres, test_features, encoding='ohe'):
 
@@ -636,17 +625,18 @@ def run(execution_environment, root_data):
         feature_names = list(lgb_featres.data().columns)
 
         # Create the model
-        lgb_model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
-                                       class_weight='balanced', learning_rate=0.05,
-                                       reg_alpha=0.1, reg_lambda=0.1,
-                                       subsample=0.8, n_jobs=-1, random_state=50)
+        model = LGBMClassifier(n_estimators=10, objective='binary',
+                               class_weight='balanced', learning_rate=0.05,
+                               reg_alpha=0.1, reg_lambda=0.1,
+                               subsample=0.8, n_jobs=-1, random_state=50)
 
-        model = lgb_featres.fit_sk_model_with_labels(lgb_model, labels, custom_args={'eval_metric': 'auc',
-                                                                                     'categorical_feature': cat_indices,
-                                                                                     'verbose': 200})
+        # Train the model
+        model.fit(features, labels, custom_args={'eval_metric': 'auc',
+                                                 'categorical_feature': cat_indices,
+                                                 'verbose': 200})
 
         # Record the best iteration
-        best_iteration = model.data().best_iteration_
+        best_iteration = model.best_iteration()
 
         # Make predictions
         test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]

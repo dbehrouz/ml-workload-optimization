@@ -34,16 +34,17 @@ class ExecutionGraph(object):
         self.graph.add_edge(start_id, end_id, **meta)
         return None
 
-    def plot_graph(self, plt, vertex_freq=True, edge_oper=False, edge_time=False):
+    def plot_graph(self, plt, figsize=(12, 12), vertex_freq=True, edge_oper=False, edge_time=False):
         """
         plot the graph using the graphvix dot layout
+        :param figsize: size of the figure (default (12,12))
         :param plt: matlibplot object
         :param vertex_freq: boolean flag for hiding vertex frequencies (default True)
         :param edge_oper: boolean flag for hiding operation names on the edges (default False)
         :param edge_time: boolean flag for hiding operation execution time on edges (default Flase)
         """
         from networkx.drawing.nx_agraph import graphviz_layout
-        f = plt.figure(figsize=(12, 12))
+        f = plt.figure(figsize=figsize)
         ax = f.add_subplot(1, 1, 1)
         pos = graphviz_layout(self.graph, prog='dot', args='')
         # TODO we should find a way to automatically update the frequencies currently, they are updated

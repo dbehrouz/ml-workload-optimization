@@ -238,9 +238,9 @@ class SuperNode(Node):
     def p_fit_sk_model_with_labels(self, model, custom_args):
         start = datetime.now()
         if custom_args is None:
-            model.fit(self.nodes[0].data(), self.nodes[1].data())
+            model.fit(self.nodes[0].data(), self.nodes[1].data(), )
         else:
-            model.fit(self.nodes[0].data(), self.nodes[1].data(), **custom_args)
+            model.fit(self.nodes[0].data(), self.nodes[1].data(), )
         # update the model training time in the graph
         ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
@@ -1245,7 +1245,7 @@ class SK_Model(Node):
     #     self.update_meta()
 
     # The matching physical operator is in the supernode class
-    def transform_col(self, node, col_name):
+    def transform_col(self, node, col_name='NO_COLUMN_NAME'):
         supernode = self.generate_super_node([self, node])
         return self.generate_feature_node('transform_col', args={'col_name': col_name}, v_id=supernode.id)
 
