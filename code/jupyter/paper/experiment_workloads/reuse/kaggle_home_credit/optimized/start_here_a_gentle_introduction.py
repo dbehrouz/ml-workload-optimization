@@ -271,7 +271,7 @@ def run(execution_environment, root_data):
     # Transform the features
     poly_features = poly_transformer.transform(poly_features)
     poly_features_test = poly_transformer.transform(poly_features_test)
-    print('Polynomial Features shape: ', poly_features.shape)
+    print('Polynomial Features shape: ', poly_features.shape().data())
 
     new_names = poly_transformer.get_feature_names(input_features=['EXT_SOURCE_1', 'EXT_SOURCE_2',
                                                                    'EXT_SOURCE_3', 'DAYS_BIRTH'])
