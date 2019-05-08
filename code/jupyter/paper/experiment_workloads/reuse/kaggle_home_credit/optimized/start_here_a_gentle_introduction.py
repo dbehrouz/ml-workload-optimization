@@ -631,7 +631,7 @@ def run(execution_environment, root_data):
                                subsample=0.8, n_jobs=-1, random_state=50)
 
         # Train the model
-        model.fit(features, labels, custom_args={'eval_metric': 'auc',
+        model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
                                                  'categorical_feature': cat_indices,
                                                  'verbose': 200})
 
