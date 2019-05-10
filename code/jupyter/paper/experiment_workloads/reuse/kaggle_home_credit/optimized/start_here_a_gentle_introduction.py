@@ -17,6 +17,7 @@ import numpy as np
 # numpy and pandas for data manipulation
 import pandas as pd
 import seaborn as sns
+
 # Experiment Graph
 
 # Suppress warnings
@@ -632,8 +633,8 @@ def run(execution_environment, root_data):
 
         # Train the model
         model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
-                                                 'categorical_feature': cat_indices,
-                                                 'verbose': 200})
+                                                    'categorical_feature': cat_indices,
+                                                    'verbose': 200})
 
         # Record the best iteration
         best_iteration = model.best_iteration()
@@ -669,7 +670,7 @@ ee = ExecutionEnvironment('dedup')
 execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + 'experiment_graphs/home-credit-default-risk/environment_dedup'
+DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
 # ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
 ee.save_environment(DATABASE_PATH)
