@@ -130,6 +130,7 @@ where $v.out\_degree$ indicates the number of outgoing edges of the artifact $v$
 Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
 The impact of the number of outgoing edges of an artifact is more implicit.
 Intuitively, an artifact with high fan-out indicates the artifact has appeared in several different machine learning workloads and pipeline.
+\todo[inline]{We should properly define the following. Workload: a subgraph which starts from the root and can end in 0 or multiple machine learning models, i.e., a machine learning script. Pipeline: any subgraph that starts at root and ends at one model. A vertex belonging to different pipelines in different workloads means, several users have used that artifact to create different machine learning models. We mark this artifact as valuable, since we suspect it is a dataset with clean and high quality features. }
 An example of these types of artifacts is cleaned and preprocessed datasets with high-quality features, where users utilize them to train several different models.
 Therefore, in the presence of equal estimated quality, recreation cost, and size, we are prioritizing artifacts with larger out\_degrees.
 
