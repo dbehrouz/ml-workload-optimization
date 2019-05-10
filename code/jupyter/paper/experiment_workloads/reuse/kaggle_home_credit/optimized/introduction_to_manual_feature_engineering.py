@@ -422,7 +422,7 @@ def run(execution_environment, root_data):
     print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data())
     print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data())
 
-    from sklearn_helper.sklearn_connectors import LGBMClassifier
+    from sklearn_helper.sklearn_wrappers import LGBMClassifier
 
     def model(lgb_featres, test_features, encoding='ohe'):
 

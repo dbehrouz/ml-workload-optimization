@@ -12,57 +12,66 @@ The second algorithm takes the duplication information into account when making 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
 Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
 The goal of the algorithm is to materialize the artifacts that result in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-However, their approach only considers access frequency and reconstruction cost of an artifact.
+However, there are several reasons which render their solution inapplicable to the artifact materialization problem.
+First, their approach only considers access frequency and reconstruction cost of an artifact.
 For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workload, i.e., materialize artifacts which result in high-quality machine learning models.
-We formulate the problem of materialization as a multi-objective optimization problem, with the goal of minimizing two functions given the storage requirement constraint.
+Second, their solution does not consider merge operations, e.g., join, concatenation, and model training, which are common in machine learning workloads.
+Lastly, their solution considers a scenario where new artifacts are rarely added.
+In the machine learning workload optimization, new artifacts are continuously added to the experiment graph.
+As a result, a proper solution must accommodate the addition of new artifacts.
 
-\textbf{Weighted Recreation Cost Function.} 
-The first function computes the weighted recreation cost of the graph:
+Here, we first formulate the problem of materialization as a multi-objective optimization problem, with the goal of minimizing two functions which consider both the artifact recreation cost and the model quality of the artifacts, given the storage requirement constraint.
+
+\textbf{Weighted Recreation Cost Function (WC).} 
+The first function computes the weighted recreation cost of all the non-merged vertices in the graph:
 \[
-WC(G) =  \sum\limits_{v \in V}  (1-v.m) \times v.f \times \sum\limits_{e \in in\_edges(G,v)} e.t
+WC(G) =  \sum\limits_{v \in V\setminus merged\_vertices}  (1-v.mat) \times v.f \times in\_edge(v).t
 \]
-where $v.m = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the access frequency of the artifact $v$, $in_edges(G,v)$ returns the set of edges with destination $v$, and $e.t$ is the execution time of the edge $e$.
+where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the access frequency of the artifact $v$, $in_edge(v)$ returns the edge with destination $v$ and a run-time of $t$.
+Merged vertices (represented by $merged\_vertices$) have no impact on $WC(G)$ since they carry no actual content except for pointers to the original vertices.
+This also ensures $in\_edge(v)$ contains at most one edge.
 Intuitively, the weighted recreation cost indicates the total amount of execution time required to recompute all the vertices multiplied by their access frequencies.
 Materialized artifacts incur no cost since they are stored.
 Non-materialized artifacts incur a cost equal to the execution time of the proceeding operations multiplied by their frequency.
 For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ with access frequency of 2, we must consider both executions of the operation \textit{vectorizer.f\_t}  when computing the weighted cost.
 Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
 
-\textbf{Estimated Quality Function.} 
-The second function computes the estimated gain in quality:
-\[
-EQ(G) =  \sum\limits_{v \in V}  v.m \times estimated\_quality(v)
-\]
-To define the function $estimated\_quality$, we first define the two following sets.
+\textbf{Estimated Quality Function (EQ).} 
+In order to define the estimated quality function, we need to define the followings first.
 \[
 M(G) = \{v \in V \mid \text{v is a machine learning model}\}
 \]
 is the set of all models in the experiment graph.
 For every vertex $v$ in the graph, 
 \[
-M(v) = \{m \in M(G) \mid (v = m) \vee \text{(v is connected to m)}\}
+M(v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
 \]
 is the set of all machine learning models to which $v$ is connected.
-Now, we define the estimated quality of an artifact as:
 \[
-estimated\_quality(v) = \sum\limits_{m \in M(v)} m.q \times \dfrac{1}{1 + \mid path(v,m) \mid}
+potential(v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
 \]
-where $m.q$ is the quality metric of a model artifact defined as part of the task (e.g., accuracy or AUC for classification tasks and coefficient of determination for regression tasks).
-The multiplier $\tfrac{1}{1+\mid path(v,m) \mid}$ is the discount factor of the estimated quality which decreases as the distance between $v$ and $m$ increases.
-If $v$ itself is a model, then $M(v)$ only contains $v$ itself, as there are no outgoing edges from model artifacts, i.e., $\forall m \in M,\text{ }estimated\_quality(m) = m.q$.
-When $v$ is not a model artifact, the further $v$ is from a model artifact the smaller the discount factor becomes, which reduces the estimated quality gained by materializing the artifact $v$.
+is the potential of an artifact, where $quality(m)$ represents the value of the quality criteria of a model artifact defined as part of the task (e.g., accuracy or AUC for classification tasks and coefficient of determination for regression tasks).
+$\alpha \in [0,1]$ is the damping factor.
+If $v$ itself is a model, then $potential(v) = quality(v)$.
+When $v$ is not a model, the further $v$ is from a model artifact the larger the damping factor becomes, which reduces the quality gained by materializing the artifact $v$.
+Intuitively, a high potential artifact is an artifact which results in a high-quality machine learning model with only a few operations.
+
+Now, we define the estimated quality function as:
+\[
+EQ(G) =  \sum\limits_{v \in V}  v.mat \times potential(v)
+\]
 
 \textbf{Multi-Objective Optimization.}
-Given the two functions, we would like to find the optimal set of vertices to materialize which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$ (for ease of representation, we instead try to minimize the inverse of the estimated quality function):
+Given the two functions, i.e., weighted recreation cost and estimated quality, we would like to find the optimal set of vertices to materialize which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$ (for ease of representation, we instead try to minimize the inverse of the estimated quality function):
 \begin{equation}
 \begin{split}
 & minimize(WC(G), \dfrac{1}{EQ(G)}), \\
-& \text{subject to:} \sum\limits_{v \in V} v.m \times v.s <= \mathcal{B}
+& \text{subject to:} \sum\limits_{v \in V} v.mat \times v.s <= \mathcal{B}
 \end{split}
 \end{equation}
 
-There are different strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}.
-However, existing solutions are time-consuming.
+Bhattacherjee et al. prove minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
+While there are different approximate strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}, they are time-consuming, which renders them inappropriate to our setting, where new artifacts are constantly added to the graph.
 Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
 As a result, existing solutions to multi-objective optimization problems are not suitable for artifact materializations of the experiment graph.
 
@@ -76,21 +85,21 @@ We propose a greedy heuristic-based algorithm for materializing the artifacts in
 \Ensure experiment graph with materialized vertices
 \State $T= 0$ \Comment {current size of the materialized artifacts}
 \For  {$v$ in root\_nodes} \Comment{materialize all the root nodes}
-	\If{$v.m = 0$}
-		\State $v.m = 1$
+	\If{$v.mat= 0$}
+		\State $v.mat = 1$
 		\State $T = T + v.s$
 	\EndIf
 \EndFor
 \State $S = $ empty priority queue
 \For {$v$ in $V$}
-	\If{$v.m = 0$}
+	\If{$v.mat = 0$}
 		\State feasibility\_ratio $= \dfrac{\text{feasibility}(G, v)}{v.s}$
 		\State insert $v$ into $S$ sorted by the feasibility\_ratio
 	\EndIf
 \EndFor
 \For {$v$ in $S$}
 	\If {$T+v.s \leq \mathcal{B}$}
-		\State $v.m = 1$
+		\State $v.mat = 1$
 		\State $T = T + v.s$		
 	\EndIf
 \EndFor
@@ -104,16 +113,18 @@ As a result, we cannot reconstruct the raw datasets if they are not materialized
 Then, for every non-materialized artifact, we compute the feasibility ratio, which is defined as the value of the $feasibility$ function of an artifact divided by its size.
 Then, we start materializing all the artifacts, sorted by their feasibility ratio, until the storage budget is exhausted.
 The feasibility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
+%TODO need to change v.out_degree as a metric for break ties rather than directly considering it in the formula.
+%TODO mention the range of each function (potential is 0-1), recreation cost is positive integers.
 \begin{equation}
 \begin{split}
 feasbility(G,v) = 	& v.out\_degree \times\\
-								&	estimated\_quality(v) \times \\
+								&	potential(v) \times \\
 								& recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where $v.out\_degree$ indicates the number of outgoing edges of the artifact $v$, $estimated\_quality(v)$ computes the estimated quality of artifact $v$, and $recreation\_factor(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
+where $v.out\_degree$ indicates the number of outgoing edges of the artifact $v$, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
 \[
-\text{recreation\_factor}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
+\text{recreation\_cost}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
 , i.e., executing all the operations from the root nodes to $v$ multiplied by the access frequency of $v$.
 Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
 The impact of the number of outgoing edges of an artifact is more implicit.
