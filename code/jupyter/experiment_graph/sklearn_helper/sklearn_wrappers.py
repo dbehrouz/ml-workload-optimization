@@ -5,7 +5,6 @@ creates overhead when modifying scripts. Here, we write some adapter codes, that
 scikit learn package and make the necessary changes inside.
 """
 
-from sklearn import preprocessing, linear_model, ensemble
 import lightgbm as lgb
 
 
@@ -25,33 +24,6 @@ class SimpleModel:
         return self.transform(data)
 
 
-class Imputer(SimpleModel):
-    def __init__(self, **args):
-        SimpleModel.__init__(self, preprocessing.Imputer(**args))
-
-
-class PolynomialFeatures(SimpleModel):
-    def __init__(self, **args):
-        SimpleModel.__init__(self, preprocessing.PolynomialFeatures(**args))
-
-    def get_feature_names(self, input_features):
-        return self.trained_node.data().get_feature_names(input_features=input_features)
-
-
-class LabelEncoder(SimpleModel):
-    def __init__(self):
-        SimpleModel.__init__(self, preprocessing.LabelEncoder())
-
-    # overriding the base class transform since the method is colling the transform_col method
-    def transform(self, data):
-        return self.trained_node.transform_col(data)
-
-
-class MinMaxScaler(SimpleModel):
-    def __init__(self, **args):
-        SimpleModel.__init__(self, preprocessing.MinMaxScaler(**args))
-
-
 class PredictiveModel:
     def __init__(self, underlying_sk_model):
         self.underlying_sk_model = underlying_sk_model
@@ -65,16 +37,6 @@ class PredictiveModel:
 
     def feature_importances(self, features):
         return self.trained_node.feature_importances(features)
-
-
-class LogisticRegression(PredictiveModel):
-    def __init__(self, **args):
-        PredictiveModel.__init__(self, linear_model.LogisticRegression(**args))
-
-
-class RandomForestClassifier(PredictiveModel):
-    def __init__(self, **args):
-        PredictiveModel.__init__(self, ensemble.RandomForestClassifier(**args))
 
 
 class LGBMClassifier(PredictiveModel):
