@@ -34,14 +34,14 @@ def download_dataset(task_id, root_path, overwrite=False):
     test.to_csv(result_path + '/test.csv', index=False)
 
 
-def parseValue(value):
+def parse_value(value):
     import ast
     try:
-        if (value == 'null'):
+        if value == 'null':
             return None
-        if (value == 'true'):
+        if value == 'true':
             return True
-        if (value == 'false'):
+        if value == 'false':
             return False
         actual = ast.literal_eval(value)
         if type(actual) is list:
@@ -62,7 +62,7 @@ def flow_to_edge_list(flow, setup):
         componentParams = dict()
         for paramKey, paramValue in setup.parameters.items():
             if paramValue.full_name.startswith(fullName):
-                # Openml saves the type informatino in a weird way so we have to write a special piece of code
+                # Openml saves the type information in a weird way so we have to write a special piece of code
                 if paramValue.parameter_name == 'dtype':
                     componentParams[str(paramValue.parameter_name)] = np.float64
                     # typeValue = self.parseValue(paramValue.value)['value']
@@ -73,7 +73,7 @@ def flow_to_edge_list(flow, setup):
                 elif paramValue.parameter_name == 'random_state':
                     componentParams[str(paramValue.parameter_name)] = 14766
                 else:
-                    componentParams[str(paramValue.parameter_name)] = parseValue(paramValue.value)
+                    componentParams[str(paramValue.parameter_name)] = parse_value(paramValue.value)
         edges.append((prefix, fullName, componentParams))
         # comp = Component(prefix, fullName, componentParams)
         # experimentObject.components.append(comp)
@@ -81,17 +81,17 @@ def flow_to_edge_list(flow, setup):
 
 
 def skpipeline_to_edge_list(pipeline, setup):
-    def getFullyQualifiedName(o):
+    def get_fully_qualified_name(o):
         return o.__module__ + "." + o.__class__.__name__
 
     edges = []
     for componentKey, componentValue in pipeline.steps:
         prefix = componentKey
-        fullName = getFullyQualifiedName(componentValue)
+        fullName = get_fully_qualified_name(componentValue)
         componentParams = dict()
         for paramKey, paramValue in setup.parameters.items():
             if paramValue.full_name.startswith(fullName):
-                # Openml saves the type informatino in a weird way so we have to write a special piece of code
+                # Openml saves the type information in a weird way so we have to write a special piece of code
                 if paramValue.parameter_name == 'dtype':
                     componentParams[str(paramValue.parameter_name)] = np.float64
                     # typeValue = self.parseValue(paramValue.value)['value']
@@ -102,7 +102,7 @@ def skpipeline_to_edge_list(pipeline, setup):
                 elif paramValue.parameter_name == 'random_state':
                     componentParams[str(paramValue.parameter_name)] = 14766
                 else:
-                    componentParams[str(paramValue.parameter_name)] = parseValue(paramValue.value)
+                    componentParams[str(paramValue.parameter_name)] = parse_value(paramValue.value)
         edges.append((prefix, fullName, componentParams))
     return edges
 
@@ -114,9 +114,9 @@ def run_to_workload(run_id):
     :return: workload represetation in graph form
     """
     run = runs.get_run(run_id)
-    execution_evironment = ExecutionEnvironment('dedup')
+    execution_environment = ExecutionEnvironment('dedup')
     # TODO check if the dataset exists or not
-    train_data = execution_evironment.load(OPENML_ROOT_DIRECTORY + '/task_id=' + str(run.task_id) + '/train.csv')
+    train_data = execution_environment.load(OPENML_ROOT_DIRECTORY + '/task_id=' + str(run.task_id) + '/train.csv')
 
     flow = flows.get_flow(run.flow_id)
     flow.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
@@ -125,6 +125,7 @@ def run_to_workload(run_id):
     pipeline = flows.flow_to_sklearn(flow)
     setup = setups.get_setup(run.setup_id)
     edges = skpipeline_to_edge_list(pipeline, setup)
+
     return edges
 
 
