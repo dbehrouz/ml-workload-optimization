@@ -60,7 +60,7 @@ class ExecutionGraph(object):
                 unique_types.append(node[1]['type'])
             freqs[node[0]] = node[1]['freq']
 
-        jet = plt.get_cmap('prism')
+        jet = plt.get_cmap('gist_rainbow')
         colors = jet(np.linspace(0, 1, len(unique_types)))
         color_map = dict(zip(unique_types, colors))
         for label in color_map:

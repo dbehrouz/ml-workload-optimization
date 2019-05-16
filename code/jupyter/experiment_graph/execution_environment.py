@@ -101,7 +101,7 @@ class Node(object):
         nextid = self.generate_uuid()
         nextnode = SK_Model(nextid, None)
         exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': oper,
+                                                    {'name': type(args['model']).__name__,
                                                      'oper': 'p_' + oper,
                                                      'args': args,
                                                      'execution_time': -1,

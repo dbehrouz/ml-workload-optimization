@@ -1,8 +1,6 @@
-import os
-
-import pandas as pd
 import numpy as np
-from openml import tasks, datasets, runs, flows, setups
+import pandas as pd
+from openml import tasks, datasets, runs, flows, setups, config
 
 from execution_environment import ExecutionEnvironment
 
@@ -84,13 +82,19 @@ def skpipeline_to_edge_list(pipeline, setup):
     def get_fully_qualified_name(o):
         return o.__module__ + "." + o.__class__.__name__
 
+    def relaxed_match(sklearn_class, openml_side):
+        if sklearn_class.__class__.__name__ in openml_side:
+            return True
+        else:
+            return False
+
     edges = []
     for componentKey, componentValue in pipeline.steps:
-        prefix = componentKey
+        # prefix = componentKey
         fullName = get_fully_qualified_name(componentValue)
         componentParams = dict()
         for paramKey, paramValue in setup.parameters.items():
-            if paramValue.full_name.startswith(fullName):
+            if paramValue.parameter_name in componentValue.get_params().keys():
                 # Openml saves the type information in a weird way so we have to write a special piece of code
                 if paramValue.parameter_name == 'dtype':
                     componentParams[str(paramValue.parameter_name)] = np.float64
@@ -103,30 +107,97 @@ def skpipeline_to_edge_list(pipeline, setup):
                     componentParams[str(paramValue.parameter_name)] = 14766
                 else:
                     componentParams[str(paramValue.parameter_name)] = parse_value(paramValue.value)
-        edges.append((prefix, fullName, componentParams))
+        componentValue.set_params(**componentParams)
+        # edges.append((prefix, componentValue, componentParams))
+        edges.append(componentValue)
     return edges
 
 
-def run_to_workload(run_id):
+def hack_dependency(dependency_string, component):
+    component.dependencies = dependency_string
+    return component
+
+
+def repair(flow):
     """
-    processes the given run and returns the workload representation of ti
+    Flows 5981, 5987, 6223 use custom class: helper.dual_imputer.DualImputer which we mark is unrepairable
+    repair a flow and return it back
+    :param flow:
+    :return:
+    """
+    flow.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
+    for v in flow.components.itervalues():
+        if v.class_name.startswith('helper.dual_imputer') or v.class_name.startswith('extra.dual_imputer'):
+            print 'undefined class: {}'.format(v.class_name)
+            return 'ERROR'
+        # if 'OneHotEncoder' in v.class_name:
+        #     v.class_name = 'sklearn.preprocessing.OneHotEncoder'
+        v.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
+        # for meta components (e.g, boosting algorithms)
+        if hasattr(v, 'components'):
+            for vv in v.components.itervalues():
+                vv.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
+
+    return flow
+
+
+def run_to_workload(run_id, execution_environment):
+    """
+    main function running an openml run with the graph.
+    TODO
+        currently it runs the graph at the end of function. We should make the optimization model
+        which gets the graph of this run and the existing experiment graph
+        and run the optimized version on return
+
+    :param execution_environment:
     :param run_id: run id
     :return: workload represetation in graph form
     """
-    run = runs.get_run(run_id)
-    execution_environment = ExecutionEnvironment('dedup')
-    # TODO check if the dataset exists or not
-    train_data = execution_environment.load(OPENML_ROOT_DIRECTORY + '/task_id=' + str(run.task_id) + '/train.csv')
+    try:
+        run = runs.get_run(run_id)
+        # execution_environment = ExecutionEnvironment('dedup')
+        # TODO check if the dataset exists or not
+        train_data = execution_environment.load(OPENML_ROOT_DIRECTORY + '/task_id=' + str(run.task_id) + '/train.csv')
 
-    flow = flows.get_flow(run.flow_id)
-    flow.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
-    for v in flow.components.itervalues():
-        v.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
-    pipeline = flows.flow_to_sklearn(flow)
-    setup = setups.get_setup(run.setup_id)
-    edges = skpipeline_to_edge_list(pipeline, setup)
+        y = train_data['class']
+        x = train_data.drop('class')
+        flow = repair(flows.get_flow(run.flow_id))
+        if flow == 'ERROR':
+            print 'skipping run {} because flow {} is not repairable'.format(run_id, run.flow_id)
+            return
+        pipeline = flows.flow_to_sklearn(flow)
+        setup = setups.get_setup(run.setup_id)
+        edges = skpipeline_to_edge_list(pipeline, setup)
+        # print edges
+        # print 'run : {} flow : {}'.format(run_id, run.flow_id)
+        for i in range(len(edges) - 1):
+            model = x.fit_sk_model(edges[i])
+            x = model.transform(x)
 
-    return edges
+        # TODO is it OK to assume all the openml pipelines end with a scikit learn model?
+        model = x.fit_sk_model_with_labels(edges[-1], y)
+
+        model.data()
+    except Exception:
+        print ('ERROR AT FLOW:{} and RUN: {}'.format(flow.flow_id, run_id))
 
 
-print run_to_workload(5768599)
+import os
+
+config.cache_directory = os.path.expanduser(OPENML_ROOT_DIRECTORY + '/cache')
+flow_list = pd.DataFrame.from_dict(flows.list_flows(), orient='index')
+allowed = flow_list[flow_list.full_name.str.startswith('sklearn.pipeline')].id
+n = len(allowed) / 100
+run_list = []
+for i in range(n):
+    run_list.extend(runs.list_runs(size=10000, task=[31], flow=allowed[(i * 100):(i + 1) * 100]).keys())
+#
+execution_environment = ExecutionEnvironment('dedup')
+for r in run_list[:100]:
+    run_to_workload(r, execution_environment)
+# run_to_workload(2081539, execution_environment)
+
+import matplotlib.pyplot as plt
+
+execution_environment.graph.plot_graph(plt, vertex_freq=True, edge_oper=True, edge_time=True)
+plt.show()
