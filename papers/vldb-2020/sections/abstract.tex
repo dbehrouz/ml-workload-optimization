@@ -8,7 +8,7 @@ As a result, only some of the artifacts such as scripts, operations, and models 
 \hl{Second, even if all the artifacts are stored, manually finding desired artifacts is a time-consuming process.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar... *Behrouz: I wanted to use the word manually (or something equal) to contrast between the current 'manual' querying or reading the scripts vs our way of reuse or warmstarting that doesn't require user's intervention.
 
 The contributions of this paper are two-fold.
-First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges respectively. 
+First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges, respectively. 
 Since storing all the artifacts is not feasible, we propose two algorithms for selecting the artifacts with high expected rates of future reuse.
 We then store the selected artifacts in memory for quick access, a process which we call artifact materialization.
 The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning model artifacts to decide what artifacts to materialize.

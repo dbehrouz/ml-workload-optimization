@@ -27,6 +27,7 @@ The general metrics include the size and access frequency of the artifacts and t
 The machine learning specific metric consists of the quality score of the machine learning models resulting from the artifact.
 Since many of the artifacts have overlapping data columns, we perform column deduplication and remove duplicated columns before storing them.
 The second algorithm is storage-aware, i.e., it takes into account the deduplication information before deciding on what artifacts to materialize.
+
 Using the graph of the materialized artifacts, which we refer to as the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
 Specifically, we provide three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.

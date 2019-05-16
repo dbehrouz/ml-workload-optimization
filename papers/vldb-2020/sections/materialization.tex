@@ -6,7 +6,7 @@ In this section, we discuss two algorithms for materializing the artifacts of th
 The first algorithm utilizes both general metrics, such as the size and access frequency of vertices and execution time of the edges, and a machine learning specific metric, i.e., the quality of the existing model artifacts, to decide what artifacts to materialize.
 The second algorithm is an extension of the first algorithm which also considers how the artifacts are stored on the file system.
 Since many of the existing operations in the experiment graph are operating on one or a small group of columns inside a data frame, the resulting artifacts have many duplicated columns.
-We devise a simple compression strategy which avoids storing duplicated columns.
+We implement a compression strategy which avoids storing duplicated columns.
 The second algorithm takes the duplication information into account when making the decision on what artifacts to materialize.
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
@@ -27,8 +27,8 @@ The first function computes the weighted recreation cost of all the non-merged v
 \[
 WC(G) =  \sum\limits_{v \in V\setminus merged\_vertices}  (1-v.mat) \times v.f \times in\_edge(v).t
 \]
-where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the access frequency of the artifact $v$, $in_edge(v)$ returns the edge with destination $v$ and a run-time of $t$.
-Merged vertices (represented by $merged\_vertices$) have no impact on $WC(G)$ since they carry no actual content except for pointers to the original vertices.
+where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, $in\_edge(v)$ returns the edge with destination $v$ and a run-time of $t$.
+Merged vertices (represented by $merged\_vertices$) have no impact on $WC(G)$ since they carry no actual data content except for pointers to the original vertices.
 This also ensures $in\_edge(v)$ contains at most one edge.
 Intuitively, the weighted recreation cost indicates the total amount of execution time required to recompute all the vertices multiplied by their access frequencies.
 Materialized artifacts incur no cost since they are stored.
@@ -39,14 +39,14 @@ Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no
 \textbf{Estimated Quality Function (EQ).} 
 In order to define the estimated quality function, we need to define the followings first.
 \[
-M(G) = \{v \in V \mid \text{v is a machine learning model}\}
+M(G) = \{v \in V \mid \text{v is a terminal model}\}
 \]
-is the set of all models in the experiment graph.
+is the set of all the terminal models in the experiment graph.
 For every vertex $v$ in the graph, 
 \[
 M(v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
 \]
-is the set of all machine learning models to which $v$ is connected.
+is the set of all terminal models to which $v$ is connected.
 \[
 potential(v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
 \]
@@ -161,14 +161,14 @@ Therefore, in the presence of equal estimated quality, recreation cost, and size
 %\caption{Artifact materialization based on Algorithm \ref{algorithm-materialization} when storage capacity is 55 (MB)}
 %\label{fig-materialization-example}
 %\end{figure}
-\subsection{Storage-Aware Artifact Materialization}
+\subsection{Storage-Aware Materialization Algorithm}
 Since many feature engineering operations only operate on one or a few columns of a dataset, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.
 As a result, after materialization, there are many duplicated columns across different artifacts.
-To further reduce the storage cost, we implement a simple deduplication mechanism.
+To further reduce the storage cost, we implement a deduplication mechanism.
 We assign a unique hash to every columns of the artifacts.
 When executing an operation on an artifact, all the columns of the resulting artifact, except for the ones affected by the operation carry the same hash value.
 When storing an artifact, a storage manager unit examines the hash of every column, and only stores the columns that do not exist in the storage unit.
-The storage manager tracks the hash and column contents of all the artifacts in the experiment graph.
+The storage manager tracks the column hashes of all the artifacts in the experiment graph.
 When a specific artifact is requested, the storage manager combines all the columns which belong to the artifact into a data frame and returns the data frame.
 This results in a large decrease in the storage cost (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifacts, deduplication result in only 8 GB of storage).
 
@@ -176,12 +176,12 @@ This results in a large decrease in the storage cost (e.g., for the same script 
 \textbf{Greedy Meta-Algorithm.}
 We propose a meta-algorithm which iteratively calls Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
 We slightly modify the Artifact-Materialization algorithm, where instead of initializing the current size, $T$, to 0 MB on Line 1, we pass the current size as an input to the algorithm. 
-Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage-aware algorithm.
+Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage aware artifact materialization algorithm.
 Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage cost by calling the compress method of the storage manager (Lines 1 and 2).
 The compress method of the storage manager removes the duplicated columns of the different artifacts of the experiment graph and returns the storage size of the graph after compression.
 While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the initial size argument.
 \begin{algorithm}[h]
-\caption{Compression-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
+\caption{Storage-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
 \Require  $G(V,E)=$ experiment graph, root\_nodes = set of root artifacts, $\mathcal{B}=$ storage budget
 \Ensure experiment graph with materialized vertices
@@ -199,5 +199,6 @@ While the size of the compressed materialized graph is smaller than the storage 
 \end{algorithmic}
 \end{algorithm}
 
-\textbf{Fractional Greedy Algorithm.}
-\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. }
+%TODO if existing algorithms produce good results, this can be a good follow up work and we do not need 
+%\textbf{Fractional Greedy Algorithm.}
+%\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. }
