@@ -120,35 +120,42 @@ For example, in Figure \ref{fig-experiment-graph}a, before applying the concaten
 %This is a critical step for the materialization algorithms and optimization strategies.
 
 \subsubsection{Notations and Terms}\label{notations-terms}
-Apart from the experiment graph, $G(V,E)$, we need to define several other terms and notations.
+Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
 
-\textbf{Task.} A task, $T$, defines the goal of the machine learning workloads. 
+\textbf{Task.} A \textit{task} defines the goal of the machine learning workloads. 
 A task clearly defines what are the initial datasets which users should analyze and train machine learning models. 
 We refer to the set of initial datasets as $roots$ since during the graph representation, they become the root vertices of the graph, i.e., they have no incoming edges.
 A task also specifies the evaluation function and criteria for the machine learning workloads.
 An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
 
-\textbf{Workload.} Given a task, $T$, a workload, $W$, is the graph representation of a user-defined script with the goal of analyzing the datasets in $roots$ of $T$ and training machine learning models which maximize the evaluation function of $T$.
+\textbf{Workload graph.} Given a task, a \textit{workload graph} is the graph representation of a user-defined script with the goal of analyzing the datasets in $roots$ of the task and training machine learning models which maximize the evaluation function of the task.
+A workload graph is rooted at the one or all of the vertices representing the root datasets of the task.
 
-\textbf{Terminal Model.} A terminal model, $m$, is a machine learning model trained inside a workload.
-The quality of $m$ can be measured by the evaluation function of the task.
-A workload may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
+\textbf{Terminal model.} A \textit{terminal model} is a vertex inside a workload graph which represents a fully trained machine learning model.
+The quality of the terminal model can be measured by the evaluation function of the task.
+A workload graph may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
 
-\textbf{Pipeline.} Any unique subgraph inside a workload which starts at one or multiple root vertices and ends with \textit{one and only one} terminal model is a pipeline.
-A workload may contain $0$ or multiple pipelines.
+\textbf{Pipeline subgraph.} Any unique subgraph inside a workload graph which starts at one or multiple root vertices and ends with one and only one terminal model is a \textit{pipeline subgraph}.
+A workload graph may contain $0$ or multiple pipeline subgraphs.
 A vertex (artifact) may belong to multiple pipelines, e.g., a preprocessed dataset which a user utilizes to train multiple machine learning models with training algorithms.
+
+Given the above definitions, the experiment graph, $G(V, E)$, is the graph which contains all the workload graphs.
 
 \subsection{Workload Optimizer for Kaggle Use Case}
 By utilizing an experiment graph, we design a workload optimizer framework.
 We integrate the workload optimizer into collaborative data science platform to improve the execution of the workloads.
 Here, we describe the integration process of the workload optimizer for optimizing and executing kernels in the Kaggle use case (our motivating example).
+Furthermore, we map the components of the Kaggle use case and our workload optimizer framework to the terms defined in Section \ref{notations-terms}.
 
-Figure \ref{improved-use-case} shows the process of the workload optimization in the Kaggle Infrastructure. 
-The workflow is as follows.
-First, we parse a workload (i.e., a kernel) and construct the workload graph (\circledtext{1}).
-Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training, and for workloads that contain a hyperparameter tuning operation, faster hyperparameter search (\circledtext{2}).
+Figure \ref{improved-use-case} shows the process of the workload optimization in the Kaggle Infrastructure.
+Each competition in Kaggle corresponds to a task.
+The competitions define the set of datasets (roots) and the evaluation function for assessing machine learning models. 
+Given a task, the workload optimization process is as follows.
+First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
+Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training, and for workloads which contain a hyperparameter tuning operation, faster hyperparameter search (\circledtext{2}).
 The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models, and proper search space and/or an initialized Bayesian hyperparameter search process.
 After executing the optimized workload, we return the result to the user (\circledtext{3}).
+Depending on the number of \textit{pipeline graphs} in the workload, the result of the execution is one or multiple of \textit{terminal models} which the user can choose to submit as their solution to the competition.
 After the execution, we update the experiment graph using the original workload graph (\circledtext{4}).
 Finally, to ensure that we can store the experiment graph given our storage budget, we run our materialization algorithms to decide what artifacts to materialize (\circledtext{5}).
 
@@ -159,10 +166,8 @@ Finally, to ensure that we can store the experiment graph given our storage budg
 \label{improved-use-case}
 \end{figure}
 
-\todo[inline]{Depending on the final version of Section \ref{notations-terms}, we need to modify the text below.}
-It is important to note that we restrict the scope of our optimizations and materialization algorithms to one machine learning task. 
-In Kaggle, each competition defines the machine learning task, i.e., one or multiple raw training datasets (we refer to as root datasets), a validation data set, and an evaluation function which computes the quality/error rate of the model on the validation dataset.
-While the experiment graph contains artifacts from all the competitions (tasks), each task corresponds to a unique connected component in the experiment graph.
-When optimizing a new workload, we only utilize the relevant connected component.
+In the experiment graph, each task corresponds to one connected component rooted at the tasks root datasets.
+Since each task has a unique set of root datasets and workloads are not allowed to analyze root datasets belonging to multiple tasks, it is impossible for two tasks to be connected.
 In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which are rooted at 2, 2, and 1 root training datasets, depicted as hollow vertices, respectively.
-When optimizing a new Kaggle kernel from competition A, we only look for optimization opportunities in the connected component A of the experiment graph.
+When optimizing a new Kaggle kernel from competition A, the optimizer (Step \circledtext{2}) component only look for optimization opportunities in the connected component A of the experiment graph.
+Furthermore, the scope of the materializer (Step \circledtext{5}) is also limited to individual competition.

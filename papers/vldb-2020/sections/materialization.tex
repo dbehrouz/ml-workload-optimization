@@ -81,10 +81,10 @@ We propose a greedy heuristic-based algorithm for materializing the artifacts in
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, root\_nodes = set of root artifacts, $\mathcal{B}=$ storage budget
+\Require  $G(V,E)=$ experiment graph, roots = set of root artifacts, $\mathcal{B}=$ storage budget
 \Ensure experiment graph with materialized vertices
 \State $T= 0$ \Comment {current size of the materialized artifacts}
-\For  {$v$ in root\_nodes} \Comment{materialize all the root nodes}
+\For  {$v$ in roots} \Comment{materialize all the root nodes}
 	\If{$v.mat= 0$}
 		\State $v.mat = 1$
 		\State $T = T + v.s$
@@ -182,7 +182,7 @@ While the size of the compressed materialized graph is smaller than the storage 
 \begin{algorithm}[h]
 \caption{Storage-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, root\_nodes = set of root artifacts, $\mathcal{B}=$ storage budget
+\Require  $G(V,E)=$ experiment graph, roots = set of root artifacts, $\mathcal{B}=$ storage budget
 \Ensure experiment graph with materialized vertices
 \State $G\_mat$ = \textit{Artifact-Materialization}($G, \mathcal{B}, 0$)
 \State $T$ = $storage\_manager.compress(G\_mat)$
