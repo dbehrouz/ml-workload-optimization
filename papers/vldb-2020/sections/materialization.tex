@@ -1,9 +1,9 @@
 \section{Artifact Materialization}\label{sec-materialization}
 Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
 For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, a popular script which analyzes a dataset of 160 MB, generates up to 17 GB of artifacts.
-Therefore, materializing every artifact under limited a storage budget is not feasible.
-In this section, we discuss two algorithms for materializing the artifacts of the experiment graph under limited storage.
-The first algorithm utilizes both general metrics, such as the size and access frequency of vertices and execution time of the edges, and a machine learning specific metric, i.e., the quality of the existing model artifacts, to decide what artifacts to materialize.
+Therefore, materializing every artifact under a limited storage budget is not feasible.
+In this section, we introduce two algorithms for materializing the artifacts of the experiment graph under limited storage.
+The first algorithm utilizes both general metrics, such as the size and access frequency of vertices and execution time of the edges, and a machine learning specific metric, i.e., the quality of the terminal models, to decide what artifacts to materialize.
 The second algorithm is an extension of the first algorithm which also considers how the artifacts are stored on the file system.
 Since many of the existing operations in the experiment graph are operating on one or a small group of columns inside a data frame, the resulting artifacts have many duplicated columns.
 We implement a compression strategy which avoids storing duplicated columns.
@@ -11,29 +11,29 @@ The second algorithm takes the duplication information into account when making 
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
 Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
-The goal of the algorithm is to materialize the artifacts that result in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+The goal of their algorithm is to materialize the artifacts which result in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
 However, there are several reasons which render their solution inapplicable to the artifact materialization problem.
 First, their approach only considers access frequency and reconstruction cost of an artifact.
-For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workload, i.e., materialize artifacts which result in high-quality machine learning models.
+For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workloads, i.e., materialize artifacts which result in high-quality machine learning models.
 Second, their solution does not consider merge operations, e.g., join, concatenation, and model training, which are common in machine learning workloads.
 Lastly, their solution considers a scenario where new artifacts are rarely added.
 In the machine learning workload optimization, new artifacts are continuously added to the experiment graph.
 As a result, a proper solution must accommodate the addition of new artifacts.
 
-Here, we first formulate the problem of materialization as a multi-objective optimization problem, with the goal of minimizing two functions which consider both the artifact recreation cost and the model quality of the artifacts, given the storage requirement constraint.
+Here, we first formulate the problem of artifact materialization as a multi-objective optimization problem, with the goal of minimizing two functions which consider both the artifact recreation cost and the model quality of the artifacts, given the storage requirement constraint.
 
 \textbf{Weighted Recreation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the non-merged vertices in the graph:
 \[
 WC(G) =  \sum\limits_{v \in V\setminus merged\_vertices}  (1-v.mat) \times v.f \times in\_edge(v).t
 \]
-where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, $in\_edge(v)$ returns the edge with destination $v$ and a run-time of $t$.
+where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, and $in\_edge(v)$ returns the edge with destination $v$ and run-time $t$.
 Merged vertices (represented by $merged\_vertices$) have no impact on $WC(G)$ since they carry no actual data content except for pointers to the original vertices.
 This also ensures $in\_edge(v)$ contains at most one edge.
-Intuitively, the weighted recreation cost indicates the total amount of execution time required to recompute all the vertices multiplied by their access frequencies.
+Intuitively, the weighted recreation cost computes the total amount of execution time required to recompute all the vertices while considering their frequencies.
 Materialized artifacts incur no cost since they are stored.
 Non-materialized artifacts incur a cost equal to the execution time of the proceeding operations multiplied by their frequency.
-For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ with access frequency of 2, we must consider both executions of the operation \textit{vectorizer.f\_t}  when computing the weighted cost.
+For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ and assuming it has a frequency of 2, we must consider both executions of the operation \textit{vectorizer.f\_t}  when computing the weighted cost.
 Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
 
 \textbf{Estimated Quality Function (EQ).} 
@@ -46,15 +46,14 @@ For every vertex $v$ in the graph,
 \[
 M(v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
 \]
-is the set of all terminal models to which $v$ is connected.
+is either $v$ itself, when $v$ is a terminal model, or the set of all terminal models to which $v$ is connected.
 \[
 potential(v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
 \]
-is the potential of an artifact, where $quality(m)$ represents the value of the quality criteria of a model artifact defined as part of the task (e.g., accuracy or AUC for classification tasks and coefficient of determination for regression tasks).
-$\alpha \in [0,1]$ is the damping factor.
+is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task and $\alpha \in [0,1]$ is the damping factor.
 If $v$ itself is a model, then $potential(v) = quality(v)$.
-When $v$ is not a model, the further $v$ is from a model artifact the larger the damping factor becomes, which reduces the quality gained by materializing the artifact $v$.
-Intuitively, a high potential artifact is an artifact which results in a high-quality machine learning model with only a few operations.
+When $v$ is not a model, the further $v$ is from a model artifact the smaller the damping factor multiplier becomes, which reduces the quality gained by materializing the artifact $v$.
+Intuitively, a high potential artifact is an artifact which results in a high-quality terminal model with only a few operations.
 
 Now, we define the estimated quality function as:
 \[
@@ -77,30 +76,32 @@ As a result, existing solutions to multi-objective optimization problems are not
 
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
+Every task, $T$, in the experiment graph has storage budget and runs a separate instance of the materialization algorithm.
+For example, in our motivating example (Figure \ref{improved-use-case}), Competitions A, B, and C have dedicated storage budgets and materializer components.
 
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, roots = set of root artifacts, $\mathcal{B}=$ storage budget
+\Require  $G(V,E)=$ experiment graph, roots = root artifacts of task, $\mathcal{B}=$ storage budget of task
 \Ensure experiment graph with materialized vertices
-\State $T= 0$ \Comment {current size of the materialized artifacts}
+\State $S= 0$ \Comment {current size of the materialized artifacts}
 \For  {$v$ in roots} \Comment{materialize all the root nodes}
 	\If{$v.mat= 0$}
 		\State $v.mat = 1$
-		\State $T = T + v.s$
+		\State $S = S + v.s$
 	\EndIf
 \EndFor
-\State $S = $ empty priority queue
+\State $Q = $ empty priority queue
 \For {$v$ in $V$}
 	\If{$v.mat = 0$}
 		\State feasibility\_ratio $= \dfrac{\text{feasibility}(G, v)}{v.s}$
-		\State insert $v$ into $S$ sorted by the feasibility\_ratio
+		\State insert $v$ into $Q$ sorted by the feasibility\_ratio
 	\EndIf
 \EndFor
 \For {$v$ in $S$}
-	\If {$T+v.s \leq \mathcal{B}$}
+	\If {$S+v.s \leq \mathcal{B}$}
 		\State $v.mat = 1$
-		\State $T = T + v.s$		
+		\State $S = S + v.s$		
 	\EndIf
 \EndFor
 \end{algorithmic}
@@ -113,25 +114,25 @@ As a result, we cannot reconstruct the raw datasets if they are not materialized
 Then, for every non-materialized artifact, we compute the feasibility ratio, which is defined as the value of the $feasibility$ function of an artifact divided by its size.
 Then, we start materializing all the artifacts, sorted by their feasibility ratio, until the storage budget is exhausted.
 The feasibility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
-\todo[inline]{v.out\_degree will be replaced by number of pipelines which $v$ belongs to, once we properly define $pipeline$ in Section \ref{notations-terms}. Furthermore, it should be the tie breaker when two vertices have similar $potential(v) \times recreatio\_cost(G,v) $ values instead of multiplying it with the potential and recreation cost.}
+\todo[inline]{$|pipelines(v)|$ should be the tie breaker when two vertices have similar $potential(v) \times recreatio\_cost(G,v) $ values instead of multiplying it with the potential and recreation cost.}
 %TODO need to change v.out_degree as a metric for break ties rather than directly considering it in the formula.
 %TODO mention the range of each function (potential is 0-1), recreation cost is positive integers.
 \begin{equation}
 \begin{split}
-feasbility(G,v) = 	& v.out\_degree \times\\
+feasbility(G,v) = 	& |pipelines(v)| \\
 								&	potential(v) \times \\
 								& recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where $v.out\_degree$ indicates the number of outgoing edges of the artifact $v$, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
+where $pipelines(v)$ is the set of pipeline subgraphs which $v$ belongs to and $|pipelines(v)|$ is the cardinality of the set, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
 \[
 \text{recreation\_cost}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
-, i.e., executing all the operations from the root nodes to $v$ multiplied by the access frequency of $v$.
+, i.e., executing all the operations from the root nodes to $v$ multiplied by the frequency of $v$.
 Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
-The impact of the number of outgoing edges of an artifact is more implicit.
-Intuitively, an artifact with high fan-out indicates the artifact has appeared in several different machine learning workloads and pipeline.
-An example of these types of artifacts is cleaned and preprocessed datasets with high-quality features, where users utilize them to train several different models.
-Therefore, in the presence of equal estimated quality, recreation cost, and size, we are prioritizing artifacts with larger out\_degrees.
+The impact of $|pipelines(v)|$ is more implicit.
+Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
+An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
+Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$ .
 
 %\begin{figure}
 %\begin{subfigure}{0.5\linewidth}
@@ -174,22 +175,23 @@ This results in a large decrease in the storage cost (e.g., for the same script 
 % maybe a better name
 \textbf{Greedy Meta-Algorithm.}
 We propose a meta-algorithm which iteratively calls Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
-We slightly modify the Artifact-Materialization algorithm, where instead of initializing the current size, $T$, to 0 MB on Line 1, we pass the current size as an input to the algorithm. 
+We slightly modify the Artifact-Materialization algorithm, where instead of initializing the current size, $S$, to 0 MB on Line 1 of Algorithm \ref{algorithm-materialization}, we pass the current size as an input to the algorithm. 
 Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage aware artifact materialization algorithm.
-Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage cost by calling the compress method of the storage manager (Lines 1 and 2).
+Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage cost by calling the compress method of the storage manager (Lines 1 and 2 of Algorithm \ref{algorithm-compression-aware-materialization}).
 The compress method of the storage manager removes the duplicated columns of the different artifacts of the experiment graph and returns the storage size of the graph after compression.
 While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the initial size argument.
 \begin{algorithm}[h]
-\caption{Storage-Aware-Artifact -Materialization}\label{algorithm-compression-aware-materialization}
+\caption{Storage-Aware-Artifact-Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, roots = set of root artifacts, $\mathcal{B}=$ storage budget
+\Require  $G(V,E)=$ experiment graph, roots = root artifacts of task, $\mathcal{B}=$ storage budget of task
+\Ensure experiment graph with materialized vertices
 \Ensure experiment graph with materialized vertices
 \State $G\_mat$ = \textit{Artifact-Materialization}($G, \mathcal{B}, 0$)
-\State $T$ = $storage\_manager.compress(G\_mat)$
-\While {$T < \mathcal{B}$}
-	\State $G\_mat^\prime$  = \textit{Artifact-Materialization}($G\_mat, \mathcal{B}, T$)
-	\State $T$ = $storage\_manager.compress(G\_mat^\prime)$
-	\If  {$T \geq \mathcal{B}$}
+\State $S$ = $storage\_manager.compress(G\_mat)$
+\While {$S < \mathcal{B}$}
+	\State $G\_mat^\prime$  = \textit{Artifact-Materialization}($G\_mat, \mathcal{B}, S$)
+	\State $S$ = $storage\_manager.compress(G\_mat^\prime)$
+	\If  {$S \geq \mathcal{B}$}
 		\State return $G\_mat$
 	\Else
 		 \State $G\_mat = G\_mat^\prime$

@@ -9,6 +9,7 @@ As a result, only some of the artifacts such as scripts, operations, and models 
 
 The contributions of this paper are two-fold.
 First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges, respectively. 
+%TODO Maybe we should rephrease "with high expected rates of future reuse" since we are also looking into quality
 Since storing all the artifacts is not feasible, we propose two algorithms for selecting the artifacts with high expected rates of future reuse.
 We then store the selected artifacts in memory for quick access, a process which we call artifact materialization.
 The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning model artifacts to decide what artifacts to materialize.

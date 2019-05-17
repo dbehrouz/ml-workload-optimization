@@ -23,7 +23,7 @@ Figure \ref{example-use-case} shows the infrastructure of Kaggle.
 \end{figure}
 
 Every user who participates in a Kaggle competition has the same goal, which is to solve the task described by the competition organizer.
-Typically, the task is to design a machine learning pipeline containing a series of exploratory data analysis steps to preprocess one or multiple raw datasets provided by the competition organizer, followed by a model training step to train a machine learning model, which aims to maximize a quality metric on an evaluation dataset.
+Typically, the task is to design a machine learning workload containing a series of exploratory data analysis steps to preprocess one or multiple raw datasets provided by the competition organizer, followed by a model training step to train a machine learning model, which aims to maximize a quality metric on an evaluation dataset.
 For example, in the \textit{Titanic: Machine Learning from Disaster} competition in Kaggle\footnote{https://www.kaggle.com/c/titanic}, the task is to create a machine learning pipeline and train a classification model on the Titanic training dataset that can predict if a traveler survived the Titanic disaster, with the goal of maximizing the prediction accuracy on a separate test dataset.
 When solving the same tasks, users tend to utilize the same type of operations.
 Figure \ref{fig-titanic-script-hierarchy} shows the most popular kernels and \hl{their relationship} for the Titanic competition.
@@ -46,7 +46,7 @@ As a result, users must re-execute a kernel to generate the desired artifact.
 \subsection{Experiment Database}
 Experiment databases include data and meta-data of different data analytics and machine learning experiments executed over time \cite{miao2018provdb, vanschoren2014openml, schelter2017automatically, vartak2016m}.
 They include different information about datasets, data processing pipeline components, machine learning models, execution of machine learning training algorithms, and quality of the models. 
-Moreover, some experiment databases allow users store some of the artifacts generated during the execution of a workload, such as raw datasets, intermediate datasets (resulting from applying data transformation operations), and machine learning models and their hyperparameters.
+Moreover, some experiment databases allow users to store some of the artifacts generated during the execution of a workload, such as raw datasets, intermediate datasets (resulting from applying data transformation operations), and machine learning models and their hyperparameters.
 However, due to limited storage space, experiment databases cannot store every artifact.
  
 Experiment databases can help in designing a better future workload.

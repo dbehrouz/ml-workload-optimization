@@ -1,5 +1,6 @@
 \section{Introduction} \label{sec-introduction}
 % Opening
+%TODO The opening sentence is a bit awkward, maybe break it into two.
 Machine learning is the process of analyzing training datasets to extract features and build a machine learning model using these features to solve a specific task, such as automatically labeling images based on the image content.
 To solve machine learning tasks, a data scientist designs and executes a machine learning workload consisting of a set of exploratory data transformation steps and one or multiple model building steps.
 Recent collaborative data science platforms facilitate workload sharing.
@@ -11,8 +12,9 @@ Data scientists can then query other users' operations and artifacts to search f
 
 % P
 While collaborative approaches lead to better performing machine learning models, they introduce two problems.
+%TODO are these two problems clearly defined?
 First, since storing all the artifacts requires a massive storage unit, existing platforms only allow the storage of raw datasets, the operations or the scripts, final models with their hyperparameters, and a limited number of intermediate artifacts.
-For example, a popular script on the \textbf{Home Credit Default Risk}\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} competition in the Kaggle platform which processes a training dataset of 160 MBs in size generates up to 17 GBs of artifacts.
+For example, a popular script of the \textbf{Home Credit Default Risk}\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} competition in the Kaggle platform which processes a training dataset of 160 MBs in size generates up to 17 GBs of artifacts.
 However, one common usage pattern in the collaborative data science platforms is for users to select an existing intermediate artifact (e.g., a preprocessed dataset) and continue their own analysis and model training on the artifact. 
 Since the intermediate artifact is not available, the user must rerun the script to generate the desired artifact.
 
