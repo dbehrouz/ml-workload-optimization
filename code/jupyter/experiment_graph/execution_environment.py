@@ -1,29 +1,128 @@
+import cPickle as pickle
 import copy
+import gc
+import hashlib
 import os
 import uuid
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import cPickle as pickle
-import hashlib
-import gc
 
-from data_storage import DedupedStorageManager, NaiveStorageManager, StorageManager
-from datetime import datetime
-from execution_graph import ExecutionGraph
-
-# Reserved word for representing super nodes.
+from data_storage import DedupedStorageManager, NaiveStorageManager
+from graph.execution_graph import ExecutionGraph, HistoryGraph
+# Reserved word for representing super graph.
 # Do not use combine as an operation name
+from optimizer import Optimizer
+
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 RANDOM_STATE = 15071989
 
 
+class ExecutionEnvironment(object):
+    def __init__(self, storage_type='dedup'):
+        if storage_type == 'dedup':
+            self.data_storage = DedupedStorageManager()
+        elif storage_type == 'naive':
+            self.data_storage = NaiveStorageManager()
+        self.workload_graph = ExecutionGraph()
+        self.history_graph = HistoryGraph()
+        self.optimizer = Optimizer()
+        self.time_manager = dict()
+
+    def update_time(self, oper_type, seconds):
+        if oper_type in self.time_manager:
+            self.time_manager[oper_type] = self.time_manager[oper_type] + seconds
+        else:
+            self.time_manager[oper_type] = seconds
+
+    def save_history(self, environment_folder, overwrite=False):
+        if os.path.exists(environment_folder) and not overwrite:
+            raise Exception('Directory already exists and overwrite is not allowed')
+        if not os.path.exists(environment_folder):
+            os.mkdir(environment_folder)
+
+        with open(environment_folder + '/graph', 'wb') as output:
+            self.history_graph.extend(self.workload_graph)
+            pickle.dump(self.history_graph, output, pickle.HIGHEST_PROTOCOL)
+
+        with open(environment_folder + '/storage', 'wb') as output:
+            pickle.dump(self.data_storage, output, pickle.HIGHEST_PROTOCOL)
+
+    def load_history(self, environment_folder):
+        with open(environment_folder + '/graph', 'rb') as g_input:
+            self.history_graph = pickle.load(g_input)
+        with open(environment_folder + '/storage', 'rb') as d_input:
+            self.data_storage = pickle.load(d_input)
+            self.time_manager = dict()
+
+    def plot_graph(self, plt, graph_type='workload'):
+        if graph_type == 'workload':
+            self.workload_graph.plot_graph(plt)
+        else:
+            self.history_graph.plot_graph(plt)
+
+    def get_artifacts_size(self, graph_type='workload'):
+        if graph_type == 'workload':
+            return self.workload_graph.get_total_size()
+        else:
+            return self.history_graph.get_total_size()
+
+    def load(self, loc, nrows=None):
+        if self.workload_graph.has_node(loc):
+            return self.workload_graph.get_node(loc)['data']
+        else:
+            initial_data = pd.read_csv(loc, nrows=nrows)
+            c_name = []
+            c_hash = []
+            # create the md5 hash values for columns
+            for i in range(len(initial_data.columns)):
+                c = initial_data.columns[i]
+                c_name.append(c)
+                # to ensure the same hashing is used for the initial data loading and the rest of the artifacts
+                # Adding the loc to make sure different datasets with the same column names do not mix
+                c_hash.append(Node.md5(loc + c))
+
+                self.data_storage.store_dataset(c_hash, initial_data[c_name])
+            nextnode = Dataset(loc, self, c_name=c_name, c_hash=c_hash)
+            size = self.data_storage.get_size(c_hash)
+            self.workload_graph.roots.append(loc)
+            self.workload_graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode,
+                                                 'loc': loc,
+                                                 'size': size})
+            return nextnode
+
+    def load_from_pandas(self, df, identifier):
+        if self.workload_graph.has_node(identifier):
+            return self.workload_graph.get_node(identifier)['data']
+        else:
+            c_name = []
+            c_hash = []
+            # create the md5 hash values for columns
+            for i in range(len(df.columns)):
+                c = df.columns[i]
+                c_name.append(c)
+                # to ensure the same hashing is used for the initial data loading and the rest of the artifacts
+                # Adding the loc to make sure different datasets with the same column names do not mix
+                c_hash.append(Node.md5(identifier + c))
+                self.data_storage.store_dataset(c_hash, df[c_name])
+            nextnode = Dataset(identifier, self, c_name=c_name, c_hash=c_hash)
+            size = self.data_storage.get_size(c_hash)
+            self.workload_graph.roots.append(identifier)
+            self.workload_graph.add_node(identifier,
+                                         **{'root': True, 'type': 'Dataset', 'data': nextnode,
+                                            'loc': identifier,
+                                            'size': size})
+            return nextnode
+
+
 class Node(object):
-    def __init__(self, node_id):
+    def __init__(self, node_id, execution_environment):
         self.id = node_id
         self.meta = {}
         self.computed = False
         self.access_freq = 0
+        self.execution_environment = execution_environment
 
     def update_freq(self):
         self.access_freq += 1
@@ -48,7 +147,7 @@ class Node(object):
     #     # compute and return the result
     #     # graph.compute_result(self.id)
     #     if self.is_empty():
-    #         ExecutionEnvironment.graph.compute_result(self.id, verbose)
+    #         self.execution_environment.graph.compute_result(self.id, verbose)
     #         self.reapply_meta()
     #     return self.data
 
@@ -73,68 +172,68 @@ class Node(object):
         if v_id is None:
             v_id = self.id
         nextid = self.generate_uuid()
-        nextnode = Agg(nextid, None)
-        exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': oper,
-                                                     'oper': 'p_' + oper,
-                                                     'args': args,
-                                                     'hash': self.e_hash(oper, args)},
-                                                    ntype=Agg.__name__)
+        nextnode = Agg(nextid, self.execution_environment)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': oper,
+                                                                    'oper': 'p_' + oper,
+                                                                    'args': args,
+                                                                    'hash': self.e_hash(oper, args)},
+                                                                   ntype=Agg.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_groupby_node(self, oper, args={}, v_id=None):
         if v_id is None:
             v_id = self.id
         nextid = self.generate_uuid()
-        nextnode = GroupBy(nextid, None)
-        exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': oper,
-                                                     'oper': 'p_' + oper,
-                                                     'args': args,
-                                                     'hash': self.e_hash(oper, args)},
-                                                    ntype=GroupBy.__name__)
+        nextnode = GroupBy(nextid, self.execution_environment)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': oper,
+                                                                    'oper': 'p_' + oper,
+                                                                    'args': args,
+                                                                    'hash': self.e_hash(oper, args)},
+                                                                   ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_sklearn_node(self, oper, args={}, v_id=None):
         if v_id is None:
             v_id = self.id
         nextid = self.generate_uuid()
-        nextnode = SK_Model(nextid, None)
-        exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': type(args['model']).__name__,
-                                                     'oper': 'p_' + oper,
-                                                     'args': args,
-                                                     'execution_time': -1,
-                                                     'hash': self.e_hash(oper, args)},
-                                                    ntype=SK_Model.__name__)
+        nextnode = SK_Model(nextid, self.execution_environment)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': type(args['model']).__name__,
+                                                                    'oper': 'p_' + oper,
+                                                                    'args': args,
+                                                                    'execution_time': -1,
+                                                                    'hash': self.e_hash(oper, args)},
+                                                                   ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_dataset_node(self, oper, args={}, v_id=None, c_name=[], c_hash=[]):
         if v_id is None:
             v_id = self.id
         nextid = self.generate_uuid()
-        nextnode = Dataset(nextid, c_name, c_hash)
-        exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': oper,
-                                                     'oper': 'p_' + oper,
-                                                     'execution_time': -1,
-                                                     'args': args,
-                                                     'hash': self.e_hash(oper, args)},
-                                                    ntype=Dataset.__name__)
+        nextnode = Dataset(nextid, self.execution_environment, c_name, c_hash)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': oper,
+                                                                    'oper': 'p_' + oper,
+                                                                    'execution_time': -1,
+                                                                    'args': args,
+                                                                    'hash': self.e_hash(oper, args)},
+                                                                   ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_feature_node(self, oper, args={}, v_id=None, c_name='', c_hash=''):
         if v_id is None:
             v_id = self.id
         nextid = self.generate_uuid()
-        nextnode = Feature(nextid, c_name, c_hash)
-        exist = ExecutionEnvironment.graph.add_edge(v_id, nextid, nextnode,
-                                                    {'name': oper,
-                                                     'execution_time': -1,
-                                                     'oper': 'p_' + oper,
-                                                     'args': args,
-                                                     'hash': self.e_hash(oper, args)},
-                                                    ntype=type(nextnode).__name__)
+        nextnode = Feature(nextid, self.execution_environment, c_name, c_hash)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': oper,
+                                                                    'execution_time': -1,
+                                                                    'oper': 'p_' + oper,
+                                                                    'args': args,
+                                                                    'hash': self.e_hash(oper, args)},
+                                                                   ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_super_node(self, nodes, args={}):
@@ -142,35 +241,34 @@ class Node(object):
         for n in nodes:
             nextid += n.id
 
-        if not ExecutionEnvironment.graph.has_node(nextid):
-            nextnode = SuperNode(nextid, nodes)
-            ExecutionEnvironment.graph.add_node(nextid,
-                                                **{'type': type(nextnode).__name__,
-                                                   'root': False,
-                                                   'data': nextnode})
+        if not self.execution_environment.workload_graph.has_node(nextid):
+            nextnode = SuperNode(nextid, self.execution_environment, nodes)
+            self.execution_environment.workload_graph.add_node(nextid,
+                                                               **{'type': type(nextnode).__name__,
+                                                                  'root': False,
+                                                                  'data': nextnode})
             for n in nodes:
                 # this is to make sure each combined edge is a unique name
-                args['uuid'] = self.generate_uuid()
-                ExecutionEnvironment.graph.add_edge(n.id, nextid, nextnode,
-                                                    # combine is a reserved word
-                                                    {'name': COMBINE_OPERATION_IDENTIFIER,
-                                                     'oper': COMBINE_OPERATION_IDENTIFIER,
-                                                     'execution_time': 0,
-                                                     'args': {},
-                                                     'hash': self.e_hash(COMBINE_OPERATION_IDENTIFIER, args)},
-                                                    ntype=type(nextnode).__name__)
+                #args['uuid'] = self.generate_uuid()
+                self.execution_environment.workload_graph.add_edge(n.id, nextid, nextnode,
+                                                                   # combine is a reserved word
+                                                                   {'name': COMBINE_OPERATION_IDENTIFIER,
+                                                                    'oper': COMBINE_OPERATION_IDENTIFIER,
+                                                                    'execution_time': 0,
+                                                                    'args': {},
+                                                                    'hash': self.e_hash(COMBINE_OPERATION_IDENTIFIER,
+                                                                                        args)},
+                                                                   ntype=type(nextnode).__name__)
             return nextnode
         else:
             # TODO: add the update rule (even though it has no effect)
-            return ExecutionEnvironment.graph.graph.nodes[nextid]['data']
+            return self.execution_environment.workload_graph.graph.nodes[nextid]['data']
 
-    @staticmethod
-    def store_dataframe(columns, df):
-        ExecutionEnvironment.data_storage.store_dataset(columns, df)
+    def store_dataframe(self, columns, df):
+        self.execution_environment.data_storage.store_dataset(columns, df)
 
-    @staticmethod
-    def store_feature(column, series):
-        ExecutionEnvironment.data_storage.store_column(column, series)
+    def store_feature(self, column, series):
+        self.execution_environment.data_storage.store_column(column, series)
 
     def find_column_index(self, c):
         return self.c_name.index(c)
@@ -188,7 +286,7 @@ class Node(object):
         if c_hash is None:
             c_hash = self.c_hash
         new_c_hash = [(self.md5(v + func_name)) for v in c_hash]
-        ExecutionEnvironment.data_storage.store_dataset(new_c_hash, df[c_name])
+        self.execution_environment.data_storage.store_dataset(new_c_hash, df[c_name])
         return c_name, new_c_hash
 
     def hash_and_store_series(self, func_name, series, c_name=None, c_hash=None):
@@ -197,23 +295,23 @@ class Node(object):
         if c_hash is None:
             c_hash = self.c_hash
         new_c_hash = self.md5(c_hash + func_name)
-        ExecutionEnvironment.data_storage.store_column(new_c_hash, series)
+        self.execution_environment.data_storage.store_column(new_c_hash, series)
         return c_name, new_c_hash
 
 
 class SuperNode(Node):
-    """SuperNode represents a (sorted) collection of other nodes
-    Its only purpose is to allow experiment_graph that require multiple nodes to fit
+    """SuperNode represents a (sorted) collection of other graph
+    Its only purpose is to allow experiment_graph that require multiple graph to fit
     in our data model
     """
 
-    def __init__(self, id, nodes):
-        Node.__init__(self, id)
+    def __init__(self, node_id, execution_environment, nodes):
+        Node.__init__(self, node_id, execution_environment)
         self.nodes = nodes
-        # self.meta = {'count': len(self.nodes)}
+        # self.meta = {'count': len(self.graph)}
 
     # def update_meta(self):
-    #     self.meta = {'count': len(self.nodes)}
+    #     self.meta = {'count': len(self.graph)}
     #
     # def reapply_meta(self):
     #     self.update_meta()
@@ -223,7 +321,7 @@ class SuperNode(Node):
         feature_data = self.nodes[1].data()
         feature_hash = self.nodes[1].c_hash
         new_hash = self.md5(feature_hash + str(model.get_params()))
-        ExecutionEnvironment.data_storage.store_column(new_hash, pd.Series(model.transform(feature_data)))
+        self.execution_environment.data_storage.store_column(new_hash, pd.Series(model.transform(feature_data)))
         return col_name, new_hash
 
     def p_transform(self):
@@ -232,7 +330,7 @@ class SuperNode(Node):
         df = pd.DataFrame(model.transform(dataset_data))
         new_columns = df.columns
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
+        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def p_fit_sk_model_with_labels(self, model, custom_args):
@@ -242,7 +340,7 @@ class SuperNode(Node):
         else:
             model.fit(self.nodes[0].data(), self.nodes[1].data(), )
         # update the model training time in the graph
-        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
     def p_predict_proba(self, custom_args):
@@ -257,7 +355,7 @@ class SuperNode(Node):
             c_name = [i for i in range(df.shape[1])]
             c_hash = [self.md5(self.generate_uuid()) for c in c_name]
         d = pd.DataFrame(df, columns=c_name)
-        ExecutionEnvironment.data_storage.store_dataset(c_hash, d)
+        self.execution_environment.data_storage.store_dataset(c_hash, d)
         return c_name, c_hash
 
     def p_filter_with(self):
@@ -267,14 +365,14 @@ class SuperNode(Node):
 
     def p_add_columns(self, col_names):
         # # already exists on the data storage
-        # current_map = self.nodes[0].map
+        # current_map = self.graph[0].map
         # # new data to be added
-        # to_be_added = self.nodes[1].map
+        # to_be_added = self.graph[1].map
         # if isinstance(col_names, list):
-        #     return self.nodes[0].data.assign(
-        #         **dict(zip(col_names, [self.nodes[1].data[a] for a in self.nodes[1].data])))
+        #     return self.graph[0].data.assign(
+        #         **dict(zip(col_names, [self.graph[1].data[a] for a in self.graph[1].data])))
         # else:
-        #     return self.nodes[0].data.assign(**dict(zip([col_names], [self.nodes[1].data])))
+        #     return self.graph[0].data.assign(**dict(zip([col_names], [self.graph[1].data])))
 
         # Since both node 0 and 1 are already stored in the
         # TODO: This only works for adding one column at a time
@@ -283,7 +381,7 @@ class SuperNode(Node):
         c_hash = copy.deepcopy(self.nodes[0].c_hash)
         c_hash.append(copy.deepcopy(self.nodes[1].c_hash))
         data = pd.concat([self.nodes[0].data(), self.nodes[1].data()], axis=1)
-        ExecutionEnvironment.data_storage.store_dataset(c_hash, data)
+        self.execution_environment.data_storage.store_dataset(c_hash, data)
         return c_names, c_hash
 
     def p_replace_columns(self, col_names):
@@ -307,7 +405,7 @@ class SuperNode(Node):
         d1 = self.nodes[0].data()
         d2 = self.nodes[1].data()
         d1[col_names] = d2
-        ExecutionEnvironment.data_storage.store_dataset(c_hashes, d1[c_names])
+        self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])
         return c_names, c_hashes
 
     def p_corr_with(self):
@@ -326,7 +424,7 @@ class SuperNode(Node):
             else:
                 raise 'Cannot concatane object of type: {}'.format(type(d))
         data = pd.concat([self.nodes[0].data(), self.nodes[1].data()], axis=1)
-        ExecutionEnvironment.data_storage.store_dataset(c_hash, data)
+        self.execution_environment.data_storage.store_dataset(c_hash, data)
         return c_name, c_hash
 
     # TODO: This can be done better
@@ -335,8 +433,8 @@ class SuperNode(Node):
     # However, it is possible than for left or right join, the other table has it's old column values and we do not
     # need to store new columns in the data store
     # def p_merge(self, on, how):
-    #     l_columns, l_hashes = self.nodes[0].c_name, self.nodes[0].c_hash
-    #     r_columns, r_hashes = self.nodes[1].c_name, self.nodes[1].c_hash
+    #     l_columns, l_hashes = self.graph[0].c_name, self.graph[0].c_hash
+    #     r_columns, r_hashes = self.graph[1].c_name, self.graph[1].c_hash
     #     if how == 'left':
     #         print 'left join'
     #         new_columns = copy.deepcopy(l_columns)
@@ -363,8 +461,8 @@ class SuperNode(Node):
     #                 new_columns.append(c)
     #                 new_hashes.append(self.md5(self.generate_uuid()))
     #
-    #     ExecutionEnvironment.data_storage.store_dataframe(new_hashes,
-    #                                                       self.nodes[0].data().merge(self.nodes[1].data(), on=on,
+    #     self.execution_environment.data_storage.store_dataframe(new_hashes,
+    #                                                       self.graph[0].data().merge(self.graph[1].data(), on=on,
     #                                                                                  how=how)[new_columns])
     #     return new_columns, new_hashes
 
@@ -375,7 +473,7 @@ class SuperNode(Node):
         # generate new hashes and store everything on disk
         new_columns = list(df.columns)
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
+        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def p_align(self):
@@ -465,14 +563,18 @@ class Feature(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            ExecutionEnvironment.graph.compute_result(self.id, verbose)
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
             self.computed = True
         # TODO: Remove index [0] after the column_map input is changed from dictionary to a better data structure
-        return ExecutionEnvironment.data_storage.get_column(self.c_name, self.c_hash)
+        return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
 
     def compute_size(self):
         if self.size == -1:
-            self.size = ExecutionEnvironment.data_storage.get_size([self.c_hash])
+            self.size = self.execution_environment.data_storage.get_size([self.c_hash])
             return self.size
         else:
             return self.size
@@ -480,8 +582,8 @@ class Feature(Node):
     # TODO: we really don't need a dictionary for the column_map rather only one key/value pair
     # TODO: is there a better way of representing this? now we must get the index 0 of the values
     # TODO: when constructing the feature from the data storage
-    def __init__(self, id, c_name='', c_hash='', size=-1):
-        Node.__init__(self, id)
+    def __init__(self, node_id, execution_environment, c_name='', c_hash='', size=-1):
+        Node.__init__(self, node_id, execution_environment)
         assert isinstance(c_name, str)
         assert isinstance(c_hash, str)
         self.c_name = c_name
@@ -620,9 +722,10 @@ class Feature(Node):
         return self.generate_dataset_node('concat', v_id=supernode.id)
 
     def isnull(self):
-        ExecutionEnvironment.graph.add_edge(self.id,
-                                            {'oper': self.e_hash('isnull'), 'hash': self.e_hash('isnull')},
-                                            ntype=type(self).__name__)
+        self.execution_environment.workload_graph.add_edge(self.id,
+                                                           {'oper': self.e_hash('isnull'),
+                                                            'hash': self.e_hash('isnull')},
+                                                           ntype=type(self).__name__)
 
     def notna(self):
         return self.generate_feature_node('notna')
@@ -730,7 +833,7 @@ class Feature(Node):
                                           self.data().replace(to_replace, inplace=False))
 
     # def onehot_encode(self):
-    #     ExecutionEnvironment.graph.add_edge(self.id,
+    #     self.execution_environment.graph.add_edge(self.id,
     #                                         {'oper': self.e_hash('onehot'), 'hash': self.e_hash('onehot')},
     #                                         ntype=Dataset.__name__)
 
@@ -744,7 +847,7 @@ class Feature(Node):
     def p_fit_sk_model(self, model):
         start = datetime.now()
         model.fit(self.data())
-        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
 
@@ -759,22 +862,30 @@ class Dataset(Node):
 
     """
 
+    def __init__(self, node_id, execution_environment, c_name=[], c_hash=[], size=-1):
+        Node.__init__(self, node_id, execution_environment)
+        self.c_name = c_name
+        self.c_hash = c_hash
+        self.size = size
+
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            ExecutionEnvironment.graph.compute_result(self.id, verbose)
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
+
             self.computed = True
-        return ExecutionEnvironment.data_storage.get_dataset(self.c_name, self.c_hash)
+        return self.execution_environment.data_storage.get_dataset(self.c_name, self.c_hash)
 
     def compute_size(self):
         if self.size == -1:
-            self.size = ExecutionEnvironment.data_storage.get_size(self.c_hash)
+            self.size = self.execution_environment.data_storage.get_size(self.c_hash)
             return self.size
         else:
             return self.size
-
-    def __init__(self, node_id, c_name=[], c_hash=[], size=-1):
-        Node.__init__(self, node_id)
 
         assert isinstance(c_name, list)
         assert isinstance(c_hash, list)
@@ -791,7 +902,7 @@ class Dataset(Node):
 
     def p_set_columns(self, columns):
         df = self.data()
-        ExecutionEnvironment.data_storage.store_dataset(self.c_hash, df)
+        self.execution_environment.data_storage.store_dataset(self.c_hash, df)
         return columns, self.c_hash
 
     def project(self, columns):
@@ -807,10 +918,10 @@ class Dataset(Node):
             for c in columns:
                 p_columns.append(c)
                 p_hashes.append(self.get_c_hash(c))
-            ExecutionEnvironment.data_storage.store_dataset(p_hashes, self.data()[p_columns])
+                self.execution_environment.data_storage.store_dataset(p_hashes, self.data()[p_columns])
             return p_columns, p_hashes
         else:
-            ExecutionEnvironment.data_storage.store_column(self.get_c_hash(columns), self.data()[columns])
+            self.execution_environment.data_storage.store_column(self.get_c_hash(columns), self.data()[columns])
             return columns, self.get_c_hash(columns)
 
     # overloading the indexing operator similar operation to project
@@ -841,7 +952,7 @@ class Dataset(Node):
         new_column = df.columns[0]
         new_column_data = df.iloc[0]
         new_c_hash = self.md5(self.generate_uuid())
-        ExecutionEnvironment.data_storage.store_column(new_c_hash, new_column_data)
+        self.execution_environment.data_storage.store_column(new_c_hash, new_column_data)
         del df
         del new_column_data
         gc.collect()
@@ -958,7 +1069,7 @@ class Dataset(Node):
         for c in df.columns:
             c_names.append(c)
             c_hashes.append(self.get_c_hash(c))
-        ExecutionEnvironment.data_storage.store_dataset(c_hashes, df[c_names])
+        self.execution_environment.data_storage.store_dataset(c_hashes, df[c_names])
         return c_names, c_hashes
 
     # If drop column results in one column the return type should be a Feature
@@ -974,7 +1085,7 @@ class Dataset(Node):
             if c not in columns:
                 new_c.append(c)
                 new_hash.append(self.get_c_hash(c))
-        ExecutionEnvironment.data_storage.store_dataset(new_hash, self.data()[new_c])
+        self.execution_environment.data_storage.store_dataset(new_hash, self.data()[new_c])
         return new_c, new_hash
         # return self.hash_and_store_df(self.map, 'drop{}'.format(columns), self.data().drop(columns=columns))
 
@@ -1017,7 +1128,7 @@ class Dataset(Node):
                 # column name does not result in the same column hash
                 new_hash.append(self.md5(self.generate_uuid() + c))
 
-        ExecutionEnvironment.data_storage.store_dataset(new_hash, df[new_column])
+        self.execution_environment.data_storage.store_dataset(new_hash, df[new_column])
         return new_column, new_hash
 
     def corr(self):
@@ -1082,7 +1193,7 @@ class Dataset(Node):
     def p_fit_sk_model(self, model):
         start = datetime.now()
         model.fit(self.data())
-        ExecutionEnvironment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
         return model
 
     def replace_columns(self, col_names, features):
@@ -1098,12 +1209,12 @@ class Dataset(Node):
 # However, there should be a better way since we are losing some deduplication opportunities
 # e.g., if user performs groupby().count() on the same columns on two datasets, the results will be
 # duplicated and stored twice with different hashes
-# We should find a way to also store groupby nodes inside the data storage
+# We should find a way to also store groupby graph inside the data storage
 # this way we can generate consistent hashes
 class GroupBy(Node):
 
-    def __init__(self, node_id, data_obj=None):
-        Node.__init__(self, node_id)
+    def __init__(self, node_id, execution_environment, data_obj=None):
+        Node.__init__(self, execution_environment, node_id)
         # of the form (df, c_key_name, c_key_hash, c_group_name, c_group_hash)
         self.data_obj = data_obj
 
@@ -1133,7 +1244,11 @@ class GroupBy(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            ExecutionEnvironment.graph.compute_result(self.id, verbose)
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
             self.computed = True
         return self.data_obj
 
@@ -1153,7 +1268,7 @@ class GroupBy(Node):
         for i in range(len(c_group_names)):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'count'))
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
+        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def agg(self, functions):
@@ -1180,7 +1295,7 @@ class GroupBy(Node):
                         new_hashes.append(self.md5(c_group_hashes[i] + level2column))
 
         df.columns = new_columns
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df)
+        self.execution_environment.data_storage.store_dataset(new_hashes, df)
         return new_columns, new_hashes
 
     def mean(self):
@@ -1200,19 +1315,23 @@ class GroupBy(Node):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'mean'))
 
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
+        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
 
 class Agg(Node):
-    def __init__(self, node_id, data_obj=None):
-        Node.__init__(self, node_id)
+    def __init__(self, node_id, execution_environment, data_obj=None):
+        Node.__init__(self, node_id, execution_environment)
         self.data_obj = data_obj
 
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            ExecutionEnvironment.graph.compute_result(self.id, verbose)
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
             self.computed = True
         return self.data_obj
 
@@ -1227,14 +1346,18 @@ class Agg(Node):
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, data_obj=None):
-        Node.__init__(self, node_id)
+    def __init__(self, node_id, execution_environment, data_obj=None):
+        Node.__init__(self, node_id, execution_environment)
         self.data_obj = data_obj
 
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            ExecutionEnvironment.graph.compute_result(self.id, verbose)
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
             self.computed = True
         return self.data_obj
 
@@ -1268,81 +1391,9 @@ class SK_Model(Node):
         new_columns = ['feature', 'importance']
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
 
-        ExecutionEnvironment.data_storage.store_dataset(new_hashes, df[new_columns])
+        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
     def predict_proba(self, test, custom_args=None):
         supernode = self.generate_super_node([self, test])
         return self.generate_dataset_node('predict_proba', args={'custom_args': custom_args}, v_id=supernode.id)
-
-
-class ExecutionEnvironment(object):
-    graph = ExecutionGraph()
-    data_storage = StorageManager()
-    time_manager = dict()
-
-    def __init__(self, storage_type='dedup'):
-        if storage_type == 'dedup':
-            ExecutionEnvironment.data_storage = DedupedStorageManager()
-        elif storage_type == 'naive':
-            ExecutionEnvironment.data_storage = NaiveStorageManager()
-
-    @staticmethod
-    def update_time(oper_type, seconds):
-        if oper_type in ExecutionEnvironment.time_manager:
-            ExecutionEnvironment.time_manager[oper_type] = ExecutionEnvironment.time_manager[oper_type] + seconds
-        else:
-            ExecutionEnvironment.time_manager[oper_type] = seconds
-
-    @staticmethod
-    def save_environment(environment_folder, overwrite=False):
-        if os.path.exists(environment_folder) and not overwrite:
-            raise Exception('Directory already exists and overwrite is not allowed')
-        if not os.path.exists(environment_folder):
-            os.mkdir(environment_folder)
-
-        with open(environment_folder + '/graph', 'wb') as output:
-            pickle.dump(ExecutionEnvironment.graph, output, pickle.HIGHEST_PROTOCOL)
-
-        with open(environment_folder + '/storage', 'wb') as output:
-            pickle.dump(ExecutionEnvironment.data_storage, output, pickle.HIGHEST_PROTOCOL)
-
-    @staticmethod
-    def load_environment(environment_folder):
-        with open(environment_folder + '/graph', 'rb') as g_input:
-            ExecutionEnvironment.graph = pickle.load(g_input)
-        with open(environment_folder + '/storage', 'rb') as d_input:
-            ExecutionEnvironment.data_storage = pickle.load(d_input)
-        ExecutionEnvironment.time_manager = dict()
-
-    @staticmethod
-    def plot_graph(plt):
-        ExecutionEnvironment.graph.plot_graph(plt)
-
-    @staticmethod
-    def get_artifacts_size():
-        return ExecutionEnvironment.graph.get_total_size()
-
-    @staticmethod
-    def load(loc, nrows=None):
-        if ExecutionEnvironment.graph.has_node(loc):
-            return ExecutionEnvironment.graph.get_node(loc)['data']
-        else:
-            initial_data = pd.read_csv(loc, nrows=nrows)
-            c_name = []
-            c_hash = []
-            # create the md5 hash values for columns
-            for i in range(len(initial_data.columns)):
-                c = initial_data.columns[i]
-                c_name.append(c)
-                # to ensure the same hashing is used for the initial data loading and the rest of the artifacts
-                # Adding the loc to make sure different datasets with the same column names do not mix
-                c_hash.append(Node.md5(loc + c))
-
-            ExecutionEnvironment.data_storage.store_dataset(c_hash, initial_data[c_name])
-            nextnode = Dataset(loc, c_name=c_name, c_hash=c_hash)
-            size = ExecutionEnvironment.data_storage.get_size(c_hash)
-            ExecutionEnvironment.graph.roots.append(loc)
-            ExecutionEnvironment.graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode, 'loc': loc,
-                                                        'size': size})
-            return nextnode

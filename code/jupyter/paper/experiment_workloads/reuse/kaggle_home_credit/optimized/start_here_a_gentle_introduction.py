@@ -673,7 +673,7 @@ root_data = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
 # ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
-ee.save_environment(DATABASE_PATH)
+ee.save_history(DATABASE_PATH)
 
 execution_end = datetime.now()
 elapsed = (execution_end - execution_start).total_seconds()

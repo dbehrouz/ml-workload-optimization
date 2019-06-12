@@ -199,5 +199,5 @@ for r in run_list[:100]:
 
 import matplotlib.pyplot as plt
 
-execution_environment.graph.plot_graph(plt, vertex_freq=True, edge_oper=True, edge_time=True)
+execution_environment.workload_graph.plot_graph(plt, vertex_freq=True, edge_oper=True, edge_time=True)
 plt.show()

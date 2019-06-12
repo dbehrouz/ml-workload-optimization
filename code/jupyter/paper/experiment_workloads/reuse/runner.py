@@ -34,7 +34,7 @@ for i in range(len(WORKLOADS)):
     if os.path.isdir(DATABASE_PATH):
         print 'Load Existing Experiment Graph!!'
         execution_start = datetime.now()
-        ee.load_environment(DATABASE_PATH)
+        ee.load_history(DATABASE_PATH)
         load_time = (datetime.now() - execution_start).total_seconds()
     else:
         load_time = 0
@@ -50,7 +50,7 @@ for i in range(len(WORKLOADS)):
     start = datetime.now()
     # Save the Graph to Disk
     # TODO: Maybe we need some versioning mechanism later on
-    ee.save_environment(environment_folder=DATABASE_PATH, overwrite=True)
+    ee.save_history(environment_folder=DATABASE_PATH, overwrite=True)
     save_time = (datetime.now() - start).total_seconds()
 
     print '{}-End of Optimized Workload'.format(execution_end)

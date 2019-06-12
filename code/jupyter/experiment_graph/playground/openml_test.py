@@ -17,6 +17,3 @@ execution_environment = ExecutionEnvironment()
 from openml_connectors import *
 
 download_dataset(task_id=31, root_path='../data/openml', overwrite=True)
-
-
-from sklearn_helper.sklearn_wrappers import LabelEncoder

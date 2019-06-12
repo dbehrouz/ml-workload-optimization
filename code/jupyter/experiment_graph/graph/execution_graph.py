@@ -6,18 +6,22 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-# Reserved word for representing super nodes.
+# Reserved word for representing super graph.
 # Do not use combine as an operation name
 # TODO: make file with all the global names
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 AS_MB = 1024.0 * 1024.0
 
 
-class ExecutionGraph(object):
-    roots = []
+class BaseGraph(object):
+    def __init__(self, graph, roots):
+        if graph is None:
+            self.graph = nx.DiGraph()
+        if roots is None:
+            self.roots = []
 
-    def __init__(self):
-        self.graph = nx.DiGraph()
+    def is_empty(self):
+        return len(self.graph) == 0
 
     def add_node(self, node_id, **meta):
         self.graph.add_node(node_id, **meta)
@@ -131,6 +135,11 @@ class ExecutionGraph(object):
     def get_node(self, node_id):
         return self.graph.nodes[node_id]
 
+
+class ExecutionGraph(BaseGraph):
+    def __init__(self, graph=None, roots=None):
+        super(ExecutionGraph, self).__init__(graph, roots)
+
     def brute_force_compute_paths(self, vertex):
         """brute force method for computing all the paths
 
@@ -163,10 +172,32 @@ class ExecutionGraph(object):
 
         return flatten
 
+    def compute_execution_subgraph(self, vertex):
+        """this method performs a similar job to the brute force and fast compute paths functions. However, instead of
+        just returning a list of [(source,destination)] vertex pairs, it returns the actual subgraph
+        This way we can also use the subgraph for cross optimizing with the history graph
+        :param vertex: vertex we are trying to compute
+        :return: subgraph that must be computed
+        """
+
+        def get_path(source, vertices):
+            if not self.graph.nodes[source]['data'].computed:
+                vertices.append(source)
+                for v in self.graph.predecessors(source):
+                    vertices.append(v)
+                    if not self.graph.nodes[v]['data'].computed:
+                        get_path(v, vertices)
+
+        execution_vertices = []
+        get_path(vertex, execution_vertices)
+        # TODO we should check to make sure the subgraph induction is not slow
+        # TODO otherwise we can compute the subgraph directly when finding the vertices
+        return self.graph.subgraph(execution_vertices)
+
     def fast_compute_paths(self, vertex):
         """faster alternative to brute_force_compute_paths
         instead of finding all the path in the graph, in this method, we traverse backward from the destination node
-        so computing the path of the nodes that are not already materialized.
+        so computing the path of the graph that are not already materialized.
 
         :param vertex: the vertex that should be materialized
         :return: path in the form of [(i,j)] indicating the list of edges that should be executed
@@ -183,17 +214,15 @@ class ExecutionGraph(object):
         get_path(vertex, all_paths)
         return all_paths
 
-    def compute_result(self, v_id, verbose=0):
-        """ main computation for nodes
-            This functions uses the schedule provided by the scheduler functions
-            (currently: fast_compute_paths, brute_force_compute_paths) to compute
-            the requested node
+    def compute_result_with_subgraph(self, subgraph, verbose=0):
         """
-        # compute_paths = self.brute_force_compute_paths(v_id)
-        compute_paths = self.fast_compute_paths(v_id)
-
-        # schedule the computation of nodes
-        schedule = self.schedule(compute_paths)
+        :param subgraph:
+        :param verbose:
+        :return:
+        """
+        # schedule the computation of graph
+        # schedule = self.schedule(compute_paths)
+        schedule = list(nx.topological_sort(nx.line_graph(subgraph)))
 
         # execute the computation based on the schedule
         for pair in schedule:
@@ -212,19 +241,31 @@ class ExecutionGraph(object):
                         # TODO: check if a shallow copy is enough
                         start_time = datetime.now()
                         cur_node['data'].c_name, cur_node['data'].c_hash = copy.deepcopy(
-                            self.compute_next(self.graph.nodes[pair[0]], edge))
+                            self.compute_next(prev_node, edge))
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = cur_node['data'].compute_size()
                     # all the other node types they contain the data themselves
                     else:
                         start_time = datetime.now()
-                        cur_node['data'].data_obj = copy.deepcopy(self.compute_next(self.graph.nodes[pair[0]], edge))
+                        cur_node['data'].data_obj = copy.deepcopy(self.compute_next(prev_node, edge))
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = self.compute_size(cur_node['data'].data_obj)
                     cur_node['data'].computed = True
                     edge['execution_time'] = total_time
             else:
                 edge['execution_time'] = 0.0
+
+    def compute_result(self, v_id, verbose=0):
+        """ main computation for graph
+            This functions uses the schedule provided by the scheduler functions
+            (currently: fast_compute_paths, brute_force_compute_paths) to compute
+            the requested node
+        """
+        # compute_paths = self.brute_force_compute_paths(v_id)
+        # compute_paths = self.fast_compute_paths(v_id)
+        execution_subgraph = self.compute_execution_subgraph(v_id)
+
+        self.compute_result_with_subgraph(execution_subgraph, verbose)
 
     @staticmethod
     def compute_next(node, edge):
@@ -233,10 +274,10 @@ class ExecutionGraph(object):
 
     @staticmethod
     def schedule(path):
-        """schedule the computation of nodes
+        """schedule the computation of graph
         receives all the paths that should be computed. Every path starts with
         a node that is already computed.
-        It returns a list of tuples which specifies the execution order of the nodes
+        It returns a list of tuples which specifies the execution order of the graph
         the list is of the form [(i,j), ...], where node[j] = node[i].operation, where operation
         is specifies inside the edge (i,j)
         :param path: a list of edges (i,j) which indicates the operations that should be executed
@@ -275,3 +316,20 @@ class ExecutionGraph(object):
                     schedule.remove(toswap)
                     schedule.insert(i, toswap)
         return schedule
+
+
+class HistoryGraph(BaseGraph):
+    def __init__(self, graph=None, roots=None):
+        super(HistoryGraph, self).__init__(graph, roots)
+
+    def extend(self, workload):
+        if self.is_empty():
+            self.graph = copy.deepcopy(workload.graph)
+            self.roots = copy.deepcopy(workload.roots)
+            for node in self.graph.nodes(data=True):
+                node[1]['meta_freq'] = 1
+        else:
+            self.graph = nx.compose(workload.graph, self.graph)
+            for n in workload.graph.nodes(data='freq'):
+                cur_node = self.graph.nodes[n[0]]
+                cur_node['meta_freq'] = cur_node['meta_freq'] + 1
