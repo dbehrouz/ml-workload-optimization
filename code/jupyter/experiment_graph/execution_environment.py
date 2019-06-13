@@ -249,7 +249,7 @@ class Node(object):
                                                                   'data': nextnode})
             for n in nodes:
                 # this is to make sure each combined edge is a unique name
-                #args['uuid'] = self.generate_uuid()
+                # args['uuid'] = self.generate_uuid()
                 self.execution_environment.workload_graph.add_edge(n.id, nextid, nextnode,
                                                                    # combine is a reserved word
                                                                    {'name': COMBINE_OPERATION_IDENTIFIER,
@@ -878,6 +878,9 @@ class Dataset(Node):
                 verbose)
 
             self.computed = True
+        return self.get_materialized_data()
+
+    def get_materialized_data(self):
         return self.execution_environment.data_storage.get_dataset(self.c_name, self.c_hash)
 
     def compute_size(self):
@@ -887,15 +890,15 @@ class Dataset(Node):
         else:
             return self.size
 
-        assert isinstance(c_name, list)
-        assert isinstance(c_hash, list)
-        assert len(c_name) == len(c_hash)
-
-        self.c_name = c_name
-        self.c_hash = c_hash
-        self.size = size
-        # if len(data) > 0:
-        #     self.update_meta()
+        # assert isinstance(c_name, list)
+        # assert isinstance(c_hash, list)
+        # assert len(c_name) == len(c_hash)
+        #
+        # self.c_name = c_name
+        # self.c_hash = c_hash
+        # self.size = size
+        # # if len(data) > 0:
+        # #     self.update_meta()
 
     def set_columns(self, columns):
         return self.generate_dataset_node('set_columns', {'columns': columns})
