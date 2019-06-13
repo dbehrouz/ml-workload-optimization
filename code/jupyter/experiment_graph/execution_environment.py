@@ -4,6 +4,7 @@ import gc
 import hashlib
 import os
 import uuid
+from abc import abstractmethod
 from datetime import datetime
 
 import numpy as np
@@ -124,6 +125,14 @@ class Node(object):
         self.access_freq = 0
         self.execution_environment = execution_environment
 
+    @abstractmethod
+    def data(self, verbose):
+        pass
+
+    @abstractmethod
+    def get_materialized_data(self):
+        pass
+
     def update_freq(self):
         self.access_freq += 1
 
@@ -143,14 +152,6 @@ class Node(object):
     def md5(val):
         return hashlib.md5(val).hexdigest()
 
-    # def get(self, verbose=0):
-    #     # compute and return the result
-    #     # graph.compute_result(self.id)
-    #     if self.is_empty():
-    #         self.execution_environment.graph.compute_result(self.id, verbose)
-    #         self.reapply_meta()
-    #     return self.data
-
     def update_meta(self):
         raise Exception('Node object has no meta data')
 
@@ -164,13 +165,10 @@ class Node(object):
         else:
             return nextnode
 
-    # def is_empty(self):
-    #     return self.data is None or 0 == len(self.data)
-
     # TODO: need to implement eager_mode when needed
-    def generate_agg_node(self, oper, args={}, v_id=None, eager_mode=0):
-        if v_id is None:
-            v_id = self.id
+    def generate_agg_node(self, oper, args=None, v_id=None, eager_mode=0):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
         nextid = self.generate_uuid()
         nextnode = Agg(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
@@ -181,9 +179,9 @@ class Node(object):
                                                                    ntype=Agg.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_groupby_node(self, oper, args={}, v_id=None):
-        if v_id is None:
-            v_id = self.id
+    def generate_groupby_node(self, oper, args=None, v_id=None):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
         nextid = self.generate_uuid()
         nextnode = GroupBy(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
@@ -194,9 +192,9 @@ class Node(object):
                                                                    ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_sklearn_node(self, oper, args={}, v_id=None):
-        if v_id is None:
-            v_id = self.id
+    def generate_sklearn_node(self, oper, args=None, v_id=None):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
         nextid = self.generate_uuid()
         nextnode = SK_Model(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
@@ -208,9 +206,11 @@ class Node(object):
                                                                    ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_dataset_node(self, oper, args={}, v_id=None, c_name=[], c_hash=[]):
-        if v_id is None:
-            v_id = self.id
+    def generate_dataset_node(self, oper, args=None, v_id=None, c_name=None, c_hash=None):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
+        c_name = [] if c_name is None else c_name
+        c_hash = [] if c_hash is None else c_hash
         nextid = self.generate_uuid()
         nextnode = Dataset(nextid, self.execution_environment, c_name, c_hash)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
@@ -222,9 +222,9 @@ class Node(object):
                                                                    ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_feature_node(self, oper, args={}, v_id=None, c_name='', c_hash=''):
-        if v_id is None:
-            v_id = self.id
+    def generate_feature_node(self, oper, args=None, v_id=None, c_name='', c_hash=''):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
         nextid = self.generate_uuid()
         nextnode = Feature(nextid, self.execution_environment, c_name, c_hash)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
@@ -236,7 +236,8 @@ class Node(object):
                                                                    ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_super_node(self, nodes, args={}):
+    def generate_super_node(self, nodes, args=None):
+        args = {} if args is None else args
         nextid = ''
         for n in nodes:
             nextid += n.id
@@ -305,16 +306,16 @@ class SuperNode(Node):
     in our data model
     """
 
+    def data(self, verbose):
+        pass
+
+    def get_materialized_data(self):
+        # SuperNodes do not have data
+        pass
+
     def __init__(self, node_id, execution_environment, nodes):
         Node.__init__(self, node_id, execution_environment)
         self.nodes = nodes
-        # self.meta = {'count': len(self.graph)}
-
-    # def update_meta(self):
-    #     self.meta = {'count': len(self.graph)}
-    #
-    # def reapply_meta(self):
-    #     self.update_meta()
 
     def p_transform_col(self, col_name):
         model = self.nodes[0].data()
@@ -560,25 +561,6 @@ class Feature(Node):
 
     """
 
-    def data(self, verbose=0):
-        self.update_freq()
-        if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
-                self.execution_environment.workload_graph,
-                self.id,
-                verbose)
-            self.computed = True
-        # TODO: Remove index [0] after the column_map input is changed from dictionary to a better data structure
-        return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
-
-    def compute_size(self):
-        if self.size == -1:
-            self.size = self.execution_environment.data_storage.get_size([self.c_hash])
-            return self.size
-        else:
-            return self.size
-
     # TODO: we really don't need a dictionary for the column_map rather only one key/value pair
     # TODO: is there a better way of representing this? now we must get the index 0 of the values
     # TODO: when constructing the feature from the data storage
@@ -590,14 +572,28 @@ class Feature(Node):
         self.c_hash = c_hash
         self.size = size
 
-    # def update_meta(self):
-    #     self.meta = {'name': self.data.name, 'dtype': self.data.dtype}
-    #
-    # def reapply_meta(self):
-    #     if not self.is_empty() and 'name' in self.meta.keys():
-    #         self.data.name = self.meta['name']
-    #     self.update_meta()
-    #
+    def data(self, verbose=0):
+        self.update_freq()
+        if not self.computed:
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
+            self.computed = True
+        # TODO: Remove index [0] after the column_map input is changed from dictionary to a better data structure
+        return self.get_materialized_data()
+
+    def get_materialized_data(self):
+        return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
+
+    def compute_size(self):
+        if self.size == -1:
+            self.size = self.execution_environment.data_storage.get_size([self.c_hash])
+            return self.size
+        else:
+            return self.size
+
     def setname(self, name):
         return self.generate_feature_node('setname', {'name': name})
 
@@ -862,10 +858,10 @@ class Dataset(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, c_name=[], c_hash=[], size=-1):
+    def __init__(self, node_id, execution_environment, c_name=None, c_hash=None, size=-1):
         Node.__init__(self, node_id, execution_environment)
-        self.c_name = c_name
-        self.c_hash = c_hash
+        self.c_name = [] if c_name is None else c_name
+        self.c_hash = [] if c_hash is None else c_hash
         self.size = size
 
     def data(self, verbose=0):
@@ -889,16 +885,6 @@ class Dataset(Node):
             return self.size
         else:
             return self.size
-
-        # assert isinstance(c_name, list)
-        # assert isinstance(c_hash, list)
-        # assert len(c_name) == len(c_hash)
-        #
-        # self.c_name = c_name
-        # self.c_hash = c_hash
-        # self.size = size
-        # # if len(data) > 0:
-        # #     self.update_meta()
 
     def set_columns(self, columns):
         return self.generate_dataset_node('set_columns', {'columns': columns})
@@ -1215,11 +1201,23 @@ class Dataset(Node):
 # We should find a way to also store groupby graph inside the data storage
 # this way we can generate consistent hashes
 class GroupBy(Node):
-
     def __init__(self, node_id, execution_environment, data_obj=None):
         Node.__init__(self, execution_environment, node_id)
-        # of the form (df, c_key_name, c_key_hash, c_group_name, c_group_hash)
         self.data_obj = data_obj
+
+    def data(self, verbose=0):
+        self.update_freq()
+        if not self.computed:
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
+            self.computed = True
+        return self.get_materialized_data()
+
+    def get_materialized_data(self):
+        return self.data_obj
 
     def project(self, columns):
         return self.generate_groupby_node('project', {'columns': columns})
@@ -1243,17 +1241,6 @@ class GroupBy(Node):
 
     def __getitem__(self, index):
         return self.project(index)
-
-    def data(self, verbose=0):
-        self.update_freq()
-        if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
-                self.execution_environment.workload_graph,
-                self.id,
-                verbose)
-            self.computed = True
-        return self.data_obj
 
     def count(self):
         return self.generate_dataset_node('count')
@@ -1336,13 +1323,10 @@ class Agg(Node):
                 self.id,
                 verbose)
             self.computed = True
-        return self.data_obj
+        return self.get_materialized_data()
 
-    # def update_meta(self):
-    #     self.meta = {'type': 'aggregation'}
-    #
-    # def reapply_meta(self):
-    #     self.update_meta()
+    def get_materialized_data(self):
+        return self.data_obj
 
     def show(self):
         return self.id + " :" + self.data().__str__()
@@ -1362,13 +1346,10 @@ class SK_Model(Node):
                 self.id,
                 verbose)
             self.computed = True
-        return self.data_obj
+        return self.get_materialized_data()
 
-    # def update_meta(self):
-    #     self.meta = {'model_class': self.data.get_params.im_class}
-    #
-    # def reapply_meta(self):
-    #     self.update_meta()
+    def get_materialized_data(self):
+        return self.data_obj
 
     # The matching physical operator is in the supernode class
     def transform_col(self, node, col_name='NO_COLUMN_NAME'):
