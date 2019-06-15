@@ -180,10 +180,10 @@ class ExecutionGraph(BaseGraph):
         :return: subgraph that must be computed
         """
 
-        def get_path(source, vertices):
-            if not self.graph.nodes[source]['data'].computed:
-                vertices.append(source)
-                for v in self.graph.predecessors(source):
+        def get_path(terminal, vertices):
+            if not self.graph.nodes[terminal]['data'].computed:
+                vertices.append(terminal)
+                for v in self.graph.predecessors(terminal):
                     vertices.append(v)
                     if not self.graph.nodes[v]['data'].computed:
                         get_path(v, vertices)
@@ -229,12 +229,13 @@ class ExecutionGraph(BaseGraph):
             cur_node = self.graph.nodes[pair[1]]
             prev_node = self.graph.nodes[pair[0]]
             edge = self.graph.edges[pair[0], pair[1]]
-            # print the path while executing
-            if verbose == 1:
-                print str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1])
-                # combine is logical and we do not execute it
+
+            # combine is logical and we do not execute it
             if edge['oper'] != COMBINE_OPERATION_IDENTIFIER:
                 if not cur_node['data'].computed:
+                    # print the path while executing
+                    if verbose == 1:
+                        print str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1])
                     # TODO: Data Storage only stores the data for Dataset and Feature for now
                     # TODO: Later on maybe we want to consider storing models and aggregates on the data storage as well
                     if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
