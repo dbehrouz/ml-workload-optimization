@@ -26,7 +26,6 @@ def run(execution_environment, root_data):
     # Read in bureau
     bureau = execution_environment.load(root_data + '/home-credit-default-risk/bureau.csv')
     bureau.head().data()
-
     previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count()
     previous_loan_counts = previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
     previous_loan_counts.head().data()
@@ -600,11 +599,11 @@ def run(execution_environment, root_data):
 
 from experiment_graph.execution_environment import ExecutionEnvironment
 
-ee = ExecutionEnvironment('naive')
+ee = ExecutionEnvironment('dedup')
 execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/environment_different_workload_naive'
+DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
 # ee.load_environment(DATABASE_PATH)
 run(ee, root_data)
 ee.save_history(DATABASE_PATH)

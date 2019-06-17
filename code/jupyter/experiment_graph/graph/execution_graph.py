@@ -38,14 +38,13 @@ class BaseGraph(object):
         self.graph.add_edge(start_id, end_id, **meta)
         return None
 
-    def plot_graph(self, plt, figsize=(12, 12), vertex_freq=True, edge_oper=False, edge_time=False):
+    def plot_graph(self, plt, figsize=(12, 12), labels_for_vertex=['freq'], labels_for_edges=['name']):
         """
         plot the graph using the graphvix dot layout
+        :param labels_for_edges:
+        :param labels_for_vertex:
         :param figsize: size of the figure (default (12,12))
         :param plt: matlibplot object
-        :param vertex_freq: boolean flag for hiding vertex frequencies (default True)
-        :param edge_oper: boolean flag for hiding operation names on the edges (default False)
-        :param edge_time: boolean flag for hiding operation execution time on edges (default Flase)
         """
         from networkx.drawing.nx_agraph import graphviz_layout
         f = plt.figure(figsize=figsize)
@@ -57,50 +56,68 @@ class BaseGraph(object):
         # TODO frequencies
         self.compute_frequencies()
         # get the list of available types and frequency of each node
-        freqs = {}
+        vertex_labels = {}
         unique_types = []
+
         for node in self.graph.nodes(data=True):
             if node[1]['type'] not in unique_types:
                 unique_types.append(node[1]['type'])
-            freqs[node[0]] = node[1]['freq']
+
+            labels = [str(node[1][p]) for p in labels_for_vertex if p != 'id']
+            if 'id' in labels_for_vertex:
+                if not node[1]['root']:
+                    labels.insert(0, node[0])
+                else:
+                    labels.insert(0, 'root')
+
+            vertex_labels[node[0]] = ','.join(labels)
 
         jet = plt.get_cmap('gist_rainbow')
         colors = jet(np.linspace(0, 1, len(unique_types)))
         color_map = dict(zip(unique_types, colors))
         for label in color_map:
             ax.scatter(None, None, color=color_map[label], label=label)
+        all_colors = [color_map[n[1]] for n in self.graph.nodes(data='type')]
 
-        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True)]
+        materialized_nodes = [n[0] for n in self.graph.node(data='data') if n[1].computed]
         nx.draw_networkx(
             self.graph,
+            nodelist=materialized_nodes,
             cmap=jet,
             vmin=0,
             vmax=len(unique_types),
             node_color=all_colors,
+            node_shape='s',
             pos=pos,
             with_labels=False,
             ax=ax)
 
-        if vertex_freq:
+        non_materialized_nodes = [n[0] for n in self.graph.node(data='data') if not n[1].computed]
+        nx.draw_networkx(
+            self.graph,
+            nodelist=non_materialized_nodes,
+            cmap=jet,
+            vmin=0,
+            vmax=len(unique_types),
+            node_color=all_colors,
+            node_shape='o',
+            pos=pos,
+            with_labels=False,
+            ax=ax)
+
+        if labels_for_vertex:
             nx.draw_networkx_labels(self.graph,
                                     pos=pos,
-                                    labels=freqs,
+                                    labels=vertex_labels,
                                     font_size=14)
 
-        def construct_label(edge_data, oper, ti):
-            if oper and ti:
-                return edge_data['name'], edge_data['execution_time']
-            if oper:
-                return edge_data['name']
-            if ti:
-                return edge_data['execution_time']
-            return ''
+        def construct_label(edge_data, edge_labels):
+            return ','.join([str(edge_data[l]) for l in edge_labels])
 
         nx.draw_networkx_edge_labels(
             self.graph,
             pos=pos,
-            edge_labels={(u, v): construct_label(d, edge_oper, edge_time)
-                         for u, v, d in self.graph.edges(data=True)})
+            edge_labels={(u, v): construct_label(d, labels_for_edges) for u, v, d in self.graph.edges(data=True)})
 
         plt.axis('off')
         f.set_facecolor('w')

@@ -9,9 +9,8 @@ from graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
 
 
 class Optimizer:
-
     def __init__(self):
-        pass
+        self.materialized_nodes = {}
 
     def optimize(self, history, workload, v_id, verbose=0):
         """
@@ -42,7 +41,6 @@ class Optimizer:
 
         # execute the workload using the optimized view
         workload.compute_result_with_subgraph(optimized_subgraph, verbose)
-
         # history.extend(workload)
 
     @staticmethod
@@ -51,8 +49,8 @@ class Optimizer:
 
     def cross_optimize(self, history, workload, workload_subgraph, verbose):
         """
-        TODO Actual implementation will follow
         also set the data node of the workload graph from the history graph
+        :param verbose:
         :param workload_subgraph:
         :param history:
         :param workload:
@@ -67,38 +65,56 @@ class Optimizer:
 
         find nodes in history graph that can the subgraph view can utilize
         and then copy their data to the workload graph
+        :param verbose:
         :param history:
         :param workload:
         :param workload_subgraph:
         :return:
         """
         # find root nodes of the workload subgraph
-        roots = [v for v, d in workload_subgraph.in_degree() if d == 0]
+        # important precondition, root vertices always have unique ids  therefore if the history graph contains a root,
+        # the id should match with the one in the workload graph
+        roots = [(v, v) for v, d in workload_subgraph.nodes(data='root') if d and history.has_node(v)]
         materialized_nodes = {}
+        if verbose == 1:
+            print 'existing materialized nodes {}'.format(self.materialized_nodes)
+        for w, h in self.materialized_nodes.iteritems():
+            roots.append((w, h))
+            materialized_nodes[w] = h
+
         for r in roots:
             # materialized_nodes are the set of nodes that exists in both graphs and are materialized
             # in the history graph
-            materialized_nodes.update(self.find_furthest_materialized_nodes(history.graph, workload_subgraph, r))
+            self.find_furthest_materialized_nodes(history.graph, workload_subgraph, r, materialized_nodes)
         if verbose == 1:
-            print 'materialized nodes {}'.format(materialized_nodes)
+            print 'new materialized nodes {}'.format(materialized_nodes)
         for m_w, m_h in materialized_nodes.iteritems():
             history_node = history.graph.nodes[m_h]
             workload_node = workload.graph.nodes[m_w]
             self.copy_from_history(history_node, workload_node)
+            if m_w in self.materialized_nodes:
+                if self.materialized_nodes[m_w] != m_h:
+                    raise Exception(
+                        'the value of the key \'{}\'is changing, existing value \'{}\', new value \'{}\''.format(
+                            m_w, self.materialized_nodes[m_w], m_h, ))
+            else:
+                self.materialized_nodes[m_w] = m_h
 
     @staticmethod
-    def find_furthest_materialized_nodes(history_graph, workload_graph, root_vertex):
+    def find_furthest_materialized_nodes(history_graph, workload_graph, root_vertex_pair, materialized_nodes):
         """
         given a root vertex and a source graph, find the set of materialized nodes in the target_graph
         that are furthest from the source and exist in both the source and target graph
         the root in the graph and returns vertex ids
+        :param materialized_nodes: initial materialized nodes
         :param history_graph: history graph
         :param workload_graph: workload sub graph
-        :param root_vertex:
+        :param root_vertex_pair: tuple of the form (w_root, h_root) a mapping of root and materialized nodes between
+            the two graphs
         :return:
         """
-        valid_nodes = [(root_vertex, root_vertex)]
-        materialized_nodes = {root_vertex: root_vertex}
+        valid_nodes = [root_vertex_pair]
+        # materialized_nodes = {root_vertex_pair[0]: root_vertex_pair[1]}
 
         out_degree = {v: d for v, d in workload_graph.out_degree() if d > 0}
         combined_nodes = {}
@@ -116,18 +132,24 @@ class Optimizer:
                             combined_nodes[w_destination] = {(w, h)}
                         if {wn for wn, hn in combined_nodes[w_destination]} == set(
                                 workload_graph.node[w_destination]['involved_nodes']):
-                            potential_valid_super_nodes[w_destination] = copy.deepcopy(combined_nodes[w_destination])
+                            potential_valid_super_nodes[w_destination] = copy.deepcopy(
+                                combined_nodes[w_destination])
                     else:
                         for _, h_destination, h_edge_data in history_graph.out_edges(h, data=True):
                             if w_edge_data['hash'] == h_edge_data['hash']:
-                                print 'adding ({},{}) to valid nodes'.format(w_destination, h_destination)
-                                valid_nodes.append((w_destination, h_destination))
-                                if history_graph.nodes[h_destination]['data'].computed:
-                                    materialized_nodes[w_destination] = h_destination
-                                    out_degree[w] -= 1
+                                if w_destination not in materialized_nodes:
+                                    valid_nodes.append((w_destination, h_destination))
+                                    if history_graph.nodes[h_destination]['data'].computed:
+                                        materialized_nodes[w_destination] = h_destination
+                                        out_degree[w] -= 1
 
+                # TODO when a node's out_degree becomes 0, we should also decrease its parent's out_degree by 1 and
+                # TODO check if that should be remove or not and so on ... until we reach parent node with out_degree
+                # TODO > 1 or root
                 if w in out_degree and out_degree[w] == 0:
-                    del materialized_nodes[w]
+                    if w in materialized_nodes:
+                        del materialized_nodes[w]
+
             for super_node, involved in potential_valid_super_nodes.iteritems():
                 h_super_node = None
                 for w, h in involved:
@@ -149,13 +171,22 @@ class Optimizer:
                 assert len(w_node) == 1
                 h_node = h_node[0]
                 w_node = w_node[0]
-                valid_nodes.append((w_node, h_node))
-                if history_graph.nodes[h_node]['data'].computed:
-                    materialized_nodes[w_node] = h_node
+                if w_node not in materialized_nodes:
+                    valid_nodes.append((w_node, h_node))
+                    if history_graph.nodes[h_node]['data'].computed:
+                        materialized_nodes[w_node] = h_node
+                        for w, _ in involved:
+                            out_degree[w] -= 1
+                            if out_degree[w] == 0:
+                                if w in materialized_nodes:
+                                    del materialized_nodes[w]
+                else:
                     for w, _ in involved:
                         out_degree[w] -= 1
                         if out_degree[w] == 0:
-                            del materialized_nodes[w]
+                            if w in materialized_nodes:
+                                del materialized_nodes[w]
+
             potential_valid_super_nodes = {}
 
         return materialized_nodes

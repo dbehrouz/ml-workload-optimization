@@ -85,6 +85,7 @@ class ExecutionEnvironment(object):
 
                 self.data_storage.store_dataset(c_hash, initial_data[c_name])
             nextnode = Dataset(loc, self, c_name=c_name, c_hash=c_hash)
+            nextnode.computed = True
             size = self.data_storage.get_size(c_hash)
             self.workload_graph.roots.append(loc)
             self.workload_graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode,
@@ -107,6 +108,7 @@ class ExecutionEnvironment(object):
                 c_hash.append(Node.md5(identifier + c))
                 self.data_storage.store_dataset(c_hash, df[c_name])
             nextnode = Dataset(identifier, self, c_name=c_name, c_hash=c_hash)
+            nextnode.computed = True
             size = self.data_storage.get_size(c_hash)
             self.workload_graph.roots.append(identifier)
             self.workload_graph.add_node(identifier,
@@ -1229,7 +1231,7 @@ class Dataset(Node):
 # this way we can generate consistent hashes
 class GroupBy(Node):
     def __init__(self, node_id, execution_environment, data_obj=None):
-        Node.__init__(self, execution_environment, node_id)
+        Node.__init__(self, node_id, execution_environment)
         self.data_obj = data_obj
 
     def data(self, verbose=0):
