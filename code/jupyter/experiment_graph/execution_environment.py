@@ -41,17 +41,26 @@ class ExecutionEnvironment(object):
             raise Exception('Directory already exists and overwrite is not allowed')
         if not os.path.exists(environment_folder):
             os.mkdir(environment_folder)
-
+        self.history_graph.extend(self.workload_graph)
         with open(environment_folder + '/graph', 'wb') as output:
-            self.history_graph.extend(self.workload_graph)
-            pickle.dump(self.history_graph, output, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.history_graph.graph, output, pickle.HIGHEST_PROTOCOL)
+
+        with open(environment_folder + '/roots', 'wb') as output:
+            pickle.dump(self.history_graph.roots, output, pickle.HIGHEST_PROTOCOL)
 
         with open(environment_folder + '/storage', 'wb') as output:
             pickle.dump(self.data_storage, output, pickle.HIGHEST_PROTOCOL)
 
     def load_history(self, environment_folder):
         with open(environment_folder + '/graph', 'rb') as g_input:
-            self.history_graph = pickle.load(g_input)
+            graph = pickle.load(g_input)
+
+        with open(environment_folder + '/roots', 'rb') as g_input:
+            roots = pickle.load(g_input)
+
+        self.history_graph = HistoryGraph(graph, roots)
+        self.history_graph.set_environment(self)
+
         with open(environment_folder + '/storage', 'rb') as d_input:
             self.data_storage = pickle.load(d_input)
             self.time_manager = dict()
@@ -125,6 +134,27 @@ class Node(object):
         self.computed = False
         self.access_freq = 0
         self.execution_environment = execution_environment
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['execution_environment']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        for k, v in self.__dict__.items():
+            if k is 'execution_environment':
+                setattr(result, k, self.execution_environment)
+            else:
+                setattr(result, k, copy.deepcopy(v, memo))
+        return result
+
+    def set_environment(self, environment):
+        self.execution_environment = environment
 
     @abstractmethod
     def data(self, verbose):

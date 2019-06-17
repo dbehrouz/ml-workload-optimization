@@ -17,8 +17,16 @@ class BaseGraph(object):
     def __init__(self, graph, roots):
         if graph is None:
             self.graph = nx.DiGraph()
+        else:
+            self.graph = graph
         if roots is None:
             self.roots = []
+        else:
+            self.roots = roots
+
+    def set_environment(self, env):
+        for node in self.graph.nodes(data='data'):
+            node[1].execution_environment = env
 
     def is_empty(self):
         return len(self.graph) == 0
@@ -342,11 +350,13 @@ class HistoryGraph(BaseGraph):
 
     def extend(self, workload):
         if self.is_empty():
+            print 'history graph is empty, initializing a new one'
             self.graph = copy.deepcopy(workload.graph)
             self.roots = copy.deepcopy(workload.roots)
             for node in self.graph.nodes(data=True):
                 node[1]['meta_freq'] = 1
         else:
+            print 'history graph is not empty, extending the existing one'
             self.graph = nx.compose(workload.graph, self.graph)
             for n in workload.graph.nodes(data='freq'):
                 cur_node = self.graph.nodes[n[0]]
