@@ -29,18 +29,18 @@ class Optimizer:
         workload_subgraph = workload.compute_execution_subgraph(v_id)
         if verbose == 1:
             print 'workload graph size: {}'.format(len(workload_subgraph.nodes()))
+            print 'materialized nodes before optimization begins: {}'.format(self.materialized_nodes)
         # here we optimize workload graph with historical graph
         if not history.is_empty():
             self.cross_optimize(history, workload, workload_subgraph, verbose)
-
-        optimized_subgraph = workload.compute_execution_subgraph(v_id)
+            workload_subgraph = workload.compute_execution_subgraph(v_id)
 
         # print 'size of the optimized graph = {}'.format(len(optimized_subgraph))
         if verbose == 1:
-            print 'optimized workload graph size: {}'.format(len(optimized_subgraph.nodes()))
+            print 'optimized workload graph size: {}'.format(len(workload_subgraph.nodes()))
 
         # execute the workload using the optimized view
-        workload.compute_result_with_subgraph(optimized_subgraph, verbose)
+        workload.compute_result_with_subgraph(workload_subgraph, verbose)
         # history.extend(workload)
 
     @staticmethod

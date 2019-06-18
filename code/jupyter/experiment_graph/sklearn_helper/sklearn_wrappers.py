@@ -17,6 +17,8 @@ class SimpleModel:
         self.trained_node = data.fit_sk_model(self.underlying_sk_model)
 
     def transform(self, data):
+        if self.trained_node is None:
+            raise Exception('Model is not trained yet!!!')
         return self.trained_node.transform(data)
 
     def fit_transform(self, data):

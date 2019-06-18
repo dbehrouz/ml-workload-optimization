@@ -6,6 +6,7 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
+import os
 import warnings
 
 # matplotlib and seaborn for plotting
@@ -72,13 +73,14 @@ def run(execution_environment, root_data):
     bureau_agg = bureau.drop(columns=['SK_ID_BUREAU']).groupby('SK_ID_CURR').agg(
         ['count', 'mean', 'max', 'min', 'sum'])
     columns = []
-    for c in bureau_agg.data().columns:
+    bureau_agg_cols = bureau_agg.data().columns
+    for c in bureau_agg_cols:
         if c != 'SK_ID_CURR':
             columns.append('bureau_{}'.format(c))
         else:
             columns.append(c)
     bureau_agg = bureau_agg.set_columns(columns)
-    bureau_agg.head().data()
+    bureau_agg.head().data(verbose=1)
 
     # Merge with the training data
     train = train.merge(bureau_agg, on='SK_ID_CURR', how='left')
@@ -145,7 +147,7 @@ def run(execution_environment, root_data):
         return agg.set_columns(column_names)
 
     bureau_agg_new = agg_numeric(bureau.drop(columns=['SK_ID_BUREAU']), group_var='SK_ID_CURR', df_name='bureau')
-    bureau_agg_new.head().data()
+    bureau_agg_new.head().data(verbose=1)
 
     # Function to calculate correlations with the target for a dataframe
     def target_corrs(df):
@@ -266,7 +268,7 @@ def run(execution_environment, root_data):
     bureau_balance_counts.head().data()
 
     bureau_balance_agg = agg_numeric(bureau_balance, group_var='SK_ID_BUREAU', df_name='bureau_balance')
-    bureau_balance_agg.head().data()
+    bureau_balance_agg.head().data(verbose=1)
 
     # Dataframe grouped by the loan
     bureau_by_loan = bureau_balance_agg.merge(
@@ -515,8 +517,8 @@ def run(execution_environment, root_data):
 
         # Train the model
         model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
-                                                 'categorical_feature': cat_indices,
-                                                 'verbose': 200})
+                                                    'categorical_feature': cat_indices,
+                                                    'verbose': 200})
 
         # Record the best iteration
         best_iteration = model.best_iteration()
@@ -585,7 +587,7 @@ def run(execution_environment, root_data):
 
     fi_raw_sorted = plot_feature_importances(fi_raw)
 
-    top_100 = list(fi_raw_sorted['feature'].data())[:100]
+    top_100 = list(fi_raw_sorted['feature'].data(verbose=1))[:100]
     new_features = [x for x in top_100 if x not in list(fi['feature'].data())]
 
     print('%% of Top 100 Features created from the bureau data = %d.00' % len(new_features))
@@ -604,9 +606,10 @@ execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
-# ee.load_environment(DATABASE_PATH)
+if os.path.isdir(DATABASE_PATH):
+    ee.load_history(DATABASE_PATH)
 run(ee, root_data)
-ee.save_history(DATABASE_PATH)
+ee.save_history(DATABASE_PATH, overwrite=True)
 
 execution_end = datetime.now()
 elapsed = (execution_end - execution_start).total_seconds()

@@ -353,11 +353,12 @@ class HistoryGraph(BaseGraph):
             print 'history graph is empty, initializing a new one'
             self.graph = copy.deepcopy(workload.graph)
             self.roots = copy.deepcopy(workload.roots)
-            for node in self.graph.nodes(data=True):
-                node[1]['meta_freq'] = 1
+            # initializing the meta frequencies to 1
+            metas = {node: 1 for node in self.graph.nodes()}
+            nx.set_node_attributes(self.graph, metas, 'meta_freq')
+
         else:
             print 'history graph is not empty, extending the existing one'
             self.graph = nx.compose(workload.graph, self.graph)
-            for n in workload.graph.nodes(data='freq'):
-                cur_node = self.graph.nodes[n[0]]
-                cur_node['meta_freq'] = cur_node['meta_freq'] + 1
+            for n in workload.graph.nodes(data='meta_freq'):
+                n[1] = n[1] + 1
