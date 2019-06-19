@@ -11,6 +11,7 @@ import warnings
 
 # matplotlib and seaborn for plotting
 from datetime import datetime
+import cPickle as pickle
 
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
@@ -23,20 +24,20 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-def run(execution_environment, root_data):
+def run(execution_environment, root_data, verbose=0):
     # Read in bureau
     bureau = execution_environment.load(root_data + '/home-credit-default-risk/bureau.csv')
-    bureau.head().data()
+    bureau.head().data(verbose=verbose)
     previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count()
     previous_loan_counts = previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
-    previous_loan_counts.head().data()
+    previous_loan_counts.head().data(verbose=verbose)
 
     # Join to the training dataframe
     train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
     train = train.merge(previous_loan_counts, on='SK_ID_CURR', how='left')
 
     train = train.replace_columns('previous_loan_counts', train['previous_loan_counts'].fillna(0))
-    train.head().data()
+    train.head().data(verbose=verbose)
 
     # Plots the distribution of a variable colored by value of the target
     def kde_target(var_name, df):
@@ -50,8 +51,8 @@ def run(execution_environment, root_data):
         plt.figure(figsize=(12, 6))
 
         # Plot the distribution for target == 0 and target == 1
-        sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(), label='TARGET == 0')
-        sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(), label='TARGET == 1')
+        sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(verbose=verbose), label='TARGET == 0')
+        sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(verbose=verbose), label='TARGET == 1')
 
         # label the plot
         plt.xlabel(var_name)
@@ -60,10 +61,10 @@ def run(execution_environment, root_data):
         plt.legend()
 
         # print out the correlation
-        print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data()))
+        print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
         # Print out average values
-        print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data())
-        print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data())
+        print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
+        print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
 
     kde_target('EXT_SOURCE_3', train)
 
@@ -73,22 +74,22 @@ def run(execution_environment, root_data):
     bureau_agg = bureau.drop(columns=['SK_ID_BUREAU']).groupby('SK_ID_CURR').agg(
         ['count', 'mean', 'max', 'min', 'sum'])
     columns = []
-    bureau_agg_cols = bureau_agg.data().columns
+    bureau_agg_cols = bureau_agg.data(verbose=verbose).columns
     for c in bureau_agg_cols:
         if c != 'SK_ID_CURR':
             columns.append('bureau_{}'.format(c))
         else:
             columns.append(c)
     bureau_agg = bureau_agg.set_columns(columns)
-    bureau_agg.head().data(verbose=1)
+    bureau_agg.head().data(verbose=verbose)
 
     # Merge with the training data
     train = train.merge(bureau_agg, on='SK_ID_CURR', how='left')
-    train.head().data()
+    train.head().data(verbose=verbose)
 
     # List of new correlations
     new_corrs = []
-    columns = bureau_agg.data().columns
+    columns = bureau_agg.data(verbose=verbose).columns
     # Iterate through the columns
     for col in columns:
         # Calculate correlation with the target
@@ -96,7 +97,7 @@ def run(execution_environment, root_data):
 
         # Append the list as a tuple
 
-        new_corrs.append((col, corr.data()))
+        new_corrs.append((col, corr.data(verbose=verbose)))
 
     # Sort the correlations by the absolute value
     # Make sure to reverse to put the largest values at the front of list
@@ -127,7 +128,7 @@ def run(execution_environment, root_data):
                 The columns are also renamed to keep track of features created.
 
         """
-        df_columns = df.data().columns
+        df_columns = df.data(verbose=verbose).columns
         # Remove id variables other than grouping variable
         for col in df_columns:
             if col != group_var and 'SK_ID' in col:
@@ -140,7 +141,7 @@ def run(execution_environment, root_data):
 
         # Need to create new column names
         column_names = [group_var]
-        columns = agg.data().columns
+        columns = agg.data(verbose=verbose).columns
         for c in columns:
             if c != group_var:
                 column_names.append('{}_{}'.format(df_name, c))
@@ -154,7 +155,7 @@ def run(execution_environment, root_data):
 
         # List of correlations
         corrs = []
-        columns = df.data().columns()
+        columns = df.data(verbose=verbose).columns()
         # Iterate through the columns
         for col in columns:
             print(col)
@@ -164,7 +165,7 @@ def run(execution_environment, root_data):
                 corr = df['TARGET'].corr(df[col])
 
                 # Append the list as a tuple
-                corrs.append((col, corr.data()))
+                corrs.append((col, corr.data(verbose=verbose)))
 
         # Sort by absolute magnitude of correlations
         corrs = sorted(corrs, key=lambda x: abs(x[1]), reverse=True)
@@ -173,15 +174,15 @@ def run(execution_environment, root_data):
 
     categorical = bureau.select_dtypes('object').onehot_encode()
     categorical = categorical.add_columns('SK_ID_CURR', bureau['SK_ID_CURR'])
-    categorical.head().data()
+    categorical.head().data(verbose=verbose)
 
     categorical_grouped = categorical.groupby('SK_ID_CURR').agg(['sum', 'mean'])
-    categorical_grouped.head().data()
+    categorical_grouped.head().data(verbose=verbose)
 
     train = train.merge(categorical_grouped, on='SK_ID_CURR', how='left')
-    train.head().data()
+    train.head().data(verbose=verbose)
 
-    train.shape().data()
+    train.shape().data(verbose=verbose)
 
     def count_categorical(df, group_var, df_name):
         """Computes counts and normalized counts for each observation
@@ -219,7 +220,7 @@ def run(execution_environment, root_data):
 
         column_names = [group_var]
         # Need to create new column names
-        columns = categorical.data().columns
+        columns = categorical.data(verbose=verbose).columns
         for c in columns:
             if c != group_var:
                 column_names.append('{}_{}'.format(df_name, c))
@@ -227,19 +228,19 @@ def run(execution_environment, root_data):
         return categorical.set_columns(column_names)
 
     bureau_counts = count_categorical(bureau, group_var='SK_ID_CURR', df_name='bureau')
-    bureau_counts.head().data()
+    bureau_counts.head().data(verbose=verbose)
 
     # Read in bureau balance
     bureau_balance = execution_environment.load(root_data + '/home-credit-default-risk/bureau_balance.csv')
-    bureau_balance.head().data()
+    bureau_balance.head().data(verbose=verbose)
 
     # Counts of each type of status for each previous loan
     bureau_balance_counts = count_categorical(bureau_balance, group_var='SK_ID_BUREAU', df_name='bureau_balance')
-    bureau_balance_counts.head().data()
+    bureau_balance_counts.head().data(verbose=verbose)
 
     # Calculate value count statistics for each `SK_ID_CURR`
     bureau_balance_agg = agg_numeric(bureau_balance, group_var='SK_ID_BUREAU', df_name='bureau_balance')
-    bureau_balance_agg.head().data()
+    bureau_balance_agg.head().data(verbose=verbose)
 
     # Dataframe grouped by the loan
     bureau_by_loan = bureau_balance_agg.merge(bureau_balance_counts, on='SK_ID_BUREAU', how='outer')
@@ -247,11 +248,11 @@ def run(execution_environment, root_data):
     # Merge to include the SK_ID_CURR
     bureau_by_loan = bureau_by_loan.merge(bureau[['SK_ID_BUREAU', 'SK_ID_CURR']], on='SK_ID_BUREAU', how='left')
 
-    bureau_by_loan.head().data()
+    bureau_by_loan.head().data(verbose=verbose)
 
     bureau_balance_by_client = agg_numeric(bureau_by_loan.drop(columns=['SK_ID_BUREAU']), group_var='SK_ID_CURR',
                                            df_name='client')
-    bureau_balance_by_client.head().data()
+    bureau_balance_by_client.head().data(verbose=verbose)
 
     # Read in new copies of all the dataframes
     train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
@@ -259,13 +260,13 @@ def run(execution_environment, root_data):
     bureau_balance = execution_environment.load(root_data + '/home-credit-default-risk/bureau_balance.csv')
 
     bureau_counts = count_categorical(bureau, group_var='SK_ID_CURR', df_name='bureau')
-    bureau_counts.head().data()
+    bureau_counts.head().data(verbose=verbose)
 
     bureau_agg = agg_numeric(bureau.drop(columns=['SK_ID_BUREAU']), group_var='SK_ID_CURR', df_name='bureau')
-    bureau_agg.head().data()
+    bureau_agg.head().data(verbose=verbose)
 
     bureau_balance_counts = count_categorical(bureau_balance, group_var='SK_ID_BUREAU', df_name='bureau_balance')
-    bureau_balance_counts.head().data()
+    bureau_balance_counts.head().data(verbose=verbose)
 
     bureau_balance_agg = agg_numeric(bureau_balance, group_var='SK_ID_BUREAU', df_name='bureau_balance')
     bureau_balance_agg.head().data(verbose=1)
@@ -284,7 +285,7 @@ def run(execution_environment, root_data):
         group_var='SK_ID_CURR',
         df_name='client')
 
-    original_features = list(train.data().columns)
+    original_features = list(train.data(verbose=verbose).columns)
     print('Original Number of Features: ', len(original_features))
 
     # Merge with the value counts of bureau
@@ -296,15 +297,15 @@ def run(execution_environment, root_data):
     # Merge with the monthly information grouped by client
     train = train.merge(bureau_balance_by_client, on='SK_ID_CURR', how='left')
 
-    new_features = list(train.data().columns)
+    new_features = list(train.data(verbose=verbose).columns)
     print('Number of features using previous loans from other institutions data: ', len(new_features))
 
     # Function to calculate missing values by column# Funct
     def missing_values_table(dataset):
         # Total missing values
-        mis_val = dataset.isnull().sum().data()
+        mis_val = dataset.isnull().sum().data(verbose=verbose)
 
-        mis_val_percent = 100 * mis_val / len(dataset.data())
+        mis_val_percent = 100 * mis_val / len(dataset.data(verbose=verbose))
 
         # Make a table with the results
         mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
@@ -319,8 +320,8 @@ def run(execution_environment, root_data):
             '% of Total Values', ascending=False).round(1)
 
         # Print some summary information
-        print("Your selected dataframe has " + str(dataset.shape().data()[1]) + " columns.\n"
-                                                                                "There are " + str(
+        print("Your selected dataframe has " + str(dataset.shape().data(verbose=verbose)[1]) + " columns.\n"
+                                                                                               "There are " + str(
             mis_val_table_ren_columns.shape[0]) +
               " columns that have missing values.")
 
@@ -345,7 +346,7 @@ def run(execution_environment, root_data):
     # Merge with the value counts of bureau balance
     test = test.merge(bureau_balance_by_client, on='SK_ID_CURR', how='left')
 
-    print('Shape of Testing Data: ', test.shape().data())
+    print('Shape of Testing Data: ', test.shape().data(verbose=verbose))
 
     train_labels = train['TARGET']
 
@@ -354,8 +355,8 @@ def run(execution_environment, root_data):
 
     train = train.add_columns('TARGET', train_labels)
 
-    print('Training Data Shape: ', train.shape().data())
-    print('Testing Data Shape: ', test.shape().data())
+    print('Training Data Shape: ', train.shape().data(verbose=verbose))
+    print('Testing Data Shape: ', test.shape().data(verbose=verbose))
 
     missing_test = missing_values_table(test)
     missing_test.head(10)
@@ -372,7 +373,7 @@ def run(execution_environment, root_data):
     test = test.drop(columns=missing_columns)
 
     # Calculate all correlations in dataframe
-    corrs = train.corr().data()
+    corrs = train.corr().data(verbose=verbose)
 
     corrs = corrs.sort_values('TARGET', ascending=False)
 
@@ -420,8 +421,8 @@ def run(execution_environment, root_data):
     train_corrs_removed = train.drop(columns=cols_to_remove)
     test_corrs_removed = test.drop(columns=cols_to_remove)
 
-    print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data())
-    print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data())
+    print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data(verbose=verbose))
+    print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data(verbose=verbose))
 
     from sklearn_helper.sklearn_wrappers import LGBMClassifier
 
@@ -470,8 +471,8 @@ def run(execution_environment, root_data):
             lgb_featres = lgb_featres.onehot_encode()
             test_features = test_features.onehot_encode()
 
-            features_columns = lgb_featres.data().columns
-            test_features_columns = test_features.data().columns
+            features_columns = lgb_featres.data(verbose=verbose).columns
+            test_features_columns = test_features.data(verbose=verbose).columns
             for c in features_columns:
                 if c not in test_features_columns:
                     lgb_featres = lgb_featres.drop(c)
@@ -503,11 +504,11 @@ def run(execution_environment, root_data):
         else:
             raise ValueError("Encoding must be either 'ohe' or 'le'")
 
-        print('Training Data Shape: ', lgb_featres.shape().data())
-        print('Testing Data Shape: ', test_features.shape().data())
+        print('Training Data Shape: ', lgb_featres.shape().data(verbose=verbose))
+        print('Testing Data Shape: ', test_features.shape().data(verbose=verbose))
 
         # Extract feature names
-        feature_names = list(lgb_featres.data().columns)
+        feature_names = list(lgb_featres.data(verbose=verbose).columns)
 
         # Create the model
         model = LGBMClassifier(n_estimators=10, objective='binary',
@@ -554,20 +555,20 @@ def run(execution_environment, root_data):
         df = df.sort_values('importance', ascending=False)
 
         # Normalize the feature importances to add up to one
-        df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data())
+        df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data(verbose=verbose))
 
         # Make a horizontal bar chart of feature importances
         plt.figure(figsize=(10, 6))
         ax = plt.subplot()
 
         # Need to reverse the index to plot most important on top
-        ax.barh(list(reversed(list(df.data().index[:15]))),
-                df['importance_normalized'].data().head(15),
+        ax.barh(list(reversed(list(df.data(verbose=verbose).index[:15]))),
+                df['importance_normalized'].data(verbose=verbose).head(15),
                 align='center', edgecolor='k')
 
         # Set the yticks and labels
-        ax.set_yticks(list(reversed(list(df.data().index[:15]))))
-        ax.set_yticklabels(df['feature'].data().head(15))
+        ax.set_yticks(list(reversed(list(df.data(verbose=verbose).index[:15]))))
+        ax.set_yticklabels(df['feature'].data(verbose=verbose).head(15))
 
         # Plot labeling
         plt.xlabel('Normalized Importance')
@@ -588,7 +589,7 @@ def run(execution_environment, root_data):
     fi_raw_sorted = plot_feature_importances(fi_raw)
 
     top_100 = list(fi_raw_sorted['feature'].data(verbose=1))[:100]
-    new_features = [x for x in top_100 if x not in list(fi['feature'].data())]
+    new_features = [x for x in top_100 if x not in list(fi['feature'].data(verbose=verbose))]
 
     print('%% of Top 100 Features created from the bureau data = %d.00' % len(new_features))
 
@@ -609,8 +610,11 @@ DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environ
 if os.path.isdir(DATABASE_PATH):
     print 'loading the history graph!!!'
     ee.load_history(DATABASE_PATH)
-run(ee, root_data)
-ee.save_history(DATABASE_PATH, overwrite=True)
+run(ee, root_data, verbose=1)
+#ee.save_history(DATABASE_PATH, overwrite=True)
+
+with open(DATABASE_PATH + '/optimizer_time_with_history', 'wb') as output:
+    pickle.dump(ee.optimizer.times, output, pickle.HIGHEST_PROTOCOL)
 
 execution_end = datetime.now()
 elapsed = (execution_end - execution_start).total_seconds()

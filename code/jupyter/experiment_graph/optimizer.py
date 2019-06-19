@@ -4,13 +4,17 @@ It receives the workload execution graph and the historical execution graph and 
 the workload execution graph and returns the scheduled execution path
 """
 import copy
-
+from datetime import datetime
 from graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
 
 
 class Optimizer:
     def __init__(self):
+        # dictionary for storing pair of materialized nodes between the workload and history graph
         self.materialized_nodes = {}
+        # dictionary of optimization times for every vertex
+        # if a vertex is called multiple times the entry is an array
+        self.times = {}
 
     def optimize(self, history, workload, v_id, verbose=0):
         """
@@ -26,22 +30,37 @@ class Optimizer:
         :param workload:
         :return:
         """
+        start = datetime.now()
         workload_subgraph = workload.compute_execution_subgraph(v_id)
         if verbose == 1:
             print 'workload graph size: {}'.format(len(workload_subgraph.nodes()))
             print 'materialized nodes before optimization begins: {}'.format(self.materialized_nodes)
         # here we optimize workload graph with historical graph
         if not history.is_empty():
+            cross_optimize_time_start = datetime.now()
             self.cross_optimize(history, workload, workload_subgraph, verbose)
             workload_subgraph = workload.compute_execution_subgraph(v_id)
+            cross_optimization = (datetime.now() - cross_optimize_time_start).total_seconds()
+        else:
+            cross_optimization = -1
 
         # print 'size of the optimized graph = {}'.format(len(optimized_subgraph))
         if verbose == 1:
             print 'optimized workload graph size: {}'.format(len(workload_subgraph.nodes()))
 
         # execute the workload using the optimized view
-        workload.compute_result_with_subgraph(workload_subgraph, verbose)
-        # history.extend(workload)
+        final_schedule = workload.compute_result_with_subgraph(workload_subgraph, verbose)
+
+        lapsed = (datetime.now() - start).total_seconds()
+        if v_id in self.times:
+            raise Exception('something is wrong, {} should have been already computed'.format(v_id))
+        else:
+            path = ''
+            for pair in final_schedule:
+                if path == '':
+                    path = pair[0]
+                path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
+            self.times[v_id] = (lapsed, path, cross_optimization)
 
     @staticmethod
     def extend(history, workload):

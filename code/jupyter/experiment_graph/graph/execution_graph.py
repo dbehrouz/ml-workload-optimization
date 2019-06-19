@@ -280,6 +280,7 @@ class ExecutionGraph(BaseGraph):
                     edge['execution_time'] = total_time
             else:
                 edge['execution_time'] = 0.0
+        return schedule
 
     def compute_result(self, v_id, verbose=0):
         """ main computation for graph
