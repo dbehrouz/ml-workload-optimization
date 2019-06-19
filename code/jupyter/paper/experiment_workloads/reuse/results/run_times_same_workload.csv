@@ -22,3 +22,7 @@ C6EB2EDF,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimiz
 C6EB2EDF,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,503.557252
 C6EB2EDF,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,28.030433,0,68.455228,81.981286
 C6EB2EDF,2,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,257.94372
+F5CA99A5,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,967.692811,26.175818,0,82.342476
+F5CA99A5,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,500.920104
+F5CA99A5,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,366.048683,24.820429,68.181893,145.327815
+F5CA99A5,2,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,255.259666

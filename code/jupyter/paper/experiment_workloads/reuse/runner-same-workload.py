@@ -21,7 +21,7 @@ sys.path.append(ROOT_PACKAGE_DIRECTORY)
 from experiment_graph.execution_environment import ExecutionEnvironment
 
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_PACKAGE_DIRECTORY + '/data/environment_different_workload'
+DATABASE_PATH = ROOT_DATA_DIRECTORY + '/experiment_graphs/home-credit-default-risk/environment_same_workload'
 
 OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'

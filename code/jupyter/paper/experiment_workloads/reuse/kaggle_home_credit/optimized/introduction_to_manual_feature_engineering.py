@@ -607,6 +607,7 @@ ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-op
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
 if os.path.isdir(DATABASE_PATH):
+    print 'loading the history graph!!!'
     ee.load_history(DATABASE_PATH)
 run(ee, root_data)
 ee.save_history(DATABASE_PATH, overwrite=True)
