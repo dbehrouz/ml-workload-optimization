@@ -4,17 +4,47 @@ It receives the workload execution graph and the historical execution graph and 
 the workload execution graph and returns the scheduled execution path
 """
 import copy
+from abc import abstractmethod
 from datetime import datetime
+
 from graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
 
 
 class Optimizer:
+
     def __init__(self):
         # dictionary for storing pair of materialized nodes between the workload and history graph
         self.materialized_nodes = {}
         # dictionary of optimization times for every vertex
         # if a vertex is called multiple times the entry is an array
         self.times = {}
+
+    @abstractmethod
+    def optimize(self, history, workload, v_id, verbose):
+        """
+        receives the historical graph and the workload graph and optimizes workload graph
+        and returns a optimized graph containing the required materialized artifact from
+        the history graph. Here are the steps:
+        :param history:
+        :param workload:
+        :param v_id:
+        :param verbose:
+        :return:
+        """
+        pass
+
+    @staticmethod
+    def copy_from_history(history_node, workload_node):
+        workload_node['data'].computed = True
+        workload_node['size'] = history_node['size']
+        if history_node['type'] == 'Dataset' or history_node['type'] == 'Feature':
+            workload_node['data'].c_name, workload_node['data'].c_hash = copy.deepcopy((
+                history_node['data'].c_name, history_node['data'].c_hash))
+        else:
+            workload_node['data'].data_obj = copy.deepcopy(history_node['data'].data_obj)
+
+
+class SearchBasedOptimizer(Optimizer):
 
     def optimize(self, history, workload, v_id, verbose=0):
         """
@@ -210,12 +240,54 @@ class Optimizer:
 
         return materialized_nodes
 
-    @staticmethod
-    def copy_from_history(history_node, workload_node):
-        workload_node['data'].computed = True
-        workload_node['size'] = history_node['size']
-        if history_node['type'] == 'Dataset' or history_node['type'] == 'Feature':
-            workload_node['data'].c_name, workload_node['data'].c_hash = copy.deepcopy((
-                history_node['data'].c_name, history_node['data'].c_hash))
+
+class HashBasedOptimizer(Optimizer):
+    def optimize(self, history, workload, v_id, verbose):
+        start = datetime.now()
+
+        # if verbose == 1:
+        #     print 'workload graph size: {}'.format(len(workload_subgraph.nodes()))
+        #     print 'materialized nodes before optimization begins: {}'.format(self.materialized_nodes)
+        # here we optimize workload graph with historical graph
+        if not history.is_empty():
+            cross_optimize_time_start = datetime.now()
+            workload_subgraph = self.compute_execution_subgraph(history, workload, v_id)
+            cross_optimization = (datetime.now() - cross_optimize_time_start).total_seconds()
         else:
-            workload_node['data'].data_obj = copy.deepcopy(history_node['data'].data_obj)
+            workload_subgraph = workload.compute_execution_subgraph(v_id)
+            cross_optimization = -1
+
+        final_schedule = workload.compute_result_with_subgraph(workload_subgraph)
+
+        lapsed = (datetime.now() - start).total_seconds()
+        if v_id in self.times:
+            raise Exception('something is wrong, {} should have been already computed'.format(v_id))
+        else:
+            path = ''
+            for pair in final_schedule:
+                if path == '':
+                    path = pair[0]
+                path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
+            self.times[v_id] = (lapsed, path, cross_optimization)
+
+    def compute_execution_subgraph(self, history, workload, vertex):
+
+        def get_path(terminal, explore_list, materialize_list):
+            if history.graph.has_node(vertex) and history.graph.nodes[vertex]['data'].computed:
+                materialize_list.append(vertex)
+            else:
+                if not workload.graph.nodes[terminal]['data'].computed:
+                    explore_list.append(terminal)
+                    for v in workload.graph.predecessors(terminal):
+                        explore_list.append(v)
+                        if not workload.graph.nodes[v]['data'].computed:
+                            get_path(v, explore_list, materialize_list)
+
+        materialized_vertices = []
+        execution_vertices = []
+        get_path(vertex, execution_vertices, materialized_vertices)
+
+        for m in materialized_vertices:
+            self.copy_from_history(history.graph.nodes[m], workload.graph.nodes[m])
+
+        return workload.compute_execution_subgraph(vertex)

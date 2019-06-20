@@ -14,7 +14,7 @@ from data_storage import DedupedStorageManager, NaiveStorageManager
 from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATION_IDENTIFIER
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
-from optimizer import Optimizer
+from optimizer import HashBasedOptimizer
 
 RANDOM_STATE = 15071989
 
@@ -27,7 +27,7 @@ class ExecutionEnvironment(object):
             self.data_storage = NaiveStorageManager()
         self.workload_graph = ExecutionGraph()
         self.history_graph = HistoryGraph()
-        self.optimizer = Optimizer()
+        self.optimizer = HashBasedOptimizer()
         self.time_manager = dict()
 
     def update_time(self, oper_type, seconds):
@@ -172,8 +172,14 @@ class Node(object):
 
     # TODO: when params are a dictionary with multiple keys the order may not be the same in str conversion
     @staticmethod
-    def e_hash(oper, params=''):
+    def edge_hash(oper, params=''):
         return oper + '(' + str(params).replace(' ', '') + ')'
+
+    @staticmethod
+    def vertex_hash(prev, edge_hash):
+        # TODO this may return collisions
+        # we should implement a collision strategy as well
+        return hashlib.md5(prev + edge_hash).hexdigest().upper()[0:12]
 
     @staticmethod
     def generate_uuid():
@@ -200,40 +206,46 @@ class Node(object):
     def generate_agg_node(self, oper, args=None, v_id=None, eager_mode=0):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
-        nextid = self.generate_uuid()
+        # nextid = self.generate_uuid()
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Agg(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
-                                                                    'hash': self.e_hash(oper, args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=Agg.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_groupby_node(self, oper, args=None, v_id=None):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
-        nextid = self.generate_uuid()
+        # nextid = self.generate_uuid()
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = GroupBy(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
-                                                                    'hash': self.e_hash(oper, args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_sklearn_node(self, oper, args=None, v_id=None):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
-        nextid = self.generate_uuid()
+        # nextid = self.generate_uuid()
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = SK_Model(nextid, self.execution_environment)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
                                                                    {'name': type(args['model']).__name__,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
                                                                     'execution_time': -1,
-                                                                    'hash': self.e_hash(oper, args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
@@ -242,28 +254,32 @@ class Node(object):
         args = {} if args is None else args
         c_name = [] if c_name is None else c_name
         c_hash = [] if c_hash is None else c_hash
-        nextid = self.generate_uuid()
+        # nextid = self.generate_uuid()
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Dataset(nextid, self.execution_environment, c_name, c_hash)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'oper': 'p_' + oper,
                                                                     'execution_time': -1,
                                                                     'args': args,
-                                                                    'hash': self.e_hash(oper, args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_feature_node(self, oper, args=None, v_id=None, c_name='', c_hash=''):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
-        nextid = self.generate_uuid()
+        # nextid = self.generate_uuid()
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Feature(nextid, self.execution_environment, c_name, c_hash)
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'execution_time': -1,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
-                                                                    'hash': self.e_hash(oper, args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
@@ -272,10 +288,12 @@ class Node(object):
         involved_nodes = []
         for n in nodes:
             involved_nodes.append(n.id)
-        nextnode_id = ''.join(involved_nodes)
-        if not self.execution_environment.workload_graph.has_node(nextnode_id):
-            nextnode = SuperNode(nextnode_id, self.execution_environment, nodes)
-            self.execution_environment.workload_graph.add_node(nextnode_id,
+        # nextid = ''.join(involved_nodes)
+        edge_hash = self.edge_hash(COMBINE_OPERATION_IDENTIFIER, args)
+        nextid = self.vertex_hash(''.join(involved_nodes), edge_hash)
+        if not self.execution_environment.workload_graph.has_node(nextid):
+            nextnode = SuperNode(nextid, self.execution_environment, nodes)
+            self.execution_environment.workload_graph.add_node(nextid,
                                                                **{'type': type(nextnode).__name__,
                                                                   'root': False,
                                                                   'data': nextnode,
@@ -284,19 +302,18 @@ class Node(object):
                 # this is to make sure each combined edge is a unique name
                 # This is also used by the optimizer to find the other node when combine
                 # edges are being examined
-                self.execution_environment.workload_graph.add_edge(n.id, nextnode_id, nextnode,
+                self.execution_environment.workload_graph.add_edge(n.id, nextid, nextnode,
                                                                    # combine is a reserved word
                                                                    {'name': COMBINE_OPERATION_IDENTIFIER,
                                                                     'oper': COMBINE_OPERATION_IDENTIFIER,
                                                                     'execution_time': 0,
                                                                     'args': args,
-                                                                    'hash': self.e_hash(COMBINE_OPERATION_IDENTIFIER,
-                                                                                        args)},
+                                                                    'hash': edge_hash},
                                                                    ntype=type(nextnode).__name__)
             return nextnode
         else:
             # TODO: add the update rule (even though it has no effect)
-            return self.execution_environment.workload_graph.graph.nodes[nextnode_id]['data']
+            return self.execution_environment.workload_graph.graph.nodes[nextid]['data']
 
     def store_dataframe(self, columns, df):
         self.execution_environment.data_storage.store_dataset(columns, df)
@@ -773,8 +790,8 @@ class Feature(Node):
 
     def isnull(self):
         self.execution_environment.workload_graph.add_edge(self.id,
-                                                           {'oper': self.e_hash('isnull'),
-                                                            'hash': self.e_hash('isnull')},
+                                                           {'oper': self.edge_hash('isnull'),
+                                                            'hash': self.edge_hash('isnull')},
                                                            ntype=type(self).__name__)
 
     def notna(self):

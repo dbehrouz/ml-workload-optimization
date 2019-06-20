@@ -611,7 +611,7 @@ if os.path.isdir(DATABASE_PATH):
     print 'loading the history graph!!!'
     ee.load_history(DATABASE_PATH)
 run(ee, root_data, verbose=1)
-#ee.save_history(DATABASE_PATH, overwrite=True)
+ee.save_history(DATABASE_PATH, overwrite=True)
 
 with open(DATABASE_PATH + '/optimizer_time_with_history', 'wb') as output:
     pickle.dump(ee.optimizer.times, output, pickle.HIGHEST_PROTOCOL)

@@ -361,6 +361,8 @@ class HistoryGraph(BaseGraph):
         else:
             print 'history graph is not empty, extending the existing one'
             self.graph = nx.compose(workload.graph, self.graph)
+            # update the roots (removing redundant nodes)
+            self.roots = list(set(self.roots + workload.roots))
             metas = {}
             for node in self.graph.nodes(data='meta_freq'):
                 if node[1] is None:
