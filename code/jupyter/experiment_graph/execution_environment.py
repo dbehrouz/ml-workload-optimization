@@ -41,7 +41,8 @@ class ExecutionEnvironment(object):
     def get_benchmark_results(self, keys=None):
         if keys is None:
             return ','.join(
-                ['NOT CAPTURED' if key not in self.time_manager else str(self.time_manager[key]) for key in BenchmarkMetrics.keys])
+                ['NOT CAPTURED' if key not in self.time_manager else str(self.time_manager[key]) for key in
+                 BenchmarkMetrics.keys])
         else:
             return ','.join([self.time_manager[key] for key in keys])
 
@@ -98,6 +99,14 @@ class ExecutionEnvironment(object):
         self.workload_graph = ExecutionGraph()
         del self.time_manager
         self.time_manager = dict()
+        optimizer_type = self.optimizer.NAME
+        del self.optimizer
+        if optimizer_type == SearchBasedOptimizer.NAME:
+            self.optimizer = SearchBasedOptimizer()
+        elif optimizer_type == HashBasedOptimizer.NAME:
+            self.optimizer = HashBasedOptimizer()
+        else:
+            raise Exception('Unknown Optimizer Type')
 
     def load_history_from_memory(self, history):
         self.history_graph = history
