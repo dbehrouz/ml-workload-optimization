@@ -39,6 +39,8 @@ class ExecutionEnvironment(object):
         self.time_manager = dict()
 
     def get_benchmark_results(self, keys=None):
+        if BenchmarkMetrics.TOTAL_EXECUTION not in self.time_manager:
+            self.compute_total_reuse_optimization_time()
         if keys is None:
             return ','.join(
                 ['NOT CAPTURED' if key not in self.time_manager else str(self.time_manager[key]) for key in
@@ -55,7 +57,7 @@ class ExecutionEnvironment(object):
     def update_history(self):
         start = datetime.now()
         self.history_graph.extend(self.workload_graph)
-        self.update_time(BenchmarkMetrics.UPDATE_HISTORY, datetime.now() - start)
+        self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
     def save_history(self, environment_folder, overwrite=False):
         if os.path.exists(environment_folder) and not overwrite:

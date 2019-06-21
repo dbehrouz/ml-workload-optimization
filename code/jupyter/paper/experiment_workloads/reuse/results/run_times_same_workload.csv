@@ -39,3 +39,20 @@ A01CCE4D,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimiz
 53728ECE,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,31.308777
 53728ECE,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,29.750343
 53728ECE,3,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,29.997899
+B90BD217,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,465.531932
+92D38F07,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,458.035971
+92D38F07,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,274.210069
+B34D25ED,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,464.228158,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,17.161201,27.473149,NOT CAPTURED,NOT CAPTURED
+B34D25ED,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,273.665865
+B34D25ED,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,451.840022,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,17.125745,26.520636,NOT CAPTURED,NOT CAPTURED
+B34D25ED,2,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,275.867281
+08682A88,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,468.895519,NOT CAPTURED,NOT CAPTURED,0:00:11.182469,NOT CAPTURED,NOT CAPTURED,17.011841,28.101833,NOT CAPTURED,NOT CAPTURED
+08682A88,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,278.682214
+08682A88,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,30.582162,NOT CAPTURED,NOT CAPTURED,0:00:00.006312,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED,NOT CAPTURED
+6B7BF64E,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,482.769196
+9928D1A9,1,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,472.723164
+9928D1A9,1,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,280.48431
+9928D1A9,2,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,33.322684
+9928D1A9,2,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,278.106966
+9928D1A9,3,kaggle_home_credit,introduction_to_manual_feature_engineering,optimized,26.321958
+9928D1A9,3,kaggle_home_credit,introduction_to_manual_feature_engineering,baseline,262.631355

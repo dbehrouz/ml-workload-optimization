@@ -15,6 +15,8 @@ import uuid
 from datetime import datetime
 from importlib import import_module
 
+from benchmark_helper import BenchmarkMetrics
+
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 sys.path.append(ROOT_PACKAGE_DIRECTORY)
 # Experiment Graph
@@ -33,6 +35,9 @@ WORKLOAD = 'introduction_to_manual_feature_engineering'
 e_id = uuid.uuid4().hex.upper()[0:8]
 ee = ExecutionEnvironment()
 
+with open(RESULT_FOLDER + '/details/{}'.format(e_id), 'w') as result:
+    result.write(','.join(BenchmarkMetrics.keys) + "\n")
+
 if os.path.isdir(DATABASE_PATH):
     print 'Load Existing Experiment Graph!!'
     ee.load_history_from_disk(DATABASE_PATH)
@@ -47,17 +52,17 @@ for i in range(1, REP + 1):
     optimized_workload = import_module(EXPERIMENT + '.optimized.' + WORKLOAD)
     ee.new_workload()
     optimized_workload.run(ee, ROOT_DATA_DIRECTORY)
+    ee.update_history()
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
     print '{}-End of Optimized Workload'.format(execution_end)
 
     with open(OUTPUT_CSV, 'a') as the_file:
         # get_benchmark_results has the following order:
-        # [LOAD_HISTORY, SAVE_HISTORY, UPDATE_HISTORY, LOAD_DATA_STORE,
-        #  SAVE_DATA_STORE, LOAD_DATASET, MODEL_TRAINING, TOTAL_REUSE, TOTAL_EXECUTION]
-        the_file.write(
-            '{},{},{},{},optimized,{}\n'.format(e_id, i, EXPERIMENT, WORKLOAD, elapsed, ee.get_benchmark_results()))
-    # End of Optimized Workload 1
+        the_file.write('{},{},{},{},optimized,{}\n'.format(e_id, i, EXPERIMENT, WORKLOAD, elapsed))
+
+    with open(RESULT_FOLDER + '/details/{}'.format(e_id), 'a') as result:
+        result.write(ee.get_benchmark_results() + "\n")
 
     # # Running Baseline Workload 1 and storing the run time
     execution_start = datetime.now()

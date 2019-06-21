@@ -79,7 +79,7 @@ class DedupedStorageManager(StorageManager):
         super(DedupedStorageManager, self).__init__()
 
     def get_column(self, c_name, c_hash):
-        return copy.deepcopy(pd.Series(self.DATA[c_hash], name=c_name))
+        return pd.Series(self.DATA[c_hash], name=c_name)
 
     def get_dataset(self, names, hashes):
         cache = []
@@ -87,7 +87,7 @@ class DedupedStorageManager(StorageManager):
         for i in range(len(names)):
             cache.append(self.DATA[hashes[i]].rename(names[i]))
 
-        return copy.deepcopy(pd.concat(cache, axis=1))
+        return pd.concat(cache, axis=1)
 
     def get_size(self, column_hashes):
         s = 0
