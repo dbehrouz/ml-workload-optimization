@@ -40,7 +40,8 @@ class ExecutionEnvironment(object):
 
     def get_benchmark_results(self, keys=None):
         if keys is None:
-            return ','.join([self.time_manager[key] for key in BenchmarkMetrics.keys])
+            return ','.join(
+                ['NOT CAPTURED' if key not in self.time_manager else str(self.time_manager[key]) for key in BenchmarkMetrics.keys])
         else:
             return ','.join([self.time_manager[key] for key in keys])
 
