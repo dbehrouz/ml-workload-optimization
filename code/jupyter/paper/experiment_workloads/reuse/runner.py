@@ -34,7 +34,7 @@ for i in range(len(WORKLOADS)):
     if os.path.isdir(DATABASE_PATH):
         print 'Load Existing Experiment Graph!!'
         execution_start = datetime.now()
-        ee.load_history(DATABASE_PATH)
+        ee.load_history_from_disk(DATABASE_PATH)
         load_time = (datetime.now() - execution_start).total_seconds()
     else:
         load_time = 0

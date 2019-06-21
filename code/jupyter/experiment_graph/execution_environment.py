@@ -10,25 +10,39 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from benchmark_helper import BenchmarkMetrics
 from data_storage import DedupedStorageManager, NaiveStorageManager
 from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATION_IDENTIFIER
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
-from optimizer import HashBasedOptimizer
+from optimizer import HashBasedOptimizer, SearchBasedOptimizer
 
 RANDOM_STATE = 15071989
 
 
 class ExecutionEnvironment(object):
-    def __init__(self, storage_type='dedup'):
+    def __init__(self, storage_type='dedup', optimizer=HashBasedOptimizer.NAME):
         if storage_type == 'dedup':
             self.data_storage = DedupedStorageManager()
         elif storage_type == 'naive':
             self.data_storage = NaiveStorageManager()
+        else:
+            raise Exception('Unknown storage type: {}'.format(storage_type))
+        if optimizer == HashBasedOptimizer.NAME:
+            self.optimizer = HashBasedOptimizer()
+        elif optimizer == SearchBasedOptimizer.NAME:
+            self.optimizer = SearchBasedOptimizer()
+        else:
+            raise Exception('Unknown optimizer type')
         self.workload_graph = ExecutionGraph()
         self.history_graph = HistoryGraph()
-        self.optimizer = HashBasedOptimizer()
         self.time_manager = dict()
+
+    def get_benchmark_results(self, keys=None):
+        if keys is None:
+            return ','.join([self.time_manager[key] for key in BenchmarkMetrics.keys])
+        else:
+            return ','.join([self.time_manager[key] for key in keys])
 
     def update_time(self, oper_type, seconds):
         if oper_type in self.time_manager:
@@ -36,22 +50,59 @@ class ExecutionEnvironment(object):
         else:
             self.time_manager[oper_type] = seconds
 
+    def update_history(self):
+        start = datetime.now()
+        self.history_graph.extend(self.workload_graph)
+        self.update_time(BenchmarkMetrics.UPDATE_HISTORY, datetime.now() - start)
+
     def save_history(self, environment_folder, overwrite=False):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
         if not os.path.exists(environment_folder):
             os.mkdir(environment_folder)
-        self.history_graph.extend(self.workload_graph)
+        self.update_history()
+        start_save_graph = datetime.now()
+
         with open(environment_folder + '/graph', 'wb') as output:
             pickle.dump(self.history_graph.graph, output, pickle.HIGHEST_PROTOCOL)
 
         with open(environment_folder + '/roots', 'wb') as output:
             pickle.dump(self.history_graph.roots, output, pickle.HIGHEST_PROTOCOL)
 
+        end_save_graph = datetime.now()
+
+        self.update_time(BenchmarkMetrics.SAVE_HISTORY, (end_save_graph - start_save_graph).total_seconds())
         with open(environment_folder + '/storage', 'wb') as output:
             pickle.dump(self.data_storage, output, pickle.HIGHEST_PROTOCOL)
 
-    def load_history(self, environment_folder):
+        self.update_time(BenchmarkMetrics.SAVE_DATA_STORE, (datetime.now() - end_save_graph).total_seconds())
+
+    def compute_total_reuse_optimization_time(self):
+        # optimizer.times has  the form {vertex_id:(execution time, optimization time)}
+        total_execution_time = 0
+        total_reuse_time = 0
+        for _, v in self.optimizer.times.iteritems():
+            total_execution_time += v[0]
+            total_reuse_time += v[1]
+        self.update_time(BenchmarkMetrics.TOTAL_EXECUTION, total_execution_time)
+        self.update_time(BenchmarkMetrics.TOTAL_REUSE, total_reuse_time)
+
+    def new_workload(self):
+        """
+        call this function if you want to keep the history graph and start a new workload in the same execution
+        environment
+        :return:
+        """
+        del self.workload_graph
+        self.workload_graph = ExecutionGraph()
+        del self.time_manager
+        self.time_manager = dict()
+
+    def load_history_from_memory(self, history):
+        self.history_graph = history
+
+    def load_history_from_disk(self, environment_folder):
+        start_graph_load = datetime.now()
         with open(environment_folder + '/graph', 'rb') as g_input:
             graph = pickle.load(g_input)
 
@@ -60,10 +111,12 @@ class ExecutionEnvironment(object):
 
         self.history_graph = HistoryGraph(graph, roots)
         self.history_graph.set_environment(self)
-
+        end_graph_load = datetime.now()
+        self.update_time(BenchmarkMetrics.LOAD_HISTORY, (end_graph_load - start_graph_load).total_seconds())
         with open(environment_folder + '/storage', 'rb') as d_input:
             self.data_storage = pickle.load(d_input)
             self.time_manager = dict()
+        self.update_time(BenchmarkMetrics.LOAD_DATA_STORE, (datetime.now() - end_graph_load).total_seconds())
 
     def plot_graph(self, plt, graph_type='workload'):
         if graph_type == 'workload':
@@ -79,9 +132,20 @@ class ExecutionEnvironment(object):
 
     def load(self, loc, nrows=None):
         if self.workload_graph.has_node(loc):
+            print 'the root node is in already the workload graph'
             return self.workload_graph.get_node(loc)['data']
+        elif self.history_graph.has_node(loc):
+            print 'the root node is in already the history graph'
+            root = copy.deepcopy(self.history_graph.graph.nodes[loc])
+            self.workload_graph.roots.append(loc)
+            self.workload_graph.add_node(loc, **root)
+            return root['data']
         else:
+            print 'creating a new root node'
+            start = datetime.now()
             initial_data = pd.read_csv(loc, nrows=nrows)
+            end = datetime.now()
+            self.update_time(BenchmarkMetrics.LOAD_DATASET, (end - start).total_seconds())
             c_name = []
             c_hash = []
             # create the md5 hash values for columns
@@ -390,7 +454,8 @@ class SuperNode(Node):
         else:
             model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data(), )
         # update the model training time in the graph
-        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
+                                               (datetime.now() - start).total_seconds())
         return model
 
     def p_predict_proba(self, custom_args):
@@ -915,7 +980,8 @@ class Feature(Node):
     def p_fit_sk_model(self, model):
         start = datetime.now()
         model.fit(self.get_materialized_data())
-        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
+                                               (datetime.now() - start).total_seconds())
         return model
 
 
@@ -1256,7 +1322,8 @@ class Dataset(Node):
     def p_fit_sk_model(self, model):
         start = datetime.now()
         model.fit(self.get_materialized_data())
-        self.execution_environment.update_time('model-training', (datetime.now() - start).total_seconds())
+        self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
+                                               (datetime.now() - start).total_seconds())
         return model
 
     def replace_columns(self, col_names, features):

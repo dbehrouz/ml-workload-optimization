@@ -597,8 +597,6 @@ def run(execution_environment, root_data, verbose=0):
 
     fi_corrs_sorted = plot_feature_importances(fi_corrs)
 
-    return execution_environment.time_manager.get('model-training', 0)
-
 
 from experiment_graph.execution_environment import ExecutionEnvironment
 
@@ -606,10 +604,10 @@ ee = ExecutionEnvironment('dedup')
 execution_start = datetime.now()
 ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
 root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
+DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup-test'
 if os.path.isdir(DATABASE_PATH):
     print 'loading the history graph!!!'
-    ee.load_history(DATABASE_PATH)
+    ee.load_history_from_disk(DATABASE_PATH)
 run(ee, root_data, verbose=1)
 ee.save_history(DATABASE_PATH, overwrite=True)
 

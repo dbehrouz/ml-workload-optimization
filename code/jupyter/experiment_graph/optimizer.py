@@ -11,12 +11,15 @@ from graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
 
 
 class Optimizer:
+    NAME = 'BASE_OPTIMIZER'
 
     def __init__(self):
         # dictionary for storing pair of materialized nodes between the workload and history graph
         self.materialized_nodes = {}
-        # dictionary of optimization times for every vertex
-        # if a vertex is called multiple times the entry is an array
+        # of the form {vertex: (execution_time, optimization_time)
+        # if history graph is empty, optimization_time is zero
+        # sum of execution_time + optimization_time is total time spent on returning the data in vertex
+        # back to the user
         self.times = {}
 
     @abstractmethod
@@ -45,6 +48,7 @@ class Optimizer:
 
 
 class SearchBasedOptimizer(Optimizer):
+    NAME = 'SEARCH_BASED'
 
     def optimize(self, history, workload, v_id, verbose=0):
         """
@@ -67,12 +71,12 @@ class SearchBasedOptimizer(Optimizer):
             print 'materialized nodes before optimization begins: {}'.format(self.materialized_nodes)
         # here we optimize workload graph with historical graph
         if not history.is_empty():
-            cross_optimize_time_start = datetime.now()
+            reuse_optimization_time_start = datetime.now()
             self.cross_optimize(history, workload, workload_subgraph, verbose)
             workload_subgraph = workload.compute_execution_subgraph(v_id)
-            cross_optimization = (datetime.now() - cross_optimize_time_start).total_seconds()
+            reuse_optimization = (datetime.now() - reuse_optimization_time_start).total_seconds()
         else:
-            cross_optimization = -1
+            reuse_optimization = 0
 
         # print 'size of the optimized graph = {}'.format(len(optimized_subgraph))
         if verbose == 1:
@@ -85,12 +89,14 @@ class SearchBasedOptimizer(Optimizer):
         if v_id in self.times:
             raise Exception('something is wrong, {} should have been already computed'.format(v_id))
         else:
-            path = ''
-            for pair in final_schedule:
-                if path == '':
-                    path = pair[0]
-                path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
-            self.times[v_id] = (lapsed, path, cross_optimization)
+            # TODO only in debug mode this should be reported.
+            # Once we have a Logger module we can report this sa well
+            # path = ''
+            # for pair in final_schedule:
+            #     if path == '':
+            #         path = pair[0]
+            #     path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
+            self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
 
     @staticmethod
     def extend(history, workload):
@@ -242,6 +248,8 @@ class SearchBasedOptimizer(Optimizer):
 
 
 class HashBasedOptimizer(Optimizer):
+    NAME = 'HASH_BASED'
+
     def optimize(self, history, workload, v_id, verbose):
         start = datetime.now()
 
@@ -250,12 +258,12 @@ class HashBasedOptimizer(Optimizer):
         #     print 'materialized nodes before optimization begins: {}'.format(self.materialized_nodes)
         # here we optimize workload graph with historical graph
         if not history.is_empty():
-            cross_optimize_time_start = datetime.now()
+            reuse_optimization_time_start = datetime.now()
             workload_subgraph = self.compute_execution_subgraph(history, workload, v_id)
-            cross_optimization = (datetime.now() - cross_optimize_time_start).total_seconds()
+            reuse_optimization = (datetime.now() - reuse_optimization_time_start).total_seconds()
         else:
             workload_subgraph = workload.compute_execution_subgraph(v_id)
-            cross_optimization = -1
+            reuse_optimization = 0
 
         final_schedule = workload.compute_result_with_subgraph(workload_subgraph)
 
@@ -263,12 +271,12 @@ class HashBasedOptimizer(Optimizer):
         if v_id in self.times:
             raise Exception('something is wrong, {} should have been already computed'.format(v_id))
         else:
-            path = ''
-            for pair in final_schedule:
-                if path == '':
-                    path = pair[0]
-                path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
-            self.times[v_id] = (lapsed, path, cross_optimization)
+            # path = ''
+            # for pair in final_schedule:
+            #     if path == '':
+            #         path = pair[0]
+            #     path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
+            self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
 
     def compute_execution_subgraph(self, history, workload, vertex):
 
