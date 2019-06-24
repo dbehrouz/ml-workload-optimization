@@ -41,9 +41,10 @@ class Optimizer:
         workload_node['data'].computed = True
         workload_node['size'] = history_node['size']
         if history_node['type'] == 'Dataset' or history_node['type'] == 'Feature':
-            workload_node['data'].c_name, workload_node['data'].c_hash = copy.deepcopy((
+            workload_node['data'].c_name, workload_node['data'].c_hash = copy.copy((
                 history_node['data'].c_name, history_node['data'].c_hash))
         else:
+            # TODO we should make sure shallow copy is not problematic for groupby operations
             workload_node['data'].data_obj = copy.deepcopy(history_node['data'].data_obj)
 
 

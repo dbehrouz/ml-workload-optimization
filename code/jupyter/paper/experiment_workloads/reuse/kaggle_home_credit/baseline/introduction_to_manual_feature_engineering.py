@@ -652,16 +652,15 @@ def run(root_data):
 
     fi_corrs_sorted = plot_feature_importances(fi_corrs)
 
-    return 0
 
+if __name__ == "__main__":
+    execution_start = datetime.now()
 
-execution_start = datetime.now()
+    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+    run(root_data)
 
-ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
-root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-run(root_data)
+    execution_end = datetime.now()
+    elapsed = (execution_end - execution_start).total_seconds()
 
-execution_end = datetime.now()
-elapsed = (execution_end - execution_start).total_seconds()
-
-print('finished execution in {} seconds'.format(elapsed))
+    print('finished execution in {} seconds'.format(elapsed))

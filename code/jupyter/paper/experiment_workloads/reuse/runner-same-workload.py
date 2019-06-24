@@ -35,7 +35,7 @@ WORKLOAD = 'introduction_to_manual_feature_engineering'
 e_id = uuid.uuid4().hex.upper()[0:8]
 ee = ExecutionEnvironment()
 
-with open(RESULT_FOLDER + '/details/{}'.format(e_id), 'w') as result:
+with open(RESULT_FOLDER + '/details/{}.csv'.format(e_id), 'w') as result:
     result.write(','.join(BenchmarkMetrics.keys) + "\n")
 
 if os.path.isdir(DATABASE_PATH):
@@ -61,7 +61,7 @@ for i in range(1, REP + 1):
         # get_benchmark_results has the following order:
         the_file.write('{},{},{},{},optimized,{}\n'.format(e_id, i, EXPERIMENT, WORKLOAD, elapsed))
 
-    with open(RESULT_FOLDER + '/details/{}'.format(e_id), 'a') as result:
+    with open(RESULT_FOLDER + '/details/{}.csv'.format(e_id), 'a') as result:
         result.write(ee.get_benchmark_results() + "\n")
 
     # # Running Baseline Workload 1 and storing the run time
@@ -77,5 +77,4 @@ for i in range(1, REP + 1):
         the_file.write(
             '{},{},{},{},baseline,{}\n'.format(e_id, i, EXPERIMENT, WORKLOAD, elapsed))
     # End of Baseline Workload 1
-
 # ee.save_history(DATABASE_PATH)

@@ -266,14 +266,13 @@ class ExecutionGraph(BaseGraph):
                     if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
                         # TODO: check if a shallow copy is enough
                         start_time = datetime.now()
-                        cur_node['data'].c_name, cur_node['data'].c_hash = copy.deepcopy(
-                            self.compute_next(prev_node, edge))
+                        cur_node['data'].c_name, cur_node['data'].c_hash = self.compute_next(prev_node, edge)
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = cur_node['data'].compute_size()
                     # all the other node types they contain the data themselves
                     else:
                         start_time = datetime.now()
-                        cur_node['data'].data_obj = copy.deepcopy(self.compute_next(prev_node, edge))
+                        cur_node['data'].data_obj = self.compute_next(prev_node, edge)
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = self.compute_size(cur_node['data'].data_obj)
                     cur_node['data'].computed = True

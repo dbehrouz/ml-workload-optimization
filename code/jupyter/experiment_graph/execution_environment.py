@@ -505,10 +505,10 @@ class SuperNode(Node):
 
         # Since both node 0 and 1 are already stored in the
         # TODO: This only works for adding one column at a time
-        c_names = copy.deepcopy(self.nodes[0].c_name)
+        c_names = copy.copy(self.nodes[0].c_name)
         c_names.append(col_names)
-        c_hash = copy.deepcopy(self.nodes[0].c_hash)
-        c_hash.append(copy.deepcopy(self.nodes[1].c_hash))
+        c_hash = copy.copy(self.nodes[0].c_hash)
+        c_hash.append(copy.copy(self.nodes[1].c_hash))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
         self.execution_environment.data_storage.store_dataset(c_hash, data)
         return c_names, c_hash
@@ -516,8 +516,8 @@ class SuperNode(Node):
     def p_replace_columns(self, col_names):
         if isinstance(col_names, list):
             assert len(col_names) == len(self.nodes[1].c_name)
-            c_names = copy.deepcopy(self.nodes[0].c_name)
-            c_hashes = copy.deepcopy(self.nodes[0].c_hash)
+            c_names = copy.copy(self.nodes[0].c_name)
+            c_hashes = copy.copy(self.nodes[0].c_hash)
             for i in range(len(col_names)):
                 if col_names[i] not in c_names:
                     raise Exception('column {} does not exist in the dataset'.format(col_names[i]))
@@ -525,8 +525,8 @@ class SuperNode(Node):
                 c_hashes[index] = self.nodes[1].c_hash[i]
         else:
             assert isinstance(self.nodes[1], Feature)
-            c_names = copy.deepcopy(self.nodes[0].c_name)
-            c_hashes = copy.deepcopy(self.nodes[0].c_hash)
+            c_names = copy.copy(self.nodes[0].c_name)
+            c_hashes = copy.copy(self.nodes[0].c_hash)
             if col_names not in c_names:
                 raise Exception('column {} does not exist in the dataset'.format(col_names))
             index = self.nodes[0].find_column_index(col_names)
@@ -1380,8 +1380,8 @@ class GroupBy(Node):
     def p_project(self, columns):
         data_object = self.get_materialized_data()
         df = data_object[0]
-        key_columns = copy.deepcopy(data_object[1])
-        key_hashes = copy.deepcopy(data_object[2])
+        key_columns = copy.copy(data_object[1])
+        key_hashes = copy.copy(data_object[2])
         c_group_names = data_object[3]
         c_group_hashes = data_object[4]
         new_group_columns = []
@@ -1403,8 +1403,8 @@ class GroupBy(Node):
     def p_count(self):
         data_object = self.get_materialized_data()
         df = data_object[0].count()
-        new_columns = copy.deepcopy(data_object[1])
-        new_hashes = copy.deepcopy(data_object[2])
+        new_columns = copy.copy(data_object[1])
+        new_hashes = copy.copy(data_object[2])
 
         c_group_names = data_object[3]
         c_group_hashes = data_object[4]
@@ -1423,8 +1423,8 @@ class GroupBy(Node):
         data_object = self.get_materialized_data()
         # .reset_index() is essential as groupby (as_index=False) has no effect for agg function
         df = self.get_materialized_data()[0].agg(functions).reset_index()
-        new_columns = copy.deepcopy(data_object[1])
-        new_hashes = copy.deepcopy(data_object[2])
+        new_columns = copy.copy(data_object[1])
+        new_hashes = copy.copy(data_object[2])
 
         c_group_names = data_object[3]
         c_group_hashes = data_object[4]
@@ -1449,8 +1449,8 @@ class GroupBy(Node):
     def p_mean(self):
         data_object = self.get_materialized_data()
         df = data_object[0].mean()
-        new_columns = copy.deepcopy(data_object[1])
-        new_hashes = copy.deepcopy(data_object[2])
+        new_columns = copy.copy(data_object[1])
+        new_hashes = copy.copy(data_object[2])
 
         c_group_names = data_object[3]
         c_group_hashes = data_object[4]

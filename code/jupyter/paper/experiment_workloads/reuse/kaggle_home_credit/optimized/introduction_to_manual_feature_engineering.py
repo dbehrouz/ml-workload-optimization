@@ -6,12 +6,9 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
-import os
 import warnings
-
 # matplotlib and seaborn for plotting
 from datetime import datetime
-import cPickle as pickle
 
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
@@ -424,7 +421,7 @@ def run(execution_environment, root_data, verbose=0):
     print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data(verbose=verbose))
     print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data(verbose=verbose))
 
-    from sklearn_helper.sklearn_wrappers import LGBMClassifier
+    from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
     def model(lgb_featres, test_features, encoding='ohe'):
 
@@ -598,27 +595,28 @@ def run(execution_environment, root_data, verbose=0):
     fi_corrs_sorted = plot_feature_importances(fi_corrs)
 
 
-ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
-import sys
+if __name__ == "__main__":
+    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+    import sys
 
-sys.path.append(ROOT_PACKAGE_DIRECTORY)
-from experiment_graph.execution_environment import ExecutionEnvironment
+    sys.path.append(ROOT_PACKAGE_DIRECTORY)
+    from experiment_graph.execution_environment import ExecutionEnvironment
 
-ee = ExecutionEnvironment('dedup')
-execution_start = datetime.now()
+    ee = ExecutionEnvironment('dedup')
+    execution_start = datetime.now()
 
-root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup-test'
-# if os.path.isdir(DATABASE_PATH):
-#     print 'loading the history graph!!!'
-#     ee.load_history_from_disk(DATABASE_PATH)
-run(ee, root_data, verbose=1)
-ee.save_history(DATABASE_PATH, overwrite=True)
+    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup-test'
+    # if os.path.isdir(DATABASE_PATH):
+    #     print 'loading the history graph!!!'
+    #     ee.load_history_from_disk(DATABASE_PATH)
+    run(ee, root_data, verbose=1)
+    # ee.save_history(DATABASE_PATH, overwrite=True)
 
-with open(DATABASE_PATH + '/optimizer_time_with_history', 'wb') as output:
-    pickle.dump(ee.optimizer.times, output, pickle.HIGHEST_PROTOCOL)
+    # with open(DATABASE_PATH + '/optimizer_time_with_history', 'wb') as output:
+    #     pickle.dump(ee.optimizer.times, output, pickle.HIGHEST_PROTOCOL)
 
-execution_end = datetime.now()
-elapsed = (execution_end - execution_start).total_seconds()
+    execution_end = datetime.now()
+    elapsed = (execution_end - execution_start).total_seconds()
 
-print('finished execution in {} seconds'.format(elapsed))
+    print('finished execution in {} seconds'.format(elapsed))

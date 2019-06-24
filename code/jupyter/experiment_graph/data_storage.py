@@ -82,10 +82,11 @@ class DedupedStorageManager(StorageManager):
         return pd.Series(self.DATA[c_hash], name=c_name)
 
     def get_dataset(self, names, hashes):
-        cache = []
+        # cache = []
         assert len(names) == len(hashes)
-        for i in range(len(names)):
-            cache.append(self.DATA[hashes[i]].rename(names[i]))
+        # for i in range(len(names)):
+        #     cache.append(self.DATA[hashes[i]].rename(names[i]))
+        cache = [self.DATA[hashes[i]].rename(names[i], inplace=True) for i in range(len(names))]
 
         return pd.concat(cache, axis=1)
 
@@ -107,7 +108,7 @@ class DedupedStorageManager(StorageManager):
             'column \'{}\' already exist'.format(column_hash)
         else:
             self.DATA[column_hash] = panda_series
-            self.DATA[column_hash + '_size'] = panda_series.memory_usage(index=True, deep=True) / self.AS_MB
+            self.DATA[column_hash + '_size'] = 100  # panda_series.memory_usage(index=True, deep=True) / self.AS_MB
 
     def store_dataset(self, column_hashes, dataset):
         for i in range(len(column_hashes)):
