@@ -29,7 +29,7 @@ OUTPUT_CSV = 'results/run_times_same_workload.csv'
 RESULT_FOLDER = 'results'
 EXPERIMENT = 'kaggle_home_credit'
 REP = 3
-WORKLOAD = 'introduction_to_manual_feature_engineering'
+WORKLOAD = 'start_here_a_gentle_introduction'
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
