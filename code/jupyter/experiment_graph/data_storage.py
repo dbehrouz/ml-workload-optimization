@@ -2,6 +2,7 @@ import copy
 
 import pandas as pd
 import hashlib
+from abc import abstractmethod
 
 
 class StorageManager(object):
@@ -15,8 +16,8 @@ class StorageManager(object):
         initializes the data dictionary and the conversion to MB value
         """
         self.DATA = {}
-        self.AS_MB = 1024.0 * 1024.0
 
+    @abstractmethod
     def get_column(self, c_name, c_hash):
         """
         returns a feature column, given the hash and renames it to the provided name
@@ -26,6 +27,7 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
+    @abstractmethod
     def get_dataset(self, names, hashes):
         """
         returns the dataset (dataframe), given the hash and renames the columns to the provided names
@@ -35,7 +37,8 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
-    def get_size(self, column_hashes):
+    @abstractmethod
+    def compute_size(self, column_hashes):
         """
         return the size of the selected features or dataset
         :param column_hashes: hash of the features or dataset
@@ -43,6 +46,7 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
+    @abstractmethod
     def total_size(self):
         """
         computes and returns the total size of the data stored in the storage manager
@@ -50,6 +54,7 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
+    @abstractmethod
     def store_column(self, column_hash, panda_series):
         """
         store a column (pandas data series) given the hash
@@ -58,6 +63,7 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
+    @abstractmethod
     def store_dataset(self, column_hashes, dataset):
         """
         store a dataset (pandas dataframe) in the storage given the hash
@@ -65,6 +71,14 @@ class StorageManager(object):
         :param dataset: input dataset (pandas dataframe)
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
+
+    @staticmethod
+    def compute_series_size(pandas_series):
+        return pandas_series.memory_usage(index=True, deep=True) / (1024.0 * 1024.0)
+
+    @staticmethod
+    def compute_frame_size(pandas_frame):
+        return sum(pandas_frame.memory_usage(index=True, deep=True)) / (1024.0 * 1024.0)
 
 
 class DedupedStorageManager(StorageManager):
@@ -90,10 +104,16 @@ class DedupedStorageManager(StorageManager):
 
         return pd.concat(cache, axis=1)
 
-    def get_size(self, column_hashes):
+    def compute_size(self, column_hashes):
         s = 0
         for k in column_hashes:
-            s += self.DATA[k + '_size']
+            key = k + '_size'
+            if key not in self.DATA:
+                computed = self.compute_series_size(self.DATA[k])
+                self.DATA[k + '_size'] = computed
+                s += computed
+            else:
+                s += self.DATA[k + '_size']
         return s
 
     def total_size(self):
@@ -103,12 +123,12 @@ class DedupedStorageManager(StorageManager):
                 s += v
         return s
 
-    def store_column(self, column_hash, panda_series):
+    def store_column(self, column_hash, pandas_series):
         if column_hash in self.DATA.keys():
             'column \'{}\' already exist'.format(column_hash)
         else:
-            self.DATA[column_hash] = panda_series
-            self.DATA[column_hash + '_size'] = 100  # panda_series.memory_usage(index=True, deep=True) / self.AS_MB
+            self.DATA[column_hash] = pandas_series
+            self.DATA[column_hash + '_size'] = self.compute_series_size(pandas_series)
 
     def store_dataset(self, column_hashes, dataset):
         for i in range(len(column_hashes)):
@@ -148,14 +168,20 @@ class NaiveStorageManager(StorageManager):
         df.columns = names
         return df
 
-    def get_size(self, column_hashes):
+    def compute_size(self, column_hashes):
         if isinstance(column_hashes, list):
             if len(column_hashes) > 1:
                 combined_hash = hashlib.md5(''.join(column_hashes)).hexdigest()
+                if combined_hash not in self.DATA:
+                    self.DATA[combined_hash + '_size'] = self.compute_frame_size(self.DATA[combined_hash])
             else:
                 combined_hash = column_hashes[0]
+                if combined_hash not in self.DATA:
+                    self.DATA[combined_hash + '_size'] = self.compute_series_size(self.DATA[combined_hash])
         else:
             combined_hash = column_hashes
+            if combined_hash not in self.DATA:
+                self.DATA[combined_hash + '_size'] = self.compute_series_size(self.DATA[combined_hash])
 
         return self.DATA[combined_hash + '_size']
 
@@ -171,7 +197,7 @@ class NaiveStorageManager(StorageManager):
             print 'column \'{}\' already exist'.format(column_hash)
         else:
             self.DATA[column_hash] = panda_series
-            self.DATA[column_hash + '_size'] = panda_series.memory_usage(index=True, deep=True) / self.AS_MB
+            self.DATA[column_hash + '_size'] = self.compute_frame_size(panda_series)
 
     def store_dataset(self, column_hashes, dataset):
         if isinstance(column_hashes, list):
@@ -193,4 +219,4 @@ class NaiveStorageManager(StorageManager):
             print 'dataset \'{}\' already exist'.format(combined_hash)
         else:
             self.DATA[combined_hash] = dataset
-            self.DATA[combined_hash + '_size'] = sum(dataset.memory_usage(index=True, deep=True)) / self.AS_MB
+            self.DATA[combined_hash + '_size'] = self.compute_frame_size(dataset)

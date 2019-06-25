@@ -172,7 +172,10 @@ class ExecutionEnvironment(object):
                 self.data_storage.store_dataset(c_hash, initial_data[c_name])
             nextnode = Dataset(loc, self, c_name=c_name, c_hash=c_hash)
             nextnode.computed = True
-            size = self.data_storage.get_size(c_hash)
+            node_size_start = datetime.now()
+            size = self.data_storage.compute_size(c_hash)
+            self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                             (datetime.now() - node_size_start).total_seconds())
             self.workload_graph.roots.append(loc)
             self.workload_graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                                  'loc': loc,
@@ -195,7 +198,10 @@ class ExecutionEnvironment(object):
                 self.data_storage.store_dataset(c_hash, df[c_name])
             nextnode = Dataset(identifier, self, c_name=c_name, c_hash=c_hash)
             nextnode.computed = True
-            size = self.data_storage.get_size(c_hash)
+            node_size_start = datetime.now()
+            size = self.data_storage.compute_size(c_hash)
+            self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                             (datetime.now() - node_size_start).total_seconds())
             self.workload_graph.roots.append(identifier)
             self.workload_graph.add_node(identifier,
                                          **{'root': True, 'type': 'Dataset', 'data': nextnode,
@@ -205,12 +211,13 @@ class ExecutionEnvironment(object):
 
 
 class Node(object):
-    def __init__(self, node_id, execution_environment):
+    def __init__(self, node_id, execution_environment, size):
         self.id = node_id
         self.meta = {}
         self.computed = False
         self.access_freq = 0
         self.execution_environment = execution_environment
+        self.size = size
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -239,6 +246,10 @@ class Node(object):
 
     @abstractmethod
     def get_materialized_data(self):
+        pass
+
+    @abstractmethod
+    def compute_size(self):
         pass
 
     def update_freq(self):
@@ -447,6 +458,9 @@ class SuperNode(Node):
     in our data model
     """
 
+    def compute_size(self):
+        pass
+
     def data(self, verbose):
         pass
 
@@ -454,7 +468,7 @@ class SuperNode(Node):
         pass
 
     def __init__(self, node_id, execution_environment, nodes):
-        Node.__init__(self, node_id, execution_environment)
+        Node.__init__(self, node_id, execution_environment, 0)
         self.nodes = nodes
 
     def p_transform_col(self, col_name):
@@ -751,12 +765,11 @@ class Feature(Node):
     # TODO: is there a better way of representing this? now we must get the index 0 of the values
     # TODO: when constructing the feature from the data storage
     def __init__(self, node_id, execution_environment, c_name='', c_hash='', size=-1):
-        Node.__init__(self, node_id, execution_environment)
+        Node.__init__(self, node_id, execution_environment, size)
         assert isinstance(c_name, str)
         assert isinstance(c_hash, str)
         self.c_name = c_name
         self.c_hash = c_hash
-        self.size = size
 
     def data(self, verbose=0):
         self.update_freq()
@@ -775,7 +788,10 @@ class Feature(Node):
 
     def compute_size(self):
         if self.size == -1:
-            self.size = self.execution_environment.data_storage.get_size([self.c_hash])
+            start = datetime.now()
+            self.size = self.execution_environment.data_storage.compute_size([self.c_hash])
+            self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                                                   (datetime.now() - start).total_seconds())
             return self.size
         else:
             return self.size
@@ -1047,10 +1063,9 @@ class Dataset(Node):
     """
 
     def __init__(self, node_id, execution_environment, c_name=None, c_hash=None, size=-1):
-        Node.__init__(self, node_id, execution_environment)
+        Node.__init__(self, node_id, execution_environment, size)
         self.c_name = [] if c_name is None else c_name
         self.c_hash = [] if c_hash is None else c_hash
-        self.size = size
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1069,7 +1084,10 @@ class Dataset(Node):
 
     def compute_size(self):
         if self.size == -1:
-            self.size = self.execution_environment.data_storage.get_size(self.c_hash)
+            start = datetime.now()
+            self.size = self.execution_environment.data_storage.compute_size(self.c_hash)
+            self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                                                   (datetime.now() - start).total_seconds())
             return self.size
         else:
             return self.size
@@ -1394,8 +1412,9 @@ class Dataset(Node):
 # We should find a way to also store groupby graph inside the data storage
 # this way we can generate consistent hashes
 class GroupBy(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None):
-        Node.__init__(self, node_id, execution_environment)
+
+    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+        Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
 
     def data(self, verbose=0):
@@ -1411,6 +1430,13 @@ class GroupBy(Node):
 
     def get_materialized_data(self):
         return self.data_obj
+
+    def compute_size(self):
+        if self.size == -1:
+            raise Exception('Groupby objects size should be set using the set_size command first')
+
+    def set_size(self, size):
+        self.size = size
 
     def project(self, columns):
         return self.generate_groupby_node('project', {'columns': columns})
@@ -1503,8 +1529,9 @@ class GroupBy(Node):
 
 
 class Agg(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None):
-        Node.__init__(self, node_id, execution_environment)
+
+    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+        Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
 
     def data(self, verbose=0):
@@ -1521,13 +1548,23 @@ class Agg(Node):
     def get_materialized_data(self):
         return self.data_obj
 
+    def compute_size(self):
+        if self.size == -1:
+            start = datetime.now()
+            from pympler import asizeof
+            self.size = asizeof.asized(self.data_obj)
+            self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                                                   (datetime.now() - start).total_seconds())
+        return self.size
+
     def show(self):
         return self.id + " :" + self.get_materialized_data().__str__()
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None):
-        Node.__init__(self, node_id, execution_environment)
+
+    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+        Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
         self.model_score = 0.0
 
@@ -1550,6 +1587,15 @@ class SK_Model(Node):
 
     def get_materialized_data(self):
         return self.data_obj
+
+    def compute_size(self):
+        if self.size == -1:
+            start = datetime.now()
+            from pympler import asizeof
+            self.size = asizeof.asized(self.data_obj)
+            self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                                                   (datetime.now() - start).total_seconds())
+        return self.size
 
     # The matching physical operator is in the supernode class
     def transform_col(self, node, col_name='NO_COLUMN_NAME'):

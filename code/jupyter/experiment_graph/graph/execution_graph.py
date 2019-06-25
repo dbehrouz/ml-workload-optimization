@@ -47,7 +47,6 @@ class BaseGraph(object):
             params['score'] = -1
 
         self.add_node(end_id, **params)
-
         meta['freq'] = 1
         self.graph.add_edge(start_id, end_id, **meta)
         return None
@@ -136,20 +135,10 @@ class BaseGraph(object):
         for line in leg.get_lines():
             line.set_linewidth(4.0)
 
-    @staticmethod
-    def compute_size(data):
-        if isinstance(data, pd.DataFrame):
-            return sum(data.memory_usage(index=True, deep=True)) / AS_MB
-        elif isinstance(data, pd.Series):
-            return data.memory_usage(index=True, deep=True) / AS_MB
-        else:
-            return sys.getsizeof(data) / AS_MB
-
     def get_total_size(self):
         t_size = 0
-        for node in self.graph.nodes(data=True):
-            t_size += node[1]['size']
-            # t_size += self.compute_size(node[1]['data'].data)
+        for node in self.graph.nodes(data='size'):
+            t_size += node[1]
         return t_size
 
     def has_node(self, node_id):
@@ -285,7 +274,14 @@ class ExecutionGraph(BaseGraph):
                         start_time = datetime.now()
                         cur_node['data'].data_obj = self.compute_next(prev_node, edge)
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
-                        cur_node['size'] = self.compute_size(cur_node['data'].data_obj)
+                        if cur_node['type'] == 'GroupBy':
+                            # TODO It's not easy to figure out a groupby objects size
+                            # but it seems it is very similar to the input dataframe that groupby
+                            # was applied to, so for now we the set the size to the previous one
+                            cur_node['size'] = cur_node['data'].set_size(prev_node['size'])
+                        else:
+                            cur_node['size'] = cur_node['data'].compute_size()
+
                     cur_node['data'].computed = True
                     edge['execution_time'] = total_time
             else:
