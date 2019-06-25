@@ -75,19 +75,27 @@ def run(execution_environment, root_data):
 
     from sklearn_helper.preprocessing import LabelEncoder
     # Create a label encoder object
-    le = LabelEncoder()
     le_count = 0
 
-    for col in app_train.select_dtypes('object').data().columns:
+    columns = app_train.select_dtypes('object').data().columns
+    for col in columns:
         # we are not using nunique because it discard nan
         if app_train[col].nunique(dropna=False).data() <= 2:
+            # TODO If the LabelEncoder is built outside of the loop
+            # TODO the fit doesnt work properly
+            # TODO seems only the first time fit is really called and the other times
+            # TODO it is skipped
+            le = LabelEncoder()
             le.fit(app_train[col])
+
             app_train = app_train.replace_columns(col, le.transform(app_train[col]))
             app_test = app_test.replace_columns(col, le.transform(app_test[col]))
 
             # Keep track of how many columns were label encoded
             le_count += 1
     print('%d columns were label encoded.' % le_count)
+    app_train.data()
+    app_test.data()
 
     app_train = app_train.onehot_encode()
     app_test = app_test.onehot_encode()
@@ -361,7 +369,7 @@ def run(execution_environment, root_data):
 
     plt.tight_layout(h_pad=2.5)
 
-    from sklearn_helper.preprocessing import MinMaxScaler, Imputer
+    from sklearn_helper.preprocessing import MinMaxScaler
 
     # Drop the target from the training data
     columns = app_train.data().columns
@@ -437,22 +445,24 @@ def run(execution_environment, root_data):
     poly_features_names = list(app_train_poly.data().columns)
 
     # Impute the polynomial features
-    imputer = Imputer(strategy='median')
+    imputer2 = Imputer(strategy='median')
 
-    poly_features = imputer.fit_transform(app_train_poly)
-    poly_features_test = imputer.transform(app_test_poly)
+    imputer2.fit(app_train_poly)
+
+    app_train_poly = imputer2.transform(app_train_poly)
+    app_test_poly = imputer2.transform(app_test_poly)
 
     # Scale the polynomial features
     scaler = MinMaxScaler(feature_range=(0, 1))
 
-    poly_features = scaler.fit_transform(poly_features)
-    poly_features_test = scaler.transform(poly_features_test)
+    app_train_poly = scaler.fit_transform(app_train_poly)
+    app_test_poly = scaler.transform(app_test_poly)
 
     random_forest_poly = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
-    random_forest_poly.fit(poly_features, train_labels)
+    random_forest_poly.fit(app_train_poly, train_labels)
 
     # Make predictions on the test data
-    predictions = random_forest_poly.predict_proba(poly_features_test)[1]
+    predictions = random_forest_poly.predict_proba(app_test_poly)[1]
 
     # Score = 0.678
     # Submission dataframe
@@ -664,18 +674,19 @@ def run(execution_environment, root_data):
     return execution_environment.time_manager.get('model-training', 0)
 
 
-from experiment_graph.execution_environment import ExecutionEnvironment
+if __name__ == "__main__":
+    from experiment_graph.execution_environment import ExecutionEnvironment
 
-ee = ExecutionEnvironment('dedup')
-execution_start = datetime.now()
-ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
-root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
-# ee.load_environment(DATABASE_PATH)
-run(ee, root_data)
-ee.save_history(DATABASE_PATH)
+    ee = ExecutionEnvironment('dedup')
+    execution_start = datetime.now()
+    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
+    # ee.load_environment(DATABASE_PATH)
+    run(ee, root_data)
+    ee.save_history(DATABASE_PATH)
 
-execution_end = datetime.now()
-elapsed = (execution_end - execution_start).total_seconds()
+    execution_end = datetime.now()
+    elapsed = (execution_end - execution_start).total_seconds()
 
-print('finished execution in {} seconds'.format(elapsed))
+    print('finished execution in {} seconds'.format(elapsed))

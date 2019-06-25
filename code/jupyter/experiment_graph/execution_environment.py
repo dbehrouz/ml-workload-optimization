@@ -253,9 +253,9 @@ class Node(object):
 
     @staticmethod
     def vertex_hash(prev, edge_hash):
-        # TODO this may return collisions
+        # TODO what are teh chances that this cause a collision?
         # we should implement a collision strategy as well
-        return hashlib.md5(prev + edge_hash).hexdigest().upper()[0:12]
+        return hashlib.md5(prev + edge_hash).hexdigest().upper()
 
     @staticmethod
     def generate_uuid():
@@ -378,14 +378,13 @@ class Node(object):
                 # this is to make sure each combined edge is a unique name
                 # This is also used by the optimizer to find the other node when combine
                 # edges are being examined
-                self.execution_environment.workload_graph.add_edge(n.id, nextid, nextnode,
-                                                                   # combine is a reserved word
-                                                                   {'name': COMBINE_OPERATION_IDENTIFIER,
-                                                                    'oper': COMBINE_OPERATION_IDENTIFIER,
-                                                                    'execution_time': 0,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=type(nextnode).__name__)
+                self.execution_environment.workload_graph.graph.add_edge(n.id, nextid,
+                                                                         # combine is a reserved word
+                                                                         **{'name': COMBINE_OPERATION_IDENTIFIER,
+                                                                            'oper': COMBINE_OPERATION_IDENTIFIER,
+                                                                            'execution_time': 0,
+                                                                            'args': args,
+                                                                            'hash': edge_hash})
             return nextnode
         else:
             # TODO: add the update rule (even though it has no effect)
@@ -468,7 +467,7 @@ class SuperNode(Node):
         # update the model training time in the graph
         self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
                                                (datetime.now() - start).total_seconds())
-        return model
+        return copy.deepcopy(model)
 
     def p_predict_proba(self, custom_args):
         if custom_args is None:
@@ -994,7 +993,7 @@ class Feature(Node):
         model.fit(self.get_materialized_data())
         self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
                                                (datetime.now() - start).total_seconds())
-        return model
+        return copy.deepcopy(model)
 
 
 class Dataset(Node):

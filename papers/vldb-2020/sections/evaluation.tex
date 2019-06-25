@@ -1,6 +1,7 @@
 \section{Evaluation} \label{sec-evaluation} 
 In this section, we evaluate the performance of our proposed optimizations.
 \subsection{Setup}
+%TODO review section
 To evaluate our proposed optimizations, we provide two different set of workloads, namely, OpenML workload and Kaggle workload.
 
 \textbf{OpenML workloads:} In the OpenML workloads, we utilize some of the popular machine learning pipelines from the OpenML repository for solving task 31, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}\footnote{https://www.openml.org/t/31}.
@@ -24,11 +25,41 @@ Table \ref{tab-openml-pipelines} shows the id, components, and number of executi
 \end{table}
 
 \textbf{Kaggle workloads:} In the second set of workloads, we target interactive machine learning loads where a large portion of the analysis is spent on data and feature preprocessing.
-We design the workload by studying several Kaggle scripts and populating the database based on those.
-Here's the description of the Kaggle challenges that we use.
-\todo[inline]{This is my next immediate ToDo.}
+We use some of the popular scripts in the \textbf{Home Credit Default Risk} competition in Kaggle\footnote{https://www.kaggle.com/c/home-credit-default-risk/}.
+The competition comprises of 9 datasets with a total size of 2.7 GB.
+The goal of the competition is to train a classification model which predicts whether clients are able to repay their loans.
+We utilize scripts written by Kaggle users and design our own scripts to measure the improvement for reuse, warmstarting, and hyperparameter tuning when using the experiment graph.
 
-\subsection{Reuse and Warmstarting for the OpenML Workload}
+
+\subsection{Reuse and Warmstarting}
+%TODO review section
+\subsubsection{Kaggle Workloads}
+To evaluate the performance of reuse and warmstarting optimizations, we selected two popular scripts from the Home Credit Kaggle competition.
+Script A\footnote{https://www.kaggle.com/willkoehrsen/introduction-to-manual-feature-engineering} and Script B\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} both read the input data, perform several steps of preprocessing and feature extractions with many visualization steps and train multiple classification models to using the preprocessed and generated features.
+The scripts have been copied and executed more than 2000 times.
+In the first experiment, we measure the run time of repeated executions of the same script.
+\begin{figure}
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+\includegraphics[width=\linewidth]{../images/experiment-results/reuse/kaggle-repeated-workloads/introduction_to_manual_feature_engineering}
+\caption{Script A}
+\end{subfigure}%
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+\includegraphics[width=\linewidth]{../images/experiment-results/reuse/kaggle-repeated-workloads/start_here_a_gentle_introduction}
+\caption{Script B}
+\end{subfigure}
+\caption{Run time of repeated executions of the Kaggle scripts.}
+\label{exp-reuse-kaggle-same-workload}
+\end{figure}
+
+Figure \ref{exp-reuse-kaggle-same-workload} shows the run time of repeated runs of Scripts A and B.
+Since there experiment graph is not yet populated, the first execution of both versions of the scripts (optimized and baseline) have similar run times.
+However, after the first run, the experiment graph is populated with the workload graphs of each scripts and the reuse optimization returns the requested data without executing the operations.
+This reduces the run time to under 10 seconds for Script A and 60 seconds for Script B.
+Most of the run time is spent on returning the requested data and visualization.
+However, baseline approach (no experiment graph) does not gain performance improvement from previous runs.
+
 \subsubsection{Feature Processing Reuse}  
 In Figure \ref{evaluation-reuse-open-figure}, we show the effect of the reuse optimization on the OpenML workflow.
 The number of executed steps drastically decreases as the majority of the pipelines have the exact same data transformation steps and they only differ in the hyperparameters of the model (Figure \ref{evaluation-reuse-open-figure}a).

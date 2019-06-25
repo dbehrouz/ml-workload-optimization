@@ -71,7 +71,7 @@ for i in range(1, REP + 1):
     baseline_workload.run(ROOT_DATA_DIRECTORY)
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
-    print '{}-End of Baseline Workload'.format(execution_end)
+    print '{}-End of Baseline Workload in {} seconds'.format(execution_end, elapsed)
 
     with open(OUTPUT_CSV, 'a') as the_file:
         the_file.write(
