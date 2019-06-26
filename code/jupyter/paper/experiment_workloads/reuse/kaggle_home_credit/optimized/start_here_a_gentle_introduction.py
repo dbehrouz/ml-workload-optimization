@@ -34,6 +34,8 @@ def run(execution_environment, root_data):
     print('Testing data shape: ', app_test.shape().data())
     app_test.head().data()
 
+    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
+
     app_train['TARGET'].value_counts().data()
 
     app_train['TARGET'].data().astype(int).plot.hist()
@@ -413,14 +415,9 @@ def run(execution_environment, root_data):
     # Train on the training data
     log_reg.fit(train, train_labels)
 
-    # Make predictions
-    # Make sure to select the second column only
-    log_reg_pred = log_reg.predict_proba(test)[1]
-
-    # Submission data
-    log_reg_pred.setname('TARGET')
-    submit = app_test['SK_ID_CURR'].concat(log_reg_pred)
-    submit.head().data()
+    log_reg.score(test,
+                  test_labels['TARGET'],
+                  score_type='auc').data()
 
     from sklearn_helper.ensemble import RandomForestClassifier
 
@@ -433,14 +430,9 @@ def run(execution_environment, root_data):
     # Extract feature importance
     feature_importances = random_forest.feature_importances(features)
 
-    # Make predictions on the test data
-    predictions = random_forest.predict_proba(test)[1]
-
-    # Score = 0.678
-    # Submission dataframe
-    predictions.setname('TARGET')
-    submit = app_test['SK_ID_CURR'].concat(predictions)
-    submit.head().data()
+    random_forest.score(test,
+                        test_labels['TARGET'],
+                        score_type='auc').data()
 
     poly_features_names = list(app_train_poly.data().columns)
 
@@ -461,14 +453,9 @@ def run(execution_environment, root_data):
     random_forest_poly = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
     random_forest_poly.fit(app_train_poly, train_labels)
 
-    # Make predictions on the test data
-    predictions = random_forest_poly.predict_proba(app_test_poly)[1]
-
-    # Score = 0.678
-    # Submission dataframe
-    predictions.setname('TARGET')
-    submit = app_test['SK_ID_CURR'].concat(predictions)
-    submit.head().data()
+    random_forest_poly.score(app_test_poly,
+                             test_labels['TARGET'],
+                             score_type='auc').data()
 
     app_train_domain = app_train_domain.drop(columns='TARGET')
 
@@ -493,14 +480,9 @@ def run(execution_environment, root_data):
     # Extract feature importances
     feature_importances_domain = random_forest_domain.feature_importances(domain_features_names)
 
-    # Make predictions on the test data
-    predictions = random_forest_domain.predict_proba(domain_features_test)[1]
-
-    # Score = 0.678
-    # Make a submission dataframe
-    predictions.setname('TARGET')
-    submit = app_test['SK_ID_CURR'].concat(predictions)
-    submit.head().data()
+    random_forest_domain.score(domain_features_test,
+                               test_labels['TARGET'],
+                               score_type='auc').data()
 
     def plot_feature_importances(df):
         """
@@ -650,11 +632,10 @@ def run(execution_environment, root_data):
         best_iteration = model.best_iteration()
 
         # Make predictions
-        test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]
-
-        test_predictions = test_predictions.setname('TARGET')
-        # Make the submission dataframe
-        submission = test_ids.concat(test_predictions)
+        model.score(test_features,
+                    test_labels['TARGET'],
+                    score_type='auc',
+                    custom_args={'num_iteration': best_iteration}).data()
 
         feature_importances = model.feature_importances(feature_names)
 

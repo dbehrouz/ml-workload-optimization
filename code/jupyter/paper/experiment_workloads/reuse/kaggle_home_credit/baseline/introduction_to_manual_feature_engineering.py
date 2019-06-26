@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 # plotting libraries
 import seaborn as sns
+from sklearn.metrics import roc_auc_score
 
 warnings.filterwarnings('ignore')
 
@@ -387,6 +388,8 @@ def run(root_data):
     # Read in the test dataframe
     test = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
 
+    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
+
     # Merge with the value counts of bureau
     test = test.merge(bureau_counts, on='SK_ID_CURR', how='left')
 
@@ -431,10 +434,10 @@ def run(root_data):
     corrs = corrs.sort_values('TARGET', ascending=False)
 
     # Ten most positive correlations
-    pd.DataFrame(corrs['TARGET'].head(10))
+    print(pd.DataFrame(corrs['TARGET'].head(10)))
 
     # Ten most negative correlations
-    pd.DataFrame(corrs['TARGET'].dropna().tail(10))
+    print(pd.DataFrame(corrs['TARGET'].dropna().tail(10)))
 
     # TODO: even on the kaggle kernel the two lines have errors
     # kde_target(var_name='client_bureau_balance_counts_mean', df=train)
@@ -470,6 +473,8 @@ def run(root_data):
                     cols_to_remove_pair.append(key)
 
     cols_to_remove = list(set(cols_to_remove))
+    if 'SK_ID_CURR' in cols_to_remove:
+        cols_to_remove.remove('SK_ID_CURR')
     print('Number of columns to remove: ', len(cols_to_remove))
 
     train_corrs_removed = train.drop(columns=cols_to_remove)
@@ -582,7 +587,8 @@ def run(root_data):
         # Record the best iteration
         best_iteration = model.best_iteration_
         predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
-
+        score = roc_auc_score(test_labels['TARGET'], predictions)
+        print 'LGBMClassifier with AUC score: {}'.format(score)
         # Record the feature importances
         feature_importance_values = model.feature_importances_
 

@@ -9,6 +9,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from sklearn.metrics import roc_auc_score
 
 from benchmark_helper import BenchmarkMetrics
 from data_storage import DedupedStorageManager, NaiveStorageManager
@@ -359,6 +360,21 @@ class Node(object):
                                                                    ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
+    def generate_evaluation_node(self, oper, args=None, v_id=None):
+        v_id = self.id if v_id is None else v_id
+        args = {} if args is None else args
+        edge_hash = self.edge_hash(oper, args)
+        nextid = self.vertex_hash(v_id, edge_hash)
+        nextnode = Evaluation(nextid, self.execution_environment)
+        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+                                                                   {'name': oper,
+                                                                    'execution_time': -1,
+                                                                    'oper': 'p_' + oper,
+                                                                    'args': args,
+                                                                    'hash': edge_hash},
+                                                                   ntype=type(nextnode).__name__)
+        return self.get_not_none(nextnode, exist)
+
     def generate_super_node(self, nodes, args=None):
         args = {} if args is None else args
         involved_nodes = []
@@ -484,6 +500,29 @@ class SuperNode(Node):
         d = pd.DataFrame(df, columns=c_name)
         self.execution_environment.data_storage.store_dataset(c_hash, d)
         return c_name, c_hash
+
+    def p_score(self, score_type, custom_args):
+        model = self.nodes[0].get_materialized_data()
+        test = self.nodes[1].get_materialized_data()
+        true_labels = self.nodes[2].get_materialized_data()
+
+        if score_type == 'accuracy':
+            if custom_args is None:
+                score = model.score(test, true_labels)
+            else:
+                score = model.score(test, true_labels, **custom_args)
+        elif score_type == 'auc':
+            if custom_args is None:
+                predictions = model.predict_proba(test)[:, 1]
+            else:
+                predictions = model.predict_proba(test, **custom_args)[:, 1]
+            score = roc_auc_score(true_labels, predictions)
+        else:
+            raise Exception('Score type \'{}\' is not supported'.format(score_type))
+
+        # TODO to make things easier, we add score to the model
+        self.nodes[0].set_model_score(score)
+        return {score_type: score}
 
     def p_filter_with(self):
         return self.hash_and_store_df('filter_with{}'.format(self.nodes[1].c_hash),
@@ -1490,6 +1529,13 @@ class SK_Model(Node):
     def __init__(self, node_id, execution_environment, data_obj=None):
         Node.__init__(self, node_id, execution_environment)
         self.data_obj = data_obj
+        self.model_score = 0.0
+
+    def set_model_score(self, model_score):
+        self.model_score = model_score
+
+    def get_model_score(self):
+        return self.model_score
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1519,7 +1565,6 @@ class SK_Model(Node):
                                           args={'domain_features_names': domain_features_names})
 
     def p_feature_importances(self, domain_features_names):
-
         if domain_features_names is None:
             df = pd.DataFrame({'feature': range(0, len(self.get_materialized_data().feature_importances_)),
                                'importance': self.get_materialized_data().feature_importances_})
@@ -1536,3 +1581,28 @@ class SK_Model(Node):
     def predict_proba(self, test, custom_args=None):
         supernode = self.generate_super_node([self, test], {'c_oper': 'predict_proba'})
         return self.generate_dataset_node('predict_proba', args={'custom_args': custom_args}, v_id=supernode.id)
+
+    def score(self, test, true_labels, score_type='accuracy', custom_args=None):
+        supernode = self.generate_super_node([self, test, true_labels], {'c_oper': 'score'})
+        return self.generate_evaluation_node('score', args={'score_type': score_type, 'custom_args': custom_args},
+                                             v_id=supernode.id)
+
+
+class Evaluation(Node):
+    def __init__(self, node_id, execution_environment, data_obj=None):
+        Node.__init__(self, node_id, execution_environment)
+        self.data_obj = data_obj
+
+    def data(self, verbose=0):
+        self.update_freq()
+        if not self.computed:
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
+            self.computed = True
+        return self.get_materialized_data()
+
+    def get_materialized_data(self):
+        return self.data_obj

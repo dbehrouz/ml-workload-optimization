@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 # sklearn preprocessing for dealing with categorical variables
+from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import LabelEncoder
 
 warnings.filterwarnings('ignore')
@@ -39,6 +40,8 @@ def run(root_data):
     app_train['TARGET'].value_counts()
 
     app_train['TARGET'].astype(int).plot.hist()
+
+    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
 
     # Function to calculate missing values by column# Funct
     def missing_values_table(df):
@@ -379,12 +382,8 @@ def run(root_data):
     # Make predictions
     # Make sure to select the second column only
     log_reg_pred = log_reg.predict_proba(test)[:, 1]
-
-    # Submission dataframe
-    submit = app_test[['SK_ID_CURR']]
-    submit['TARGET'] = log_reg_pred
-
-    submit.head()
+    score = roc_auc_score(test_labels['TARGET'], log_reg_pred)
+    print 'Logistic Regression with AUC score: {}'.format(score)
 
     from sklearn.ensemble import RandomForestClassifier
 
@@ -403,9 +402,8 @@ def run(root_data):
 
     # Score = 0.678
     # Make a submission dataframe
-    submit = app_test[['SK_ID_CURR']]
-    submit['TARGET'] = predictions
-    submit.head()
+    score = roc_auc_score(test_labels['TARGET'], predictions)
+    print 'Random Forest Simple Data with AUC score: {}'.format(score)
 
     poly_features_names = list(app_train_poly.columns)
 
@@ -429,9 +427,8 @@ def run(root_data):
 
     # Score = 0.678
     # Make a submission dataframe
-    submit = app_test[['SK_ID_CURR']]
-    submit['TARGET'] = predictions
-    submit.head()
+    score = roc_auc_score(test_labels['TARGET'], predictions)
+    print 'Random Forest Poly Data with AUC score: {}'.format(score)
 
     app_train_domain = app_train_domain.drop(columns='TARGET')
 
@@ -463,9 +460,8 @@ def run(root_data):
 
     # Score = 0.679
     # Make a submission dataframe
-    submit = app_test[['SK_ID_CURR']]
-    submit['TARGET'] = predictions
-    submit.head()
+    score = roc_auc_score(test_labels['TARGET'], predictions)
+    print 'Random Forest Domain Data with AUC score: {}'.format(score)
 
     def plot_feature_importances(df):
         """
@@ -615,7 +611,8 @@ def run(root_data):
         # Record the best iteration
         best_iteration = model.best_iteration_
         predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
-
+        score = roc_auc_score(test_labels['TARGET'], predictions)
+        print 'LGBMClassifier with AUC score: {}'.format(score)
         # Record the feature importances
         feature_importance_values = model.feature_importances_
 

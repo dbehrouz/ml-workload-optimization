@@ -6,6 +6,7 @@ scikit learn package and make the necessary changes inside.
 """
 
 import lightgbm as lgb
+from sklearn.metrics import roc_auc_score
 
 
 class SimpleModel:
@@ -36,6 +37,9 @@ class PredictiveModel:
 
     def predict_proba(self, test, custom_args=None):
         return self.trained_node.predict_proba(test, custom_args)
+
+    def score(self, test, true_labels, score_type='accuracy', custom_args=None):
+        return self.trained_node.score(test, true_labels, score_type=score_type, custom_args=custom_args)
 
     def feature_importances(self, features):
         return self.trained_node.feature_importances(features)

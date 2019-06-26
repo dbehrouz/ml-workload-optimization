@@ -334,6 +334,8 @@ def run(execution_environment, root_data, verbose=0):
     # Read in the test dataframe
     test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
 
+    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
+
     # Merge with the value counts of bureau
     test = test.merge(bureau_counts, on='SK_ID_CURR', how='left')
 
@@ -522,11 +524,14 @@ def run(execution_environment, root_data, verbose=0):
         best_iteration = model.best_iteration()
 
         # Make predictions
-        test_predictions = model.predict_proba(test_features, custom_args={'num_iteration': best_iteration})[1]
+        model.score(test_features,
+                    test_labels['TARGET'],
+                    score_type='auc',
+                    custom_args={'num_iteration': best_iteration}).data()
 
-        test_predictions = test_predictions.setname('TARGET')
-        # Make the submission dataframe
-        submission = test_ids.concat(test_predictions)
+        # test_predictions = test_predictions.setname('TARGET')
+        # # Make the submission dataframe
+        # submission = test_ids.concat(test_predictions)
 
         feature_importances = model.feature_importances(feature_names)
 

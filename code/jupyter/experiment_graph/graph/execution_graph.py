@@ -9,6 +9,7 @@ import pandas as pd
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 # TODO: make file with all the global names
+
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 AS_MB = 1024.0 * 1024.0
 
@@ -40,13 +41,18 @@ class BaseGraph(object):
                 exist = self.graph.nodes[e[1]]['data']
                 e[2]['freq'] = e[2]['freq'] + 1
                 return exist
+        params = {'type': ntype, 'root': False, 'data': nextnode, 'size': 0.0}
 
-        self.add_node(end_id, **{'type': ntype, 'root': False, 'data': nextnode, 'size': 0.0})
+        if ntype == 'SK_Model':
+            params['score'] = 0.0
+
+        self.add_node(end_id, **params)
+
         meta['freq'] = 1
         self.graph.add_edge(start_id, end_id, **meta)
         return None
 
-    def plot_graph(self, plt, figsize=(12, 12), labels_for_vertex=['freq'], labels_for_edges=['name']):
+    def plot_graph(self, plt, figsize=(12, 12), labels_for_vertex=['size'], labels_for_edges=['name']):
         """
         plot the graph using the graphvix dot layout
         :param labels_for_edges:
@@ -58,11 +64,7 @@ class BaseGraph(object):
         f = plt.figure(figsize=figsize)
         ax = f.add_subplot(1, 1, 1)
         pos = graphviz_layout(self.graph, prog='dot', args='')
-        # TODO we should find a way to automatically update the frequencies currently, they are updated
-        # TODO inside the Node subclasses and there is no direct access to the graph from inside the
-        # TODO Node subclasses, that's why we are manually calling this function to compute teh actual
-        # TODO frequencies
-        self.compute_frequencies()
+
         # get the list of available types and frequency of each node
         vertex_labels = {}
         unique_types = []
@@ -74,7 +76,7 @@ class BaseGraph(object):
             labels = [str(node[1][p]) for p in labels_for_vertex if p != 'id']
             if 'id' in labels_for_vertex:
                 if not node[1]['root']:
-                    labels.insert(0, node[0])
+                    labels.insert(0, node[0][:10])
                 else:
                     labels.insert(0, 'root')
 
@@ -134,10 +136,6 @@ class BaseGraph(object):
         for line in leg.get_lines():
             line.set_linewidth(4.0)
 
-    def compute_frequencies(self):
-        for node in self.graph.nodes(data=True):
-            node[1]['freq'] = node[1]['data'].get_freq()
-
     @staticmethod
     def compute_size(data):
         if isinstance(data, pd.DataFrame):
@@ -164,6 +162,19 @@ class BaseGraph(object):
 class ExecutionGraph(BaseGraph):
     def __init__(self, graph=None, roots=None):
         super(ExecutionGraph, self).__init__(graph, roots)
+        self.post_processed = False
+
+    def post_process(self):
+        """
+        This method should be call before extending the history to add quality and frequency to the graph
+        :return:
+        """
+        # for node in self.graph.nodes(data=True):
+        #     node[1]['freq'] = node[1]['data'].get_freq()
+        for node in self.graph.nodes(data=True):
+            if node[1]['type'] == 'SK_Model':
+                node[1]['score'] = node[1]['data'].get_model_score()
+        self.post_processed = True
 
     def brute_force_compute_paths(self, vertex):
         """brute force method for computing all the paths
@@ -349,6 +360,10 @@ class HistoryGraph(BaseGraph):
         super(HistoryGraph, self).__init__(graph, roots)
 
     def extend(self, workload):
+        # make sure the workload graph is post processed, i.e., the model scores are added to the graph
+        if not workload.post_processed:
+            workload.post_process()
+
         if self.is_empty():
             print 'history graph is empty, initializing a new one'
             self.graph = copy.deepcopy(workload.graph)
