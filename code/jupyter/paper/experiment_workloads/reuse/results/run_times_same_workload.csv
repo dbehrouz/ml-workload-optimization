@@ -46,3 +46,8 @@ ABEF10E0,3,kaggle_home_credit,introduction_to_manual_feature_engineering,baselin
 39567B3D,2,kaggle_home_credit,start_here_a_gentle_introduction,baseline,357.418295
 39567B3D,3,kaggle_home_credit,start_here_a_gentle_introduction,optimized,68.454438
 39567B3D,3,kaggle_home_credit,start_here_a_gentle_introduction,baseline,348.465416
+193BC373,1,kaggle_home_credit,start_here_a_gentle_introduction,optimized,477.845429
+193BC373,1,kaggle_home_credit,start_here_a_gentle_introduction,baseline,386.288754
+193BC373,2,kaggle_home_credit,start_here_a_gentle_introduction,optimized,71.557789
+193BC373,2,kaggle_home_credit,start_here_a_gentle_introduction,baseline,361.111005
+193BC373,3,kaggle_home_credit,start_here_a_gentle_introduction,optimized,70.075761
