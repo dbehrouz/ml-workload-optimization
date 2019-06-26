@@ -44,7 +44,7 @@ class BaseGraph(object):
         params = {'type': ntype, 'root': False, 'data': nextnode, 'size': 0.0}
 
         if ntype == 'SK_Model':
-            params['score'] = 0.0
+            params['score'] = -1
 
         self.add_node(end_id, **params)
 
