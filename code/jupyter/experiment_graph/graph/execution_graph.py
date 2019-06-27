@@ -79,9 +79,11 @@ class BaseGraph(object):
                     else:
                         labels.append(node[0][:10])
                 elif p == 'size':
-                    labels.append('{:.2f}'.format(node[1][p]))
+                    labels.append('{:.3f}'.format(node[1][p]))
+                elif p == 'recreation_cost':
+                    labels.append('{:.3f}'.format(node[1][p]))
                 else:
-                    labels.append(node[1][p])
+                    labels.append(str(node[1][p]))
 
             vertex_labels[node[0]] = ','.join(labels)
 

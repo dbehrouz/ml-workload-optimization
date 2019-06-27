@@ -1,15 +1,16 @@
 import networkx as nx
 
 
-def compute_recreation_cost(graph):
+def compute_recreation_cost(graph, modify_graph=True):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
     recreation_cost(v) = v['meta_freq'] * sum[e['execution_time'] for e in  path(v_0, v)]
-    :type graph: input history graph
+    :type modify_graph: bool
+    :type graph: nx.DiGraph
     """
     partial_recreation_cost = {node: -1 for node in graph.nodes}
     for n in nx.topological_sort(graph):
-        if graph[n]['root']:
+        if graph.nodes[n]['root']:
             partial_recreation_cost[n] = 0
         else:
             cost = 0.0
@@ -22,6 +23,9 @@ def compute_recreation_cost(graph):
     recreation_cost = {}
     for n in graph.nodes(data='meta_freq'):
         recreation_cost[n[0]] = n[1] * partial_recreation_cost[n[0]]
+    if modify_graph:
+        for n in graph.nodes(data=True):
+            n[1]['recreation_cost'] = recreation_cost[n[0]]
 
     return recreation_cost
 
