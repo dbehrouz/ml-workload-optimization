@@ -4,6 +4,8 @@ import pandas as pd
 import hashlib
 from abc import abstractmethod
 
+AS_KB = 1024.0
+
 
 class StorageManager(object):
     """ DataStorage class
@@ -74,11 +76,11 @@ class StorageManager(object):
 
     @staticmethod
     def compute_series_size(pandas_series):
-        return pandas_series.memory_usage(index=True, deep=True) / (1024.0 * 1024.0)
+        return pandas_series.memory_usage(index=True, deep=True) / AS_KB
 
     @staticmethod
     def compute_frame_size(pandas_frame):
-        return sum(pandas_frame.memory_usage(index=True, deep=True)) / (1024.0 * 1024.0)
+        return sum(pandas_frame.memory_usage(index=True, deep=True)) / AS_KB
 
 
 class DedupedStorageManager(StorageManager):

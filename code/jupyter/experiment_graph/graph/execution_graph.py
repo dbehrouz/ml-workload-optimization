@@ -9,7 +9,6 @@ import numpy as np
 # TODO: make file with all the global names
 
 COMBINE_OPERATION_IDENTIFIER = 'combine'
-AS_MB = 1024.0 * 1024.0
 
 
 class BaseGraph(object):
@@ -49,9 +48,12 @@ class BaseGraph(object):
         self.graph.add_edge(start_id, end_id, **meta)
         return None
 
-    def plot_graph(self, plt, figsize=(12, 12), labels_for_vertex=['size'], labels_for_edges=['name']):
+    def plot_graph(self, plt, figsize=(12, 12), labels_for_vertex=['size'], labels_for_edges=['name'], vertex_size=1000,
+                   vertex_font_size=10):
         """
         plot the graph using the graphvix dot layout
+        :param vertex_font_size:
+        :param vertex_size:
         :param labels_for_edges:
         :param labels_for_vertex:
         :param figsize: size of the figure (default (12,12))
@@ -69,13 +71,17 @@ class BaseGraph(object):
         for node in self.graph.nodes(data=True):
             if node[1]['type'] not in unique_types:
                 unique_types.append(node[1]['type'])
-
-            labels = [str(node[1][p]) for p in labels_for_vertex if p != 'id']
-            if 'id' in labels_for_vertex:
-                if not node[1]['root']:
-                    labels.insert(0, node[0][:10])
+            labels = []
+            for p in labels_for_vertex:
+                if p == 'id':
+                    if node[1]['root']:
+                        labels.append('root')
+                    else:
+                        labels.append(node[0][:10])
+                elif p == 'size':
+                    labels.append('{:.2f}'.format(node[1][p]))
                 else:
-                    labels.insert(0, 'root')
+                    labels.append(node[1][p])
 
             vertex_labels[node[0]] = ','.join(labels)
 
@@ -84,15 +90,17 @@ class BaseGraph(object):
         color_map = dict(zip(unique_types, colors))
         for label in color_map:
             ax.scatter(None, None, color=color_map[label], label=label)
-        all_colors = [color_map[n[1]] for n in self.graph.nodes(data='type')]
 
+        # TODO there's a problem with nodelist=...., the node type and legends dont match
         materialized_nodes = [n[0] for n in self.graph.node(data='data') if n[1].computed]
+        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if n[1]['data'].computed]
         nx.draw_networkx(
             self.graph,
+            node_size=vertex_size,
             nodelist=materialized_nodes,
             cmap=jet,
-            vmin=0,
-            vmax=len(unique_types),
+            # vmin=0,
+            # vmax=len(unique_types),
             node_color=all_colors,
             node_shape='s',
             pos=pos,
@@ -100,26 +108,40 @@ class BaseGraph(object):
             ax=ax)
 
         non_materialized_nodes = [n[0] for n in self.graph.node(data='data') if not n[1].computed]
+        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if not n[1]['data'].computed]
         nx.draw_networkx(
             self.graph,
+            node_size=vertex_size,
             nodelist=non_materialized_nodes,
             cmap=jet,
-            vmin=0,
-            vmax=len(unique_types),
+            # vmin=0,
+            # vmax=len(unique_types),
             node_color=all_colors,
             node_shape='o',
             pos=pos,
             with_labels=False,
             ax=ax)
 
+        # nx.draw_networkx(
+        #     self.graph,
+        #     # nodelist=non_materialized_nodes,
+        #     cmap=jet,
+        #     # vmin=0,
+        #     # vmax=len(unique_types),
+        #     node_color=all_colors,
+        #     node_shape='o',
+        #     pos=pos,
+        #     with_labels=False,
+        #     ax=ax)
+
         if labels_for_vertex:
             nx.draw_networkx_labels(self.graph,
                                     pos=pos,
                                     labels=vertex_labels,
-                                    font_size=14)
+                                    font_size=vertex_font_size)
 
         def construct_label(edge_data, edge_labels):
-            return ','.join([str(edge_data[l]) for l in edge_labels])
+            return ','.join(['' if str(edge_data[l]) == 'combine' else str(edge_data[l]) for l in edge_labels])
 
         nx.draw_networkx_edge_labels(
             self.graph,

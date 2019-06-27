@@ -75,7 +75,7 @@ def run(execution_environment, root_data):
 
     app_train.select_dtypes('object').nunique().data()
 
-    from sklearn_helper.preprocessing import LabelEncoder
+    from experiment_graph.sklearn_helper.preprocessing import LabelEncoder
     # Create a label encoder object
     le_count = 0
 
@@ -259,7 +259,7 @@ def run(execution_environment, root_data):
     poly_features_test = app_test[['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
 
     # imputer for handling missing values
-    from sklearn_helper.preprocessing import Imputer
+    from experiment_graph.sklearn_helper.preprocessing import Imputer
 
     imputer = Imputer(strategy='median')
 
@@ -271,7 +271,7 @@ def run(execution_environment, root_data):
     poly_features = imputer.fit_transform(poly_features)
     poly_features_test = imputer.transform(poly_features_test)
 
-    from sklearn_helper.preprocessing import PolynomialFeatures
+    from experiment_graph.sklearn_helper.preprocessing import PolynomialFeatures
 
     # Create the polynomial object with specified degree
     poly_transformer = PolynomialFeatures(degree=3)
@@ -371,7 +371,7 @@ def run(execution_environment, root_data):
 
     plt.tight_layout(h_pad=2.5)
 
-    from sklearn_helper.preprocessing import MinMaxScaler
+    from experiment_graph.sklearn_helper.preprocessing import MinMaxScaler
 
     # Drop the target from the training data
     columns = app_train.data().columns
@@ -407,7 +407,7 @@ def run(execution_environment, root_data):
     print('Training data shape: ', train.shape().data())
     print('Testing data shape: ', test.shape().data())
 
-    from sklearn_helper.linear_model import LogisticRegression
+    from experiment_graph.sklearn_helper.linear_model import LogisticRegression
 
     # Make the model with the specified regularization parameter
     log_reg = LogisticRegression(C=0.0001)
@@ -419,7 +419,7 @@ def run(execution_environment, root_data):
                   test_labels['TARGET'],
                   score_type='auc').data()
 
-    from sklearn_helper.ensemble import RandomForestClassifier
+    from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
     # Make the random forest classifier
     random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
@@ -531,7 +531,7 @@ def run(execution_environment, root_data):
 
     feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
-    from sklearn_helper.sklearn_wrappers import LGBMClassifier
+    from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
     def model(lgb_featres, test_features, encoding='ohe'):
 

@@ -1,4 +1,3 @@
-from experiment_graph.graph.execution_graph import HistoryGraph
 import networkx as nx
 
 
@@ -6,7 +5,7 @@ def compute_recreation_cost(graph):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
     recreation_cost(v) = v['meta_freq'] * sum[e['execution_time'] for e in  path(v_0, v)]
-    :type graph: nx.DiGraph
+    :type graph: input history graph
     """
     partial_recreation_cost = {node: -1 for node in graph.nodes}
     for n in nx.topological_sort(graph):
@@ -27,10 +26,10 @@ def compute_recreation_cost(graph):
     return recreation_cost
 
 
-def compute_vertex_potential(history_graph):
+def compute_vertex_potential(graph):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
 
-    :type history_graph: HistoryGraph
+    :type graph: input history graph
     """
     pass

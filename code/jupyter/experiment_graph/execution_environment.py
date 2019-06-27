@@ -19,6 +19,7 @@ from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATIO
 from optimizer import HashBasedOptimizer, SearchBasedOptimizer
 
 RANDOM_STATE = 15071989
+AS_KB = 1024.0
 
 
 class ExecutionEnvironment(object):
@@ -400,6 +401,7 @@ class Node(object):
                                                                **{'type': type(nextnode).__name__,
                                                                   'root': False,
                                                                   'data': nextnode,
+                                                                  'size': 0,
                                                                   'involved_nodes': involved_nodes})
             for n in nodes:
                 # this is to make sure each combined edge is a unique name
@@ -459,7 +461,7 @@ class SuperNode(Node):
     """
 
     def compute_size(self):
-        pass
+        return 0.0
 
     def data(self, verbose):
         pass
@@ -1552,7 +1554,7 @@ class Agg(Node):
         if self.size == -1:
             start = datetime.now()
             from pympler import asizeof
-            self.size = asizeof.asized(self.data_obj)
+            self.size = asizeof.asizeof(self.data_obj) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size
@@ -1592,7 +1594,7 @@ class SK_Model(Node):
         if self.size == -1:
             start = datetime.now()
             from pympler import asizeof
-            self.size = asizeof.asized(self.data_obj)
+            self.size = asizeof.asizeof(self.data_obj) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size
@@ -1635,8 +1637,17 @@ class SK_Model(Node):
 
 
 class Evaluation(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None):
-        Node.__init__(self, node_id, execution_environment)
+    def compute_size(self):
+        if self.size == -1:
+            start = datetime.now()
+            from pympler import asizeof
+            self.size = asizeof.asizeof(self.data_obj) / AS_KB
+            self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
+                                                   (datetime.now() - start).total_seconds())
+        return self.size
+
+    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+        Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
 
     def data(self, verbose=0):

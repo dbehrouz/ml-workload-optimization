@@ -6,7 +6,6 @@ scikit learn package and make the necessary changes inside.
 """
 
 import lightgbm as lgb
-from sklearn.metrics import roc_auc_score
 
 
 class SimpleModel:
