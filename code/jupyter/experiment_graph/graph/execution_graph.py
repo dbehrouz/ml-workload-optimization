@@ -73,7 +73,9 @@ class BaseGraph(object):
                 unique_types.append(node[1]['type'])
             labels = []
             for p in labels_for_vertex:
-                if p == 'id':
+                if p not in node[1]:
+                    labels.append('-')
+                elif p == 'id':
                     if node[1]['root']:
                         labels.append('root')
                     else:
