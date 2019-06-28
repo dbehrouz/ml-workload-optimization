@@ -40,56 +40,80 @@ def compute_vertex_potential(graph, modify_graph=True, alpha=0.9):
     :type modify_graph: bool
 
     """
-    best_model_so_far = {}
+    potentials = {}
+    connected_models = {}
     ml_models = []
     for node in graph.nodes(data=True):
         if node[1]['type'] == 'SK_Model':
-            best_model_so_far[node[0]] = node[1]['score']
+            potentials[node[0]] = node[1]['score']
             if node[1]['score'] > 0.0:
+                connected_models[node[0]] = {node[0]}
                 ml_models.append(node[0])
+            else:
+                connected_models[node[0]] = set()
         elif graph.out_degree(node[0]) == 0:
-            best_model_so_far[node[0]] = -1.0
+            potentials[node[0]] = -1.0
+            connected_models[node[0]] = set()
         else:
-            best_model_so_far[node[0]] = 0.0
+            potentials[node[0]] = 0.0
+            connected_models[node[0]] = set()
 
-    distance_to_best_model = {node: 0 for node in graph.nodes}
+    # TODO this should be investigated, but it only seems fair if we assign potential and num pipeline to evaluation
+    # and test datasets as well
     for m in ml_models:
-        dest = list(graph.out_edges(m))
-        if len(dest) > 1:
-            raise Exception('A model can only be evaluated against one dataset')
-        best_model_so_far[dest[0][1]] = best_model_so_far[m]
-        eval_dest = list(graph.out_edges(dest[0][1]))
-        if len(eval_dest) > 1:
-            raise Exception('There can only be one evaluation node for one model')
-        best_model_so_far[eval_dest[0][1]] = best_model_so_far[m]
+        out = list(graph.out_edges(m))
+        assert len(out) == 1
+        out = out[0][1]
+        connected_models[out] = {m}
+        potentials[out] = potentials[m]
+        outout = list(graph.out_edges(out))
+        assert len(outout) == 1
+        outout = outout[0][1]
+        connected_models[outout] = {m}
+        potentials[outout] = potentials[m]
 
+    total_score = 0.0  # for keeping track of the sum of score to compute the score for out of reach nodes
     for n in reversed(list(nx.topological_sort(graph))):
-        print graph.nodes[n]['type']
-        if best_model_so_far[n] != 0:
-            # The node is either a ml model or a terminal node
-            continue
+        current_score = potentials[n]
+        if current_score > 0:
+            # The node is a ml model
+            total_score += current_score
         else:
             best_score_among_neighbors = -1
             selected_node = -1
             terminal = True
+            models = set()
             for _, destination in graph.out_edges(n):
+                if destination in ml_models:
+                    models.add(destination)
+                else:
+                    for e in connected_models[destination]:
+                        models.add(e)
                 terminal = False
-                score = best_model_so_far[destination]
+                score = potentials[destination]
                 if score >= best_score_among_neighbors:
                     selected_node = destination
                     best_score_among_neighbors = score
             if selected_node == -1 and not terminal:
                 raise Exception('something went wrong, the node {} has no neighbors and is not a terminal node')
             if best_score_among_neighbors == -1:
-                best_model_so_far[n] = -1
+                potentials[n] = -1
                 continue
+            s = alpha * best_score_among_neighbors
+            potentials[n] = s
+            total_score += s
+            connected_models[n] = models
 
-            distance = distance_to_best_model[selected_node] + 1
-            best_model_so_far[n] = pow(alpha, distance) * best_score_among_neighbors
-            distance_to_best_model[n] = distance
-
+    default = total_score / len(graph.nodes)
+    for k, v in potentials.iteritems():
+        if v == -1:
+            potentials[k] = default
+    num_pipelines = {}
     if modify_graph:
         for n in graph.nodes(data=True):
-            n[1]['potential'] = best_model_so_far[n[0]]
+            n[1]['potential'] = potentials[n[0]]
+            length = len(connected_models[n[0]])
+            n[1]['num_pipelines'] = length
+            num_pipelines[n[0]] = length
 
-    return best_model_so_far
+    return potentials, num_pipelines

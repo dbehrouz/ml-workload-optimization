@@ -80,9 +80,7 @@ class BaseGraph(object):
                         labels.append('root')
                     else:
                         labels.append(node[0][:10])
-                elif p == 'size':
-                    labels.append('{:.3f}'.format(node[1][p]))
-                elif p == 'recreation_cost':
+                elif type(node[1][p]) is np.float64:
                     labels.append('{:.3f}'.format(node[1][p]))
                 else:
                     labels.append(str(node[1][p]))
@@ -115,6 +113,7 @@ class BaseGraph(object):
         all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if not n[1]['data'].computed]
         nx.draw_networkx(
             self.graph,
+            edgelist=[],
             node_size=vertex_size,
             nodelist=non_materialized_nodes,
             cmap=jet,
@@ -125,18 +124,6 @@ class BaseGraph(object):
             pos=pos,
             with_labels=False,
             ax=ax)
-
-        # nx.draw_networkx(
-        #     self.graph,
-        #     # nodelist=non_materialized_nodes,
-        #     cmap=jet,
-        #     # vmin=0,
-        #     # vmax=len(unique_types),
-        #     node_color=all_colors,
-        #     node_shape='o',
-        #     pos=pos,
-        #     with_labels=False,
-        #     ax=ax)
 
         if labels_for_vertex:
             nx.draw_networkx_labels(self.graph,
