@@ -49,9 +49,10 @@ class StorageManager(object):
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
     @abstractmethod
-    def total_size(self):
+    def total_size(self, column_list):
         """
         computes and returns the total size of the data stored in the storage manager
+        :param column_list
         :return: total size of the data inside the storage manager
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
@@ -118,11 +119,15 @@ class DedupedStorageManager(StorageManager):
                 s += self.DATA[k + '_size']
         return s
 
-    def total_size(self):
+    def total_size(self, column_list=None):
         s = 0
-        for k, v in self.DATA.iteritems():
-            if k.endswith('_size'):
-                s += v
+        if column_list is None:
+            for k, v in self.DATA.iteritems():
+                if k.endswith('_size'):
+                    s += v
+        else:
+            for k in column_list:
+                s += self.DATA[k + '_size']
         return s
 
     def store_column(self, column_hash, pandas_series):
@@ -187,11 +192,15 @@ class NaiveStorageManager(StorageManager):
 
         return self.DATA[combined_hash + '_size']
 
-    def total_size(self):
+    def total_size(self, column_list=None):
         s = 0
-        for k, v in self.DATA.iteritems():
-            if k.endswith('_size'):
-                s += v
+        if column_list is None:
+            for k, v in self.DATA.iteritems():
+                if k.endswith('_size'):
+                    s += v
+        else:
+            for k in column_list:
+                s += self.DATA[k + '_size']
         return s
 
     def store_column(self, column_hash, panda_series):

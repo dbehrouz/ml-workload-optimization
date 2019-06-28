@@ -61,6 +61,11 @@ class ExecutionEnvironment(object):
         self.history_graph.extend(self.workload_graph)
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
+    def get_real_history_graph_size(self):
+        if not self.history_graph.extended:
+            raise Exception('cannot get the storage size before history graph is extended')
+        return self.history_graph.get_total_size(exclude_types=['Dataset', 'Feature']) + self.data_storage.total_size()
+
     def save_history(self, environment_folder, overwrite=False):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
@@ -111,6 +116,7 @@ class ExecutionEnvironment(object):
             self.optimizer = HashBasedOptimizer()
         else:
             raise Exception('Unknown Optimizer Type')
+        self.history_graph.extended = False
 
     def load_history_from_memory(self, history):
         self.history_graph = history
@@ -214,7 +220,6 @@ class ExecutionEnvironment(object):
 class Node(object):
     def __init__(self, node_id, execution_environment, size):
         self.id = node_id
-        self.meta = {}
         self.computed = False
         self.access_freq = 0
         self.execution_environment = execution_environment
@@ -253,6 +258,10 @@ class Node(object):
     def compute_size(self):
         pass
 
+    @abstractmethod
+    def clear_content(self):
+        pass
+
     def update_freq(self):
         self.access_freq += 1
 
@@ -277,12 +286,6 @@ class Node(object):
     @staticmethod
     def md5(val):
         return hashlib.md5(val).hexdigest()
-
-    def update_meta(self):
-        raise Exception('Node object has no meta data')
-
-    def reapply_meta(self):
-        raise Exception('Node class should not have been instantiated')
 
     @staticmethod
     def get_not_none(nextnode, exist):
@@ -460,6 +463,13 @@ class SuperNode(Node):
     in our data model
     """
 
+    def __init__(self, node_id, execution_environment, nodes):
+        Node.__init__(self, node_id, execution_environment, 0.0)
+        self.nodes = nodes
+
+    def clear_content(self):
+        pass
+
     def compute_size(self):
         return 0.0
 
@@ -468,10 +478,6 @@ class SuperNode(Node):
 
     def get_materialized_data(self):
         pass
-
-    def __init__(self, node_id, execution_environment, nodes):
-        Node.__init__(self, node_id, execution_environment, 0)
-        self.nodes = nodes
 
     def p_transform_col(self, col_name):
         model = self.nodes[0].get_materialized_data()
@@ -763,15 +769,18 @@ class Feature(Node):
 
     """
 
-    # TODO: we really don't need a dictionary for the column_map rather only one key/value pair
-    # TODO: is there a better way of representing this? now we must get the index 0 of the values
-    # TODO: when constructing the feature from the data storage
-    def __init__(self, node_id, execution_environment, c_name='', c_hash='', size=-1):
+    def __init__(self, node_id, execution_environment, c_name='', c_hash='', size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         assert isinstance(c_name, str)
         assert isinstance(c_hash, str)
         self.c_name = c_name
         self.c_hash = c_hash
+
+    def clear_content(self):
+        self.c_name = ''
+        self.c_hash = ''
+        self.computed = False
+        self.size = 0.0
 
     def data(self, verbose=0):
         self.update_freq()
@@ -782,14 +791,15 @@ class Feature(Node):
                 self.id,
                 verbose)
             self.computed = True
-        # TODO: Remove index [0] after the column_map input is changed from dictionary to a better data structure
         return self.get_materialized_data()
 
     def get_materialized_data(self):
         return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
 
     def compute_size(self):
-        if self.size == -1:
+        print 'in size computation {} and {}'.format(self.computed, self.size)
+        if self.computed and self.size == 0.0:
+            print 'computing the size'
             start = datetime.now()
             self.size = self.execution_environment.data_storage.compute_size([self.c_hash])
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -1064,10 +1074,18 @@ class Dataset(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, c_name=None, c_hash=None, size=-1):
+    def __init__(self, node_id, execution_environment, c_name=None, c_hash=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         self.c_name = [] if c_name is None else c_name
         self.c_hash = [] if c_hash is None else c_hash
+
+    def clear_content(self):
+        del self.c_name
+        del self.c_hash
+        self.c_name = []
+        self.c_hash = []
+        self.computed = False
+        self.size = 0.0
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1085,7 +1103,7 @@ class Dataset(Node):
         return self.execution_environment.data_storage.get_dataset(self.c_name, self.c_hash)
 
     def compute_size(self):
-        if self.size == -1:
+        if self.computed and self.size == 0.0:
             start = datetime.now()
             self.size = self.execution_environment.data_storage.compute_size(self.c_hash)
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -1407,17 +1425,19 @@ class Dataset(Node):
         return self.generate_dataset_node('replace_columns', {'col_names': col_names}, v_id=supernode.id)
 
 
-# TODO: for now we are always generating randomized hashes for the generated aggregate columns
-# However, there should be a better way since we are losing some deduplication opportunities
-# e.g., if user performs groupby().count() on the same columns on two datasets, the results will be
-# duplicated and stored twice with different hashes
-# We should find a way to also store groupby graph inside the data storage
-# this way we can generate consistent hashes
+# TODO delete GroupBy node since they dont bring any benefit. seems they are lazily evaluated from the originating
+# TODO dataset/Feature as a result we are just storing the data in the graph for no reason
 class GroupBy(Node):
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
+
+    def clear_content(self):
+        del self.data_obj
+        self.data_obj = None
+        self.computed = False
+        self.size = 0.0
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1434,7 +1454,7 @@ class GroupBy(Node):
         return self.data_obj
 
     def compute_size(self):
-        if self.size == -1:
+        if self.computed and self.size == 0.0:
             raise Exception('Groupby objects size should be set using the set_size command first')
 
     def set_size(self, size):
@@ -1532,9 +1552,15 @@ class GroupBy(Node):
 
 class Agg(Node):
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
+
+    def clear_content(self):
+        del self.data_obj
+        self.data_obj = None
+        self.computed = False
+        self.size = 0.0
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1551,7 +1577,7 @@ class Agg(Node):
         return self.data_obj
 
     def compute_size(self):
-        if self.size == -1:
+        if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.data_obj) / AS_KB
@@ -1564,10 +1590,16 @@ class Agg(Node):
 
 
 class SK_Model(Node):
-
-    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
+    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
+        self.model_score = 0.0
+
+    def clear_content(self):
+        del self.data_obj
+        self.data_obj = None
+        self.computed = False
+        self.size = 0.0
         self.model_score = 0.0
 
     def set_model_score(self, model_score):
@@ -1591,7 +1623,7 @@ class SK_Model(Node):
         return self.data_obj
 
     def compute_size(self):
-        if self.size == -1:
+        if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.data_obj) / AS_KB
@@ -1637,8 +1669,13 @@ class SK_Model(Node):
 
 
 class Evaluation(Node):
+
+    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
+        Node.__init__(self, node_id, execution_environment, size)
+        self.data_obj = data_obj
+
     def compute_size(self):
-        if self.size == -1:
+        if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.data_obj) / AS_KB
@@ -1646,9 +1683,11 @@ class Evaluation(Node):
                                                    (datetime.now() - start).total_seconds())
         return self.size
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=-1):
-        Node.__init__(self, node_id, execution_environment, size)
-        self.data_obj = data_obj
+    def clear_content(self):
+        del self.data_obj
+        self.data_obj = None
+        self.computed = False
+        self.size = 0.0
 
     def data(self, verbose=0):
         self.update_freq()

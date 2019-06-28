@@ -73,14 +73,15 @@ class BaseGraph(object):
                 unique_types.append(node[1]['type'])
             labels = []
             for p in labels_for_vertex:
-                if p not in node[1]:
-                    labels.append('-')
-                elif p == 'id':
+
+                if p == 'id':
                     if node[1]['root']:
                         labels.append('root')
                     else:
                         labels.append(node[0][:10])
-                elif type(node[1][p]) is np.float64:
+                if p not in node[1]:
+                    labels.append('-')
+                elif type(node[1][p]) is np.float64 or type(node[1][p]) is float:
                     labels.append('{:.3f}'.format(node[1][p]))
                 else:
                     labels.append(str(node[1][p]))
@@ -146,10 +147,24 @@ class BaseGraph(object):
         for line in leg.get_lines():
             line.set_linewidth(4.0)
 
-    def get_total_size(self):
+    def get_total_size(self, for_types=None, exclude_types=None):
         t_size = 0
-        for node in self.graph.nodes(data='size'):
-            t_size += node[1]
+        # both cannot have some values
+        assert for_types is None or exclude_types is None
+
+        if exclude_types is None:
+            if for_types is None:
+                for node in self.graph.nodes(data='size'):
+                    t_size += node[1]
+            else:
+                for node in self.graph.nodes(data=True):
+                    if node[1]['type'] in for_types:
+                        t_size += node[1]['size']
+        else:
+            for node in self.graph.nodes(data=True):
+                if node[1]['type'] not in exclude_types:
+                    t_size += node[1]['size']
+
         return t_size
 
     def has_node(self, node_id):
@@ -278,12 +293,14 @@ class ExecutionGraph(BaseGraph):
                         # TODO: check if a shallow copy is enough
                         start_time = datetime.now()
                         cur_node['data'].c_name, cur_node['data'].c_hash = self.compute_next(prev_node, edge)
+                        cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = cur_node['data'].compute_size()
                     # all the other node types they contain the data themselves
                     else:
                         start_time = datetime.now()
                         cur_node['data'].data_obj = self.compute_next(prev_node, edge)
+                        cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         if cur_node['type'] == 'GroupBy':
                             # TODO It's not easy to figure out a groupby objects size
@@ -292,8 +309,6 @@ class ExecutionGraph(BaseGraph):
                             cur_node['size'] = cur_node['data'].set_size(prev_node['size'])
                         else:
                             cur_node['size'] = cur_node['data'].compute_size()
-
-                    cur_node['data'].computed = True
                     edge['execution_time'] = total_time
             else:
                 edge['execution_time'] = 0.0
@@ -365,8 +380,11 @@ class ExecutionGraph(BaseGraph):
 class HistoryGraph(BaseGraph):
     def __init__(self, graph=None, roots=None):
         super(HistoryGraph, self).__init__(graph, roots)
+        self.extended = False
 
     def extend(self, workload):
+        if self.extended:
+            raise Exception('graph for this workload is already extended')
         # make sure the workload graph is post processed, i.e., the model scores are added to the graph
         if not workload.post_processed:
             workload.post_process()
@@ -391,3 +409,5 @@ class HistoryGraph(BaseGraph):
                 else:
                     metas[node[0]] = node[1] + 1
             nx.set_node_attributes(self.graph, metas, 'meta_freq')
+
+        self.extended = True
