@@ -260,14 +260,17 @@ class HashBasedOptimizer(Optimizer):
         # here we optimize workload graph with historical graph
         if not history.is_empty():
             reuse_optimization_time_start = datetime.now()
-            workload_subgraph = self.compute_execution_subgraph(history, workload, v_id)
+            workload_subgraph = self.compute_execution_subgraph(history, workload, v_id, verbose=verbose)
             reuse_optimization = (datetime.now() - reuse_optimization_time_start).total_seconds()
         else:
             workload_subgraph = workload.compute_execution_subgraph(v_id)
             reuse_optimization = 0
 
         final_schedule = workload.compute_result_with_subgraph(workload_subgraph)
-
+        if verbose == 1:
+            schedule_length = len(final_schedule)
+            if schedule_length > 0:
+                print 'executing {} steps to compute vertex {}'.format(schedule_length, v_id)
         lapsed = (datetime.now() - start).total_seconds()
         if v_id in self.times:
             raise Exception('something is wrong, {} should have been already computed'.format(v_id))
@@ -279,7 +282,8 @@ class HashBasedOptimizer(Optimizer):
             #     path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
             self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
 
-    def compute_execution_subgraph(self, history, workload, vertex):
+    # TODO measure number of reads in history graph
+    def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
         def get_path(terminal, explore_list, materialize_list):
             if history.graph.has_node(vertex) and history.graph.nodes[vertex]['data'].computed:

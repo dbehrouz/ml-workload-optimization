@@ -36,7 +36,7 @@ class ExecutionEnvironment(object):
             self.optimizer = SearchBasedOptimizer()
         else:
             raise Exception('Unknown optimizer type')
-        self.workload_graph = ExecutionGraph()
+        self.workload_graph = None
         self.history_graph = HistoryGraph()
         self.time_manager = dict()
 
@@ -66,12 +66,13 @@ class ExecutionEnvironment(object):
             raise Exception('cannot get the storage size before history graph is extended')
         return self.history_graph.get_total_size(exclude_types=['Dataset', 'Feature']) + self.data_storage.total_size()
 
-    def save_history(self, environment_folder, overwrite=False):
+    def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
         if not os.path.exists(environment_folder):
             os.mkdir(environment_folder)
-        self.update_history()
+        if not skip_history_update:
+            self.update_history()
         start_save_graph = datetime.now()
 
         with open(environment_folder + '/graph', 'wb') as output:
@@ -131,6 +132,7 @@ class ExecutionEnvironment(object):
 
         self.history_graph = HistoryGraph(graph, roots)
         self.history_graph.set_environment(self)
+        self.history_graph.extended = True
         end_graph_load = datetime.now()
         self.update_time(BenchmarkMetrics.LOAD_HISTORY, (end_graph_load - start_graph_load).total_seconds())
         with open(environment_folder + '/storage', 'rb') as d_input:
@@ -248,6 +250,13 @@ class Node(object):
 
     @abstractmethod
     def data(self, verbose):
+        """
+        verbose = 0 ==> no logging
+        verbose = 1 ==> simple logging
+
+        :param verbose:
+        :return:
+        """
         pass
 
     @abstractmethod
@@ -797,9 +806,7 @@ class Feature(Node):
         return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
 
     def compute_size(self):
-        print 'in size computation {} and {}'.format(self.computed, self.size)
         if self.computed and self.size == 0.0:
-            print 'computing the size'
             start = datetime.now()
             self.size = self.execution_environment.data_storage.compute_size([self.c_hash])
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,

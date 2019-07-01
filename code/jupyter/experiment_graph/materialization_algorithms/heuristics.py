@@ -58,19 +58,15 @@ def compute_vertex_potential(graph, modify_graph=True, alpha=0.9):
             potentials[node[0]] = 0.0
             connected_models[node[0]] = set()
 
-    # TODO this should be investigated, but it only seems fair if we assign potential and num pipeline to evaluation
-    # and test datasets as well
+    # TODO so far the only edges going out of a model are the feature importance operation and score operation which has
+    # two levels
     for m in ml_models:
-        out = list(graph.out_edges(m))
-        assert len(out) == 1
-        out = out[0][1]
-        connected_models[out] = {m}
-        potentials[out] = potentials[m]
-        outout = list(graph.out_edges(out))
-        assert len(outout) == 1
-        outout = outout[0][1]
-        connected_models[outout] = {m}
-        potentials[outout] = potentials[m]
+        for _, out in graph.out_edges(m):
+            connected_models[out] = {m}
+            potentials[out] = potentials[m]
+            for _, outout in graph.out_edges(out):
+                connected_models[outout] = {m}
+                potentials[outout] = potentials[m]
 
     total_score = 0.0  # for keeping track of the sum of score to compute the score for out of reach nodes
     for n in reversed(list(nx.topological_sort(graph))):

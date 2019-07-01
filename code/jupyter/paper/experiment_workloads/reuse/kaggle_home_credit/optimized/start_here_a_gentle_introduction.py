@@ -24,28 +24,28 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-def run(execution_environment, root_data):
+def run(execution_environment, root_data, verbose=0):
     print(os.listdir(root_data))
     app_train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
-    print('Training data shape: ', app_train.shape().data())
-    app_train.head().data()
+    print('Training data shape: ', app_train.shape().data(verbose))
+    app_train.head().data(verbose)
 
     app_test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
-    print('Testing data shape: ', app_test.shape().data())
-    app_test.head().data()
+    print('Testing data shape: ', app_test.shape().data(verbose))
+    app_test.head().data(verbose)
 
     test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
 
-    app_train['TARGET'].value_counts().data()
+    app_train['TARGET'].value_counts().data(verbose)
 
-    app_train['TARGET'].data().astype(int).plot.hist()
+    app_train['TARGET'].data(verbose).astype(int).plot.hist()
 
     # Function to calculate missing values by column# Funct
     def missing_values_table(dataset):
         # Total missing values
-        mis_val = dataset.isnull().sum().data()
+        mis_val = dataset.isnull().sum().data(verbose)
 
-        mis_val_percent = 100 * mis_val / len(dataset.data())
+        mis_val_percent = 100 * mis_val / len(dataset.data(verbose))
 
         # Make a table with the results
         mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
@@ -60,8 +60,8 @@ def run(execution_environment, root_data):
             '% of Total Values', ascending=False).round(1)
 
         # Print some summary information
-        print("Your selected dataframe has " + str(dataset.shape().data()[1]) + " columns.\n"
-                                                                                "There are " + str(
+        print("Your selected dataframe has " + str(dataset.shape().data(verbose)[1]) + " columns.\n"
+                                                                                       "There are " + str(
             mis_val_table_ren_columns.shape[0]) +
               " columns that have missing values.")
 
@@ -71,18 +71,18 @@ def run(execution_environment, root_data):
     missing_values = missing_values_table(app_train)
     missing_values.head(20)
 
-    app_train.dtypes().data().value_counts()
+    app_train.dtypes().data(verbose).value_counts()
 
-    app_train.select_dtypes('object').nunique().data()
+    app_train.select_dtypes('object').nunique().data(verbose)
 
     from experiment_graph.sklearn_helper.preprocessing import LabelEncoder
     # Create a label encoder object
     le_count = 0
 
-    columns = app_train.select_dtypes('object').data().columns
+    columns = app_train.select_dtypes('object').data(verbose).columns
     for col in columns:
         # we are not using nunique because it discard nan
-        if app_train[col].nunique(dropna=False).data() <= 2:
+        if app_train[col].nunique(dropna=False).data(verbose) <= 2:
             # TODO If the LabelEncoder is built outside of the loop
             # TODO the fit doesnt work properly
             # TODO seems only the first time fit is really called and the other times
@@ -96,39 +96,39 @@ def run(execution_environment, root_data):
             # Keep track of how many columns were label encoded
             le_count += 1
     print('%d columns were label encoded.' % le_count)
-    app_train.data()
-    app_test.data()
+    app_train.data(verbose)
+    app_test.data(verbose)
 
     app_train = app_train.onehot_encode()
     app_test = app_test.onehot_encode()
 
-    print('Training Features shape: ', app_train.shape().data())
-    print('Testing Features shape: ', app_test.shape().data())
+    print('Training Features shape: ', app_train.shape().data(verbose))
+    print('Testing Features shape: ', app_test.shape().data(verbose))
 
     train_labels = app_train['TARGET']
-    train_columns = app_train.data().columns
-    test_columns = app_test.data().columns
+    train_columns = app_train.data(verbose).columns
+    test_columns = app_test.data(verbose).columns
     for c in train_columns:
         if c not in test_columns:
             app_train = app_train.drop(c)
 
     app_train = app_train.add_columns('TARGET', train_labels)
 
-    print('Training Features shape: ', app_train.shape().data())
-    print('Testing Features shape: ', app_test.shape().data())
+    print('Training Features shape: ', app_train.shape().data(verbose))
+    print('Testing Features shape: ', app_test.shape().data(verbose))
 
-    (app_train['DAYS_BIRTH'] / 365).describe().data()
+    (app_train['DAYS_BIRTH'] / 365).describe().data(verbose)
 
-    app_train['DAYS_EMPLOYED'].describe().data()
+    app_train['DAYS_EMPLOYED'].describe().data(verbose)
 
-    app_train['DAYS_EMPLOYED'].data().plot.hist(title='Days Employment Histogram')
+    app_train['DAYS_EMPLOYED'].data(verbose).plot.hist(title='Days Employment Histogram')
     plt.xlabel('Days Employment')
 
     anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
     non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
-    print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data()))
-    print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data()))
-    print('There are %d anomalous days of employment' % anom.shape().data()[0])
+    print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data(verbose)))
+    print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data(verbose)))
+    print('There are %d anomalous days of employment' % anom.shape().data(verbose)[0])
 
     days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
     app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
@@ -136,7 +136,7 @@ def run(execution_environment, root_data):
     app_train = app_train.drop('DAYS_EMPLOYED')
     app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
 
-    app_train["DAYS_EMPLOYED"].data().plot.hist(title='Days Employment Histogram');
+    app_train["DAYS_EMPLOYED"].data(verbose).plot.hist(title='Days Employment Histogram');
     plt.xlabel('Days Employment')
 
     days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
@@ -145,10 +145,10 @@ def run(execution_environment, root_data):
     app_test = app_test.drop('DAYS_EMPLOYED')
     app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
     print('There are %d anomalies in the test data out of %d entries'
-          % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(),
-             app_test.shape().data()[0]))
+          % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(verbose),
+             app_test.shape().data(verbose)[0]))
 
-    correlations = app_train.corr().data()
+    correlations = app_train.corr().data(verbose)
     top = correlations['TARGET'].sort_values()
     # Display correlations
     print('Most Positive Correlations:\n', top.tail(15))
@@ -157,22 +157,22 @@ def run(execution_environment, root_data):
     abs_age = app_train['DAYS_BIRTH'].abs()
     app_train = app_train.drop('DAYS_BIRTH')
     app_train = app_train.add_columns('DAYS_BIRTH', abs_age)
-    app_train['DAYS_BIRTH'].corr(app_train['TARGET']).data()
+    app_train['DAYS_BIRTH'].corr(app_train['TARGET']).data(verbose)
 
     # Set the style of plots
     plt.style.use('fivethirtyeight')
 
     # Plot the distribution of ages in years
-    plt.hist((app_train['DAYS_BIRTH'] / 365).data(), edgecolor='k', bins=25)
+    plt.hist((app_train['DAYS_BIRTH'] / 365).data(verbose), edgecolor='k', bins=25)
     plt.title('Age of Client')
     plt.xlabel('Age (years)')
     plt.ylabel('Count')
 
     plt.figure(figsize=(10, 8))
     # KDE plot of loans that were repaid on time
-    sns.kdeplot((app_train[app_train['TARGET'] == 0]['DAYS_BIRTH'] / 365).data(), label='target == 0')
+    sns.kdeplot((app_train[app_train['TARGET'] == 0]['DAYS_BIRTH'] / 365).data(verbose), label='target == 0')
     # KDE plot of loans which were not repaid on time
-    sns.kdeplot((app_train[app_train['TARGET'] == 1]['DAYS_BIRTH'] / 365).data(), label='target == 1')
+    sns.kdeplot((app_train[app_train['TARGET'] == 1]['DAYS_BIRTH'] / 365).data(verbose), label='target == 1')
     # Labeling of plot
     plt.xlabel('Age (years)')
     plt.ylabel('Density')
@@ -185,15 +185,15 @@ def run(execution_environment, root_data):
     binned = age_data['YEARS_BIRTH'].binning(20, 70, 11)
     binned.setname('YEARS_BINNED')
     age_data = age_data.add_columns('YEARS_BINNED', binned)
-    age_data.head(10).data()
+    age_data.head(10).data(verbose)
 
     age_groups = age_data.groupby('YEARS_BINNED').mean()
-    age_groups.data()
+    age_groups.data(verbose)
 
     plt.figure(figsize=(8, 8))
 
     # Graph the age bins and the average of the target as a bar plot
-    plt.bar(age_groups.data().index.astype(str), age_groups.data()['TARGET'] * 100)
+    plt.bar(age_groups.data(verbose).index.astype(str), age_groups.data(verbose)['TARGET'] * 100)
 
     # Plot labeling
     plt.xticks(rotation=75)
@@ -202,7 +202,7 @@ def run(execution_environment, root_data):
     plt.title('Failure to Repay by Age Group')
 
     ext_data = app_train[['TARGET', 'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
-    ext_data_corrs = ext_data.corr().data()
+    ext_data_corrs = ext_data.corr().data(verbose)
 
     plt.figure(figsize=(8, 6))
 
@@ -218,10 +218,10 @@ def run(execution_environment, root_data):
         plt.subplot(3, 1, i + 1)
         # plot repaid loans
         source_data = app_train[[column, 'TARGET']][app_train['TARGET'] == 0]
-        sns.kdeplot(source_data[app_train[column].notna()][column].data(), label='target == 0')
+        sns.kdeplot(source_data[app_train[column].notna()][column].data(verbose), label='target == 0')
         # plot loans that were not repaid
         source_data = app_train[[column, 'TARGET']][app_train['TARGET'] == 1]
-        sns.kdeplot(source_data[app_train[column].notna()][column].data(), label='target == 1')
+        sns.kdeplot(source_data[app_train[column].notna()][column].data(verbose), label='target == 1')
 
         # Label the plots
         plt.title('Distribution of %s by Target Value' % column)
@@ -239,9 +239,9 @@ def run(execution_environment, root_data):
     plot_data = plot_data.head(100000).dropna()
 
     # Create the pair grid object
-    grid = sns.PairGrid(data=plot_data.data(), size=3, diag_sharey=False,
+    grid = sns.PairGrid(data=plot_data.data(verbose), size=3, diag_sharey=False,
                         hue='TARGET',
-                        vars=[x for x in list(plot_data.data().columns) if x != 'TARGET'])
+                        vars=[x for x in list(plot_data.data(verbose).columns) if x != 'TARGET'])
 
     # Upper is a scatter plot
     grid.map_upper(plt.scatter, alpha=0.2)
@@ -282,7 +282,7 @@ def run(execution_environment, root_data):
     # Transform the features
     poly_features = poly_transformer.transform(poly_features)
     poly_features_test = poly_transformer.transform(poly_features_test)
-    print('Polynomial Features shape: ', poly_features.shape().data())
+    print('Polynomial Features shape: ', poly_features.shape().data(verbose))
 
     new_names = poly_transformer.get_feature_names(input_features=['EXT_SOURCE_1', 'EXT_SOURCE_2',
                                                                    'EXT_SOURCE_3', 'DAYS_BIRTH'])
@@ -293,7 +293,7 @@ def run(execution_environment, root_data):
     poly_features = poly_features.add_columns('TARGET', poly_target)
 
     # Find the correlations with the target
-    poly_corrs = poly_features.corr().data()['TARGET'].sort_values()
+    poly_corrs = poly_features.corr().data(verbose)['TARGET'].sort_values()
 
     # Display most negative and most positive
     print(poly_corrs.head(10))
@@ -310,17 +310,17 @@ def run(execution_environment, root_data):
     app_test_poly = app_test.merge(poly_features_test, on='SK_ID_CURR', how='left')
 
     # Align the dataframes
-    train_columns = app_train_poly.data().columns
-    test_columns = app_test_poly.data().columns
+    train_columns = app_train_poly.data(verbose).columns
+    test_columns = app_test_poly.data(verbose).columns
     for c in train_columns:
         if c not in test_columns:
             app_train_poly = app_train_poly.drop(c)
 
     # Print out the new shapes
     print('Training data with polynomial features shape: ',
-          app_train_poly.shape().data())
+          app_train_poly.shape().data(verbose))
     print('Testing data with polynomial features shape:  ',
-          app_test_poly.shape().data())
+          app_test_poly.shape().data(verbose))
 
     app_train_domain = app_train.copy()
     app_test_domain = app_test.copy()
@@ -356,12 +356,12 @@ def run(execution_environment, root_data):
         # plot repaid loans
         negative = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 0]
         sns.kdeplot(
-            negative[app_train_domain[column].notna()][column].data(),
+            negative[app_train_domain[column].notna()][column].data(verbose),
             label='target == 0')
         # plot loans that were not repaid
         positive = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 1]
         sns.kdeplot(
-            positive[app_train_domain[column].notna()][column].data(),
+            positive[app_train_domain[column].notna()][column].data(verbose),
             label='target == 1')
 
         # Label the plots
@@ -374,14 +374,14 @@ def run(execution_environment, root_data):
     from experiment_graph.sklearn_helper.preprocessing import MinMaxScaler
 
     # Drop the target from the training data
-    columns = app_train.data().columns
+    columns = app_train.data(verbose).columns
     if 'TARGET' in columns:
         train = app_train.drop(columns=['TARGET'])
     else:
         train = app_train.copy()
 
     # Feature names
-    features = list(train.data().columns)
+    features = list(train.data(verbose).columns)
 
     # Copy of the testing data
     test = app_test.copy()
@@ -404,8 +404,8 @@ def run(execution_environment, root_data):
     train = scaler.transform(train)
     test = scaler.transform(test)
 
-    print('Training data shape: ', train.shape().data())
-    print('Testing data shape: ', test.shape().data())
+    print('Training data shape: ', train.shape().data(verbose))
+    print('Testing data shape: ', test.shape().data(verbose))
 
     from experiment_graph.sklearn_helper.linear_model import LogisticRegression
 
@@ -417,7 +417,7 @@ def run(execution_environment, root_data):
 
     log_reg.score(test,
                   test_labels['TARGET'],
-                  score_type='auc').data()
+                  score_type='auc').data(verbose)
 
     from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
@@ -432,9 +432,9 @@ def run(execution_environment, root_data):
 
     random_forest.score(test,
                         test_labels['TARGET'],
-                        score_type='auc').data()
+                        score_type='auc').data(verbose)
 
-    poly_features_names = list(app_train_poly.data().columns)
+    poly_features_names = list(app_train_poly.data(verbose).columns)
 
     # Impute the polynomial features
     imputer2 = Imputer(strategy='median')
@@ -455,11 +455,11 @@ def run(execution_environment, root_data):
 
     random_forest_poly.score(app_test_poly,
                              test_labels['TARGET'],
-                             score_type='auc').data()
+                             score_type='auc').data(verbose)
 
     app_train_domain = app_train_domain.drop(columns='TARGET')
 
-    domain_features_names = list(app_train_domain.data().columns)
+    domain_features_names = list(app_train_domain.data(verbose).columns)
 
     # Impute the domainnomial features
     imputer = Imputer(strategy='median')
@@ -482,7 +482,7 @@ def run(execution_environment, root_data):
 
     random_forest_domain.score(domain_features_test,
                                test_labels['TARGET'],
-                               score_type='auc').data()
+                               score_type='auc').data(verbose)
 
     def plot_feature_importances(df):
         """
@@ -504,20 +504,20 @@ def run(execution_environment, root_data):
         df = df.sort_values('importance', ascending=False)
 
         # Normalize the feature importances to add up to one
-        df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data())
+        df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data(verbose))
 
         # Make a horizontal bar chart of feature importances
         plt.figure(figsize=(10, 6))
         ax = plt.subplot()
 
         # Need to reverse the index to plot most important on top
-        ax.barh(list(reversed(list(df.data().index[:15]))),
-                df['importance_normalized'].data().head(15),
+        ax.barh(list(reversed(list(df.data(verbose).index[:15]))),
+                df['importance_normalized'].data(verbose).head(15),
                 align='center', edgecolor='k')
 
         # Set the yticks and labels
-        ax.set_yticks(list(reversed(list(df.data().index[:15]))))
-        ax.set_yticklabels(df['feature'].data().head(15))
+        ax.set_yticks(list(reversed(list(df.data(verbose).index[:15]))))
+        ax.set_yticklabels(df['feature'].data(verbose).head(15))
 
         # Plot labeling
         plt.xlabel('Normalized Importance')
@@ -578,8 +578,8 @@ def run(execution_environment, root_data):
             lgb_featres = lgb_featres.onehot_encode()
             test_features = test_features.onehot_encode()
 
-            features_columns = lgb_featres.data().columns
-            test_features_columns = test_features.data().columns
+            features_columns = lgb_featres.data(verbose).columns
+            test_features_columns = test_features.data(verbose).columns
             for c in features_columns:
                 if c not in test_features_columns:
                     lgb_featres = lgb_featres.drop(c)
@@ -611,11 +611,11 @@ def run(execution_environment, root_data):
         else:
             raise ValueError("Encoding must be either 'ohe' or 'le'")
 
-        print('Training Data Shape: ', lgb_featres.shape().data())
-        print('Testing Data Shape: ', test_features.shape().data())
+        print('Training Data Shape: ', lgb_featres.shape().data(verbose))
+        print('Testing Data Shape: ', test_features.shape().data(verbose))
 
         # Extract feature names
-        feature_names = list(lgb_featres.data().columns)
+        feature_names = list(lgb_featres.data(verbose).columns)
 
         # Create the model
         model = LGBMClassifier(n_estimators=10, objective='binary',
@@ -635,7 +635,7 @@ def run(execution_environment, root_data):
         model.score(test_features,
                     test_labels['TARGET'],
                     score_type='auc',
-                    custom_args={'num_iteration': best_iteration}).data()
+                    custom_args={'num_iteration': best_iteration}).data(verbose)
 
         feature_importances = model.feature_importances(feature_names)
 
@@ -650,10 +650,6 @@ def run(execution_environment, root_data):
     fi_domain = model(app_train_domain, app_test_domain)
     fi_sorted = plot_feature_importances(fi_domain)
 
-    # the total time is captured by the profiler,
-    # here we return the experiment_graphs load, save, and the total time the system spent in training models
-    return execution_environment.time_manager.get('model-training', 0)
-
 
 if __name__ == "__main__":
     from experiment_graph.execution_environment import ExecutionEnvironment
@@ -663,9 +659,10 @@ if __name__ == "__main__":
     ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
     DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
-    # ee.load_environment(DATABASE_PATH)
-    run(ee, root_data)
-    ee.save_history(DATABASE_PATH)
+    ee.load_history_from_disk(DATABASE_PATH)
+    ee.new_workload()
+    run(ee, root_data, verbose=1)
+    # ee.save_history(DATABASE_PATH)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

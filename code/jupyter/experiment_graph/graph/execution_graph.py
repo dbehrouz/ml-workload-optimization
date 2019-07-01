@@ -312,12 +312,14 @@ class ExecutionGraph(BaseGraph):
                             # TODO It's not easy to figure out a groupby objects size
                             # but it seems it is very similar to the input dataframe that groupby
                             # was applied to, so for now we the set the size to the previous one
-                            cur_node['size'] = cur_node['data'].set_size(prev_node['size'])
+                            cur_node['size'] = prev_node['size']
+                            cur_node['data'].set_size(prev_node['size'])
                         else:
                             cur_node['size'] = cur_node['data'].compute_size()
                     edge['execution_time'] = total_time
             else:
                 edge['execution_time'] = 0.0
+                cur_node['size'] = 0.0
         return schedule
 
     def compute_result(self, v_id, verbose=0):

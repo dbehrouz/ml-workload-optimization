@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from heuristics import compute_recreation_cost, compute_vertex_potential
 
 
 class Materializer:
@@ -11,6 +12,8 @@ class Materializer:
         self.modify_graph = modify_graph
         self.storage_budget = storage_budget
         self.verbose = verbose
+        compute_recreation_cost(execution_environment.history_graph.graph, modify_graph=True)
+        compute_vertex_potential(execution_environment.history_graph.graph, modify_graph=True)
 
     def compute_rhos(self):
         rhos = []
@@ -20,12 +23,16 @@ class Materializer:
 
             elif node[1]['type'] == 'SuperNode':
                 rho = 0
-
             else:
-                rho_object = RHO(node[0], node[1]['recreation_cost'], node[1]['potential'], node[1]['num_pipelines'],
-                                 node[1]['size'], self.use_rc, self.use_pt)
-                rhos.append(rho_object)
-                rho = rho_object.rho
+                if node[1]['size'] == 0.0:
+                    print 'nothing to materialize for node {}'.format(node[0])
+                    rho = -1
+                else:
+                    rho_object = RHO(node[0], node[1]['recreation_cost'], node[1]['potential'],
+                                     node[1]['num_pipelines'],
+                                     node[1]['size'], self.use_rc, self.use_pt)
+                    rhos.append(rho_object)
+                    rho = rho_object.rho
 
             if self.modify_graph:
                 node[1]['rho'] = rho
@@ -202,6 +209,8 @@ class StorageAwareMaterializer(Materializer):
             elif node[1]['type'] == 'Feature':
 
                 if node[0] in should_materialize:
+                    if node[1]['data'].c_hash == '':
+                        print 'problem at node {}'.format(node[0])
                     to_keep.add(node[1]['data'].c_hash)
             else:
                 if node[0] in should_materialize:
@@ -212,9 +221,7 @@ class StorageAwareMaterializer(Materializer):
 
             if node['type'] == 'Feature':
                 if node['data'].c_hash in to_keep:
-                    print 'before: {}'.format(rho.size)
                     rho.size = 0.0
-                    print 'after: {}'.format(rho.size)
             if node['type'] == 'Dataset':
                 cols = []
                 for c in node['data'].c_hash:
