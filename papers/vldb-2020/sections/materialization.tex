@@ -82,10 +82,10 @@ For example, in our motivating example (Figure \ref{improved-use-case}), Competi
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, roots = root artifacts of task, $\mathcal{B}=$ storage budget of task
+\Require  $G(V,E)=$ experiment graph, $\mathcal{B}=$ storage budget of task
 \Ensure experiment graph with materialized vertices
 \State $S= 0$ \Comment {current size of the materialized artifacts}
-\For  {$v$ in roots} \Comment{materialize all the root nodes}
+\For  {$v$ in roots(G)} \Comment{materialize all the root nodes}
 	\If{$v.mat= 0$}
 		\State $v.mat = 1$
 		\State $S = S + v.s$
@@ -174,28 +174,33 @@ This results in a large decrease in the storage cost (e.g., for the same script 
 
 % maybe a better name
 \textbf{Greedy Meta-Algorithm.}
-We propose a meta-algorithm which iteratively calls Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
-We slightly modify the Artifact-Materialization algorithm, where instead of initializing the current size, $S$, to 0 MB on Line 1 of Algorithm \ref{algorithm-materialization}, we pass the current size as an input to the algorithm. 
+We propose a meta-algorithm which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
 Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage aware artifact materialization algorithm.
-Initially, we compute the materialized graph by calling the Artifact-Materialization algorithm and computing its compressed storage cost by calling the compress method of the storage manager (Lines 1 and 2 of Algorithm \ref{algorithm-compression-aware-materialization}).
-The compress method of the storage manager removes the duplicated columns of the different artifacts of the experiment graph and returns the storage size of the graph after compression.
-While the size of the compressed materialized graph is smaller than the storage budget $\mathcal{B}$, we make repeated calls to the Artifact-Materialization algorithm, passing the current compressed size as the initial size argument.
+We define a variable to represent the remaining budget (Line 1).
+While the budget is not exhausted, we proceed as follows.
+We extract the current set of materialized nodes from the graph(Line 3), then we apply the Artifact-Materialization Algorithm using the remaining budget to compute new vertices for materialization.
+If the materialization process cannot find any further vertices to materialize, we return the current graph (Line 6).
+We compute the compressed size of the graph artifacts (Line 8), by invoking the compress method of the storage manager which computes the size of graph artifacts after deduplication. 
+Next, we update the required storage size of the remaining artifacts (Line 9).
+For example, if the materialized artifact $v_1$ contains some of the columns of the non-materialized artifact $v_2$, then we only need to store the remaining columns of $v_2$ to fully materialize it.
+Therefore, we update the size of $v_2$ to indicate the amount of storage it needs to fully materialize.
+Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
+
 \begin{algorithm}[h]
 \caption{Storage-Aware-Artifact-Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, roots = root artifacts of task, $\mathcal{B}=$ storage budget of task
+\Require  $G(V,E)=$ experiment graph, $\mathcal{B}=$ storage budget of task
 \Ensure experiment graph with materialized vertices
-\Ensure experiment graph with materialized vertices
-\State $G\_mat$ = \textit{Artifact-Materialization}($G, \mathcal{B}, 0$)
-\State $S$ = $storage\_manager.compress(G\_mat)$
-\While {$S < \mathcal{B}$}
-	\State $G\_mat^\prime$  = \textit{Artifact-Materialization}($G\_mat, \mathcal{B}, S$)
-	\State $S$ = $storage\_manager.compress(G\_mat^\prime)$
-	\If  {$S \geq \mathcal{B}$}
-		\State return $G\_mat$
-	\Else
-		 \State $G\_mat = G\_mat^\prime$
+\State $R = \mathcal{B}$ 
+\While {$R > 0$}
+	\State $prev\_mats = materialized\_nodes(G)$
+	\State $G$  = \textit{Artifact-Materialization}($G, R$)
+	\If  {$prev\_mats = materialized\_nodes(G)$}
+		\State return $G$
 	\EndIf
+	\State $compressed\_size$ = $storage\_manager.compress(G)$
+	\State $storage\_manager.update\_required\_size(G)$
+	\State  $R = \mathcal{B} -  compressed\_size$
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
