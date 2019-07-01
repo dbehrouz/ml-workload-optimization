@@ -167,6 +167,12 @@ class BaseGraph(object):
 
         return t_size
 
+    def get_size_of(self, node_list):
+        size = 0.0
+        for n in node_list:
+            size += self.graph.nodes[n]['size']
+        return size
+
     def has_node(self, node_id):
         return self.graph.has_node(node_id)
 
