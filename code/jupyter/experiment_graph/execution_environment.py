@@ -98,6 +98,7 @@ class ExecutionEnvironment(object):
             total_reuse_time += v[1]
         self.update_time(BenchmarkMetrics.TOTAL_EXECUTION, total_execution_time)
         self.update_time(BenchmarkMetrics.TOTAL_REUSE, total_reuse_time)
+        self.update_time(BenchmarkMetrics.TOTAL_HISTORY_READ, self.optimizer.history_reads)
 
     def new_workload(self):
         """

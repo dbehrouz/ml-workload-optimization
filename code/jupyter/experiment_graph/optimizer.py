@@ -21,6 +21,7 @@ class Optimizer:
         # sum of execution_time + optimization_time is total time spent on returning the data in vertex
         # back to the user
         self.times = {}
+        self.history_reads = 0
 
     @abstractmethod
     def optimize(self, history, workload, v_id, verbose):
@@ -283,23 +284,31 @@ class HashBasedOptimizer(Optimizer):
             self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
 
     # TODO measure number of reads in history graph
+    # TODO measure time of these
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
-        def get_path(terminal, explore_list, materialize_list):
-            if history.graph.has_node(vertex) and history.graph.nodes[vertex]['data'].computed:
-                materialize_list.append(vertex)
-            else:
-                if not workload.graph.nodes[terminal]['data'].computed:
-                    explore_list.append(terminal)
-                    for v in workload.graph.predecessors(terminal):
-                        explore_list.append(v)
-                        if not workload.graph.nodes[v]['data'].computed:
-                            get_path(v, explore_list, materialize_list)
+        def get_path(terminal, explore_list, materialize_list, history_reads):
+            if terminal not in explore_list:
+                if history.graph.has_node(vertex):
+                    history_reads += 1
+                    if history.graph.nodes[vertex]['data'].computed:
+                        history_reads += 1
+                        materialize_list.add(vertex)
+                    return history_reads
+                else:
+                    if not workload.graph.nodes[terminal]['data'].computed:
+                        explore_list.add(terminal)
+                        for v in workload.graph.predecessors(terminal):
+                            if not workload.graph.nodes[v]['data'].computed:
+                                history_reads = history_reads + get_path(v, explore_list, materialize_list,
+                                                                         history_reads)
+            return history_reads
 
-        materialized_vertices = []
-        execution_vertices = []
-        get_path(vertex, execution_vertices, materialized_vertices)
+        materialized_vertices = set()
+        execution_vertices = set()
 
+        total_history_graph_reads = get_path(vertex, execution_vertices, materialized_vertices, 0)
+        self.history_reads += total_history_graph_reads
         for m in materialized_vertices:
             self.copy_from_history(history.graph.nodes[m], workload.graph.nodes[m])
 

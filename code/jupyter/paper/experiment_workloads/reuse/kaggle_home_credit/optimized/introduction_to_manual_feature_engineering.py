@@ -6,6 +6,7 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
+import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
@@ -611,15 +612,12 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup-test'
-    # if os.path.isdir(DATABASE_PATH):
-    #     print 'loading the history graph!!!'
-    #     ee.load_history_from_disk(DATABASE_PATH)
-    run(ee, root_data, verbose=1)
-    # ee.save_history(DATABASE_PATH, overwrite=True)
+    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
 
-    # with open(DATABASE_PATH + '/optimizer_time_with_history', 'wb') as output:
-    #     pickle.dump(ee.optimizer.times, output, pickle.HIGHEST_PROTOCOL)
+    #ee.load_history_from_disk(DATABASE_PATH)
+    ee.new_workload()
+    run(ee, root_data, verbose=1)
+    ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
