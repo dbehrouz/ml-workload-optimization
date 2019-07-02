@@ -30,7 +30,30 @@
 %\usepackage[export]{adjustbox}
 %\usepackage{lipsum}% http://ctan.org/pkg/lipsum
 %\usepackage{graphicx}% http://ctan.org/pkg/graphicx
-\usepackage{soul}
+%\usepackage{soul}
+\usepackage{xcolor}
+% Use hladd to highlight newly added text
+\newcommand\hladd[1]{%
+  \bgroup
+  \hskip0pt\color{blue}%
+  #1%
+  \egroup
+}
+
+% Use hldel to highlight text that will be removed
+\newcommand\hldel[1]{%
+  \bgroup
+  \hskip0pt\color{red!80!black}%
+  #1%
+  \egroup
+}
+% Use hl when the highlighted text should be discussed with a reviewer (marked in the .tex file)
+\newcommand\hl[1]{%
+  \bgroup
+  \hskip0pt\color{green!80!black}%
+  #1%
+  \egroup
+}
 %\usepackage{float}
 %\usepackage{amsmath}
 \usepackage{todonotes}

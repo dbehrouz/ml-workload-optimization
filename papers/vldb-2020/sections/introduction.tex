@@ -1,11 +1,12 @@
 \section{Introduction} \label{sec-introduction}
 % Opening
-%TODO The opening sentence is a bit awkward, maybe break it into two.
-Machine learning is the process of analyzing training datasets to extract features and build a machine learning model using these features to solve a specific task, such as automatically labeling images based on the image content.
+\hladd{Machine learning is the process of analyzing training datasets to extract features and build machine learning models to solve different tasks, such as labeling images based on image content and detecting fraudulent credit card and bank transactions.}
 To solve machine learning tasks, a data scientist designs and executes a machine learning workload consisting of a set of exploratory data transformation steps and one or multiple model building steps.
+\hladd{Many of these workloads are executed in an interactive approach in notebook environments (e.g., Jupyter notebooks \cite{Kluyver:2016aa}), where users can examine the result of every operation.}
+
 Recent collaborative data science platforms facilitate workload sharing.
-As a result, data scientists can study other workloads, learn from them, and improve upon them to train better machine learning models.
-Some platforms such as Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} provide an intuitive way of sharing scripts and raw data and allow execution of the scripts on the platform using Jupyter notebooks \cite{Kluyver:2016aa}. 
+As a result, data scientists can study other workloads, learn from them, and improve them to train better machine learning models.
+Some platforms such as Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} provide an intuitive way of sharing scripts and raw data and allow execution of the scripts on the platform using Jupyter notebooks. 
 Other platforms such as OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and ProvDB \cite{miao2018provdb} enable the data scientists to store the operations and artifacts of their machine learning workloads, i.e., raw datasets, intermediate datasets resulting from the operations, and models with their hyperparameters.
 These platforms are typically referred to as experiment databases \cite{Vanschoren2012}.
 Data scientists can then query other users' operations and artifacts to search for more detailed information such as the types of operations, preprocessed datasets, models, hyperparameters, and evaluation metrics for specific machine learning tasks.
@@ -33,23 +34,24 @@ The second algorithm is storage-aware, i.e., it takes into account the deduplica
 Using the graph of the materialized artifacts, which we refer to as the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
 Specifically, we provide three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
-Reuse decreases the data processing time and enables interactive data analysis, especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
+Reuse decreases the data processing time especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
 In model warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.
-\hl{Warmstarting speeds up the convergence rate, resulting in shorter training time.}  %Tilmann: Do we have a reference? Behrouz: I cannot find specific papers studying the effect of warmstarting, though there are several that mention they are doing warmstarting because it is useful. I can cite some of those maybe? 
-Lastly, we propose to utilize the experiment graph to improve the process of hyperparameter tuning.
+Warmstarting speeds up the convergence rate, resulting in shorter training time.  %Tilmann: Do we have a reference? Behrouz: I cannot find specific papers studying the effect of warmstarting, though there are several that mention they are doing warmstarting because it is useful. I can cite some of those maybe? 
+\hladd{Reuse and warmstarting can create a faster feedback loop which enables users to try out different data transformation operations, models, and model hyperparameters based on the existing result in shorter time which is a requirement of interactive machine learning workloads.}
+\hldel{Lastly, we propose to utilize the experiment graph to improve the process of hyperparameter tuning.
 There are 3 common hyperparameter tuning techniques, namely, grid search, random search, and Bayesian hyperparameter search \cite{hutter2011sequential,snoek2012practical}.
 All three methods rely on defining a search space before the process of tuning begins.
 Setting the search space typically requires a combination of domain knowledge and machine learning expertise.
 As a result, non-expert users struggle with setting an effective search space.
 Moreover, after setting the search space, the Bayesian hyperparameter tuning technique requires many initial trials until it starts to propose promising hyperparameters.
 Using the existing model artifacts inside the experiment graph, we construct a feasible search space for hyperparameter tuning and initialize the process of the Bayesian hyperparameter tuning.
-As a result, data scientists can utilize the automatically defined search space for hyperparameter tuning (applicable to grid, random, and Bayesian search) and skip the initial trials of the Bayesian hyperparameter tuning.
+As a result, data scientists can utilize the automatically defined search space for hyperparameter tuning (applicable to grid, random, and Bayesian search) and skip the initial trials of the Bayesian hyperparameter tuning.}
 
 In summary, we make the following contributions:
 \begin{itemize}
 \item We present a graph representation of artifacts and operations of machine learning workloads.
 \item We propose algorithms for materializing the workloads artifacts in the experiment graph under limited storage capacity
-\item We propose automatic reuse and model warmstarting, as well as fast hyperparameter tuning for new workloads using the experiment graph.
+\item We propose automatic reuse and model warmstarting\hldel{, as well as fast hyperparameter tuning} for new workloads using the experiment graph.
 \end{itemize}
 
 The rest of this document is organized as follows.

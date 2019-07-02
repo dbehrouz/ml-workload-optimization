@@ -114,12 +114,9 @@ As a result, we cannot reconstruct the raw datasets if they are not materialized
 Then, for every non-materialized artifact, we compute the feasibility ratio, which is defined as the value of the $feasibility$ function of an artifact divided by its size.
 Then, we start materializing all the artifacts, sorted by their feasibility ratio, until the storage budget is exhausted.
 The feasibility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
-\todo[inline]{$|pipelines(v)|$ should be the tie breaker when two vertices have similar $potential(v) \times recreatio\_cost(G,v) $ values instead of multiplying it with the potential and recreation cost.}
-%TODO need to change v.out_degree as a metric for break ties rather than directly considering it in the formula.
-%TODO mention the range of each function (potential is 0-1), recreation cost is positive integers.
 \begin{equation}
 \begin{split}
-feasbility(G,v) = 	& |pipelines(v)| \\
+feasbility(G,v) = 	& \hldel{|pipelines(v)|} \\
 								&	potential(v) \times \\
 								& recreation\_cost(G,v)  
  \end{split}
@@ -176,14 +173,14 @@ This results in a large decrease in the storage cost (e.g., for the same script 
 \textbf{Greedy Meta-Algorithm.}
 We propose a meta-algorithm which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
 Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage aware artifact materialization algorithm.
-We define a variable to represent the remaining budget (Line 1).
+\hladd{We define a variable to represent the remaining budget (Line 1).
 While the budget is not exhausted, we proceed as follows.
-We extract the current set of materialized nodes from the graph(Line 3), then we apply the Artifact-Materialization Algorithm using the remaining budget to compute new vertices for materialization.
-If the materialization process cannot find any further vertices to materialize, we return the current graph (Line 6).
+We extract the current set of materialized nodes from the graph (Line 3), then we apply the Artifact-Materialization algorithm using the remaining budget to compute new vertices for materialization.
+If the Artifact-Materialization algorithm did not find any new vertices to materialize, we return the current graph (Line 6).
 We compute the compressed size of the graph artifacts (Line 8), by invoking the compress method of the storage manager which computes the size of graph artifacts after deduplication. 
 Next, we update the required storage size of the remaining artifacts (Line 9).
 For example, if the materialized artifact $v_1$ contains some of the columns of the non-materialized artifact $v_2$, then we only need to store the remaining columns of $v_2$ to fully materialize it.
-Therefore, we update the size of $v_2$ to indicate the amount of storage it needs to fully materialize.
+Therefore, we update the size of $v_2$ to indicate the amount of storage it requires to fully materialize.
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
 
 \begin{algorithm}[h]
@@ -204,7 +201,7 @@ Finally, we compute the remaining budget by deducting the compressed size from t
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
-
+}
 %TODO if existing algorithms produce good results, this can be a good follow up work and we do not need 
 %\textbf{Fractional Greedy Algorithm.}
 %\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. }
