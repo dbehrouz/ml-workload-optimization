@@ -440,7 +440,8 @@ def run(execution_environment, root_data, verbose=0):
                 dataframe of testing features to use
                 for making predictions with the model.
             encoding (str, default = 'ohe'):
-                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label encoding
+                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label
+                encoding
                 n_folds (int, default = 5): number of folds to use for cross validation
 
         Return
@@ -612,12 +613,11 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
+    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/materialized-no-groupby'
 
-    #ee.load_history_from_disk(DATABASE_PATH)
-    ee.new_workload()
+    ee.load_history_from_disk(DATABASE_PATH)
     run(ee, root_data, verbose=1)
-    ee.save_history(DATABASE_PATH, overwrite=True)
+    # ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

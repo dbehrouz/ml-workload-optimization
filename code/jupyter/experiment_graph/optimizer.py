@@ -275,41 +275,42 @@ class HashBasedOptimizer(Optimizer):
         lapsed = (datetime.now() - start).total_seconds()
         if v_id in self.times:
             raise Exception('something is wrong, {} should have been already computed'.format(v_id))
-        else:
-            # path = ''
-            # for pair in final_schedule:
-            #     if path == '':
-            #         path = pair[0]
-            #     path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
-            self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
+        # else:
+        #     path = ''
+        #     for pair in final_schedule:
+        #         if path == '':
+        #             path = pair[0]
+        #         path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
+        #     if len(final_schedule) > 0:
+        #         print path
+        self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
 
     # TODO measure number of reads in history graph
     # TODO measure time of these
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
-        def get_path(terminal, explore_list, materialize_list, history_reads):
-            if terminal not in explore_list:
-                if history.graph.has_node(vertex):
-                    history_reads += 1
-                    if history.graph.nodes[vertex]['data'].computed:
-                        history_reads += 1
-                        materialize_list.add(vertex)
+        def get_path(terminal, explore_list, materialize_list):
+            explore_list.add(terminal)
+            history_reads = 0
+            if history.graph.has_node(terminal):
+                history_reads += 1
+                if history.graph.nodes[terminal]['data'].computed:
+                    # history_reads += 1
+                    materialize_list.add(terminal)
                     return history_reads
-                else:
-                    if not workload.graph.nodes[terminal]['data'].computed:
-                        explore_list.add(terminal)
-                        for v in workload.graph.predecessors(terminal):
-                            if not workload.graph.nodes[v]['data'].computed:
-                                history_reads = history_reads + get_path(v, explore_list, materialize_list,
-                                                                         history_reads)
+
+            if not workload.graph.nodes[terminal]['data'].computed:
+                for v in workload.graph.predecessors(terminal):
+                    history_reads = history_reads + get_path(v, explore_list, materialize_list)
+
             return history_reads
 
         materialized_vertices = set()
         execution_vertices = set()
 
-        total_history_graph_reads = get_path(vertex, execution_vertices, materialized_vertices, 0)
+        total_history_graph_reads = get_path(vertex, execution_vertices, materialized_vertices)
         self.history_reads += total_history_graph_reads
         for m in materialized_vertices:
             self.copy_from_history(history.graph.nodes[m], workload.graph.nodes[m])
 
-        return workload.compute_execution_subgraph(vertex)
+        return workload.graph.subgraph(execution_vertices)

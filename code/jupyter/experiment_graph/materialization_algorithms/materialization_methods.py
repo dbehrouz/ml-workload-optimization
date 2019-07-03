@@ -23,6 +23,11 @@ class Materializer:
 
             elif node[1]['type'] == 'SuperNode':
                 rho = 0
+            elif node[1]['type'] == 'GroupBy':
+                # we are not materializing group by nodes at any cost
+                rho = 0
+                node[1]['data'].clear_content()
+                node[1]['size'] = 0.0
             else:
                 if node[1]['size'] == 0.0:
                     print 'nothing to materialize for node {}'.format(node[0])
@@ -128,10 +133,6 @@ class HeuristicsMaterializer(Materializer):
             raise Exception('num pipeline is not supported yet')
         graph = self.ee.history_graph.graph
         rhos = self.compute_rhos()
-        if self.verbose:
-            print 'initial rhos'
-            for r in rhos:
-                print r
         root_size = 0.0
         to_mat = []
         for n in graph.nodes(data=True):
@@ -147,9 +148,7 @@ class HeuristicsMaterializer(Materializer):
             print 'total size of materialized nodes: {}'.format(total_node_size)
             print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
                                                                                     len(should_materialize))
-            print 'remaining rhos after size recomputation'
-            for r in rhos:
-                print r
+
         return should_materialize
 
 
@@ -160,10 +159,6 @@ class StorageAwareMaterializer(Materializer):
             raise Exception('num pipeline is not supported yet')
 
         rhos = self.compute_rhos()
-        if self.verbose:
-            print 'initial rhos'
-            for r in rhos:
-                print r
         root_size = 0.0
         to_materialize = []
 
@@ -190,9 +185,6 @@ class StorageAwareMaterializer(Materializer):
                                                                                              actual_size)
                 print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
                                                                                         len(to_materialize))
-                print 'remaining rhos after size recomputation'
-                for r in rhos:
-                    print r
 
             i += 1
         return to_materialize

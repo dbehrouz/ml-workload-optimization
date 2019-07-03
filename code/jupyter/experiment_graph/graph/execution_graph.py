@@ -238,15 +238,14 @@ class ExecutionGraph(BaseGraph):
         """
 
         def get_path(terminal, vertices):
+            vertices.add(terminal)
             if not self.graph.nodes[terminal]['data'].computed:
-                vertices.append(terminal)
                 for v in self.graph.predecessors(terminal):
-                    vertices.append(v)
-                    if not self.graph.nodes[v]['data'].computed:
-                        get_path(v, vertices)
+                    get_path(v, vertices)
 
-        execution_vertices = []
+        execution_vertices = set()
         get_path(vertex, execution_vertices)
+        print execution_vertices
         # TODO we should check to make sure the subgraph induction is not slow
         # TODO otherwise we can compute the subgraph directly when finding the vertices
         return self.graph.subgraph(execution_vertices)
@@ -388,11 +387,8 @@ class ExecutionGraph(BaseGraph):
 class HistoryGraph(BaseGraph):
     def __init__(self, graph=None, roots=None):
         super(HistoryGraph, self).__init__(graph, roots)
-        self.extended = False
 
     def extend(self, workload):
-        if self.extended:
-            raise Exception('graph for this workload is already extended')
         # make sure the workload graph is post processed, i.e., the model scores are added to the graph
         if not workload.post_processed:
             workload.post_process()
@@ -417,5 +413,3 @@ class HistoryGraph(BaseGraph):
                 else:
                     metas[node[0]] = node[1] + 1
             nx.set_node_attributes(self.graph, metas, 'meta_freq')
-
-        self.extended = True

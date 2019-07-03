@@ -36,7 +36,7 @@ class ExecutionEnvironment(object):
             self.optimizer = SearchBasedOptimizer()
         else:
             raise Exception('Unknown optimizer type')
-        self.workload_graph = None
+        self.workload_graph = ExecutionGraph()
         self.history_graph = HistoryGraph()
         self.time_manager = dict()
 
@@ -62,8 +62,6 @@ class ExecutionEnvironment(object):
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
     def get_real_history_graph_size(self):
-        if not self.history_graph.extended:
-            raise Exception('cannot get the storage size before history graph is extended')
         return self.history_graph.get_total_size(exclude_types=['Dataset', 'Feature']) + self.data_storage.total_size()
 
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
@@ -118,7 +116,6 @@ class ExecutionEnvironment(object):
             self.optimizer = HashBasedOptimizer()
         else:
             raise Exception('Unknown Optimizer Type')
-        self.history_graph.extended = False
 
     def load_history_from_memory(self, history):
         self.history_graph = history
@@ -133,13 +130,12 @@ class ExecutionEnvironment(object):
 
         self.history_graph = HistoryGraph(graph, roots)
         self.history_graph.set_environment(self)
-        self.history_graph.extended = True
-        end_graph_load = datetime.now()
-        self.update_time(BenchmarkMetrics.LOAD_HISTORY, (end_graph_load - start_graph_load).total_seconds())
+
+        self.update_time(BenchmarkMetrics.LOAD_HISTORY, (datetime.now() - start_graph_load).total_seconds())
+        start_data_manager_load = datetime.now()
         with open(environment_folder + '/storage', 'rb') as d_input:
             self.data_storage = pickle.load(d_input)
-            self.time_manager = dict()
-        self.update_time(BenchmarkMetrics.LOAD_DATA_STORE, (datetime.now() - end_graph_load).total_seconds())
+        self.update_time(BenchmarkMetrics.LOAD_DATA_STORE, (datetime.now() - start_data_manager_load).total_seconds())
 
     def plot_graph(self, plt, graph_type='workload'):
         if graph_type == 'workload':
