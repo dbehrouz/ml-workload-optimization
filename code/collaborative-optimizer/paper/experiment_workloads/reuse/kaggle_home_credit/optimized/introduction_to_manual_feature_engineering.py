@@ -19,6 +19,8 @@ import seaborn as sns
 # Experiment Graph
 
 # Suppress warnings
+from Reuse import BottomUpReuse, TopDownReuse, FastBottomUpReuse
+
 warnings.filterwarnings('ignore')
 
 
@@ -230,6 +232,8 @@ def run(execution_environment, root_data, verbose=0):
 
     # Read in bureau balance
     bureau_balance = execution_environment.load(root_data + '/kaggle_home_credit/bureau_balance.csv')
+
+    # bureau_balance = execution_environment.load(root_data + '/home-credit-default-risk/bureau_balance.csv', dtype={'STATUS': 'category'})
     bureau_balance.head().data(verbose=verbose)
 
     # Counts of each type of status for each previous loan
@@ -613,11 +617,12 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+
     DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
 
-    ee.load_history_from_disk(DATABASE_PATH)
+    # ee.load_history_from_disk(DATABASE_PATH)
     run(ee, root_data, verbose=1)
-    # ee.save_history(DATABASE_PATH, overwrite=True)
+    ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

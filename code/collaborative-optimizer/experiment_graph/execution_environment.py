@@ -13,29 +13,30 @@ from sklearn.metrics import roc_auc_score
 
 from benchmark_helper import BenchmarkMetrics
 from data_storage import DedupedStorageManager, NaiveStorageManager
-from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATION_IDENTIFIER
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
-from optimizer import HashBasedOptimizer, SearchBasedOptimizer
+from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimizer
+from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATION_IDENTIFIER
+from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 
 RANDOM_STATE = 15071989
 AS_KB = 1024.0
 
 
 class ExecutionEnvironment(object):
-    def __init__(self, storage_type='dedup', optimizer=HashBasedOptimizer.NAME):
+
+    @staticmethod
+    def construct_readable_root_hash(loc, extra_params=None):
+        return loc[loc.rfind('/') + 1:] + str(extra_params)
+
+    def __init__(self, storage_type='dedup', optimizer_type=HashBasedOptimizer.NAME, reuse_type=FastBottomUpReuse.NAME):
         if storage_type == 'dedup':
             self.data_storage = DedupedStorageManager()
         elif storage_type == 'naive':
             self.data_storage = NaiveStorageManager()
         else:
             raise Exception('Unknown storage type: {}'.format(storage_type))
-        if optimizer == HashBasedOptimizer.NAME:
-            self.optimizer = HashBasedOptimizer()
-        elif optimizer == SearchBasedOptimizer.NAME:
-            self.optimizer = SearchBasedOptimizer()
-        else:
-            raise Exception('Unknown optimizer type')
+        self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
         self.workload_graph = ExecutionGraph()
         self.history_graph = HistoryGraph()
         self.time_manager = dict()
@@ -109,13 +110,9 @@ class ExecutionEnvironment(object):
         del self.time_manager
         self.time_manager = dict()
         optimizer_type = self.optimizer.NAME
+        reuse_type = self.optimizer.reuse_type
         del self.optimizer
-        if optimizer_type == SearchBasedOptimizer.NAME:
-            self.optimizer = SearchBasedOptimizer()
-        elif optimizer_type == HashBasedOptimizer.NAME:
-            self.optimizer = HashBasedOptimizer()
-        else:
-            raise Exception('Unknown Optimizer Type')
+        self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
 
     def load_history_from_memory(self, history):
         self.history_graph = history
@@ -149,20 +146,27 @@ class ExecutionEnvironment(object):
         else:
             return self.history_graph.get_total_size()
 
-    def load(self, loc, nrows=None):
-        if self.workload_graph.has_node(loc):
+    def load(self, loc, dtype=None, nrows=None):
+        extra_params = dict()
+        if dtype is not None:
+            extra_params['dtype'] = dtype
+        if nrows is not None:
+            extra_params['nrows'] = nrows
+
+        root_hash = self.construct_readable_root_hash(loc, extra_params)
+        if self.workload_graph.has_node(root_hash):
             print 'the root node is in already the workload graph'
-            return self.workload_graph.get_node(loc)['data']
-        elif self.history_graph.has_node(loc):
+            return self.workload_graph.get_node(root_hash)['data']
+        elif self.history_graph.has_node(root_hash):
             print 'the root node is in already the history graph'
-            root = copy.deepcopy(self.history_graph.graph.nodes[loc])
-            self.workload_graph.roots.append(loc)
-            self.workload_graph.add_node(loc, **root)
+            root = copy.deepcopy(self.history_graph.graph.nodes[root_hash])
+            self.workload_graph.roots.append(root_hash)
+            self.workload_graph.add_node(root_hash, **root)
             return root['data']
         else:
             print 'creating a new root node'
             start = datetime.now()
-            initial_data = pd.read_csv(loc, nrows=nrows)
+            initial_data = pd.read_csv(loc, dtype=dtype, nrows=nrows)
             end = datetime.now()
             self.update_time(BenchmarkMetrics.LOAD_DATASET, (end - start).total_seconds())
             c_name = []
@@ -173,19 +177,20 @@ class ExecutionEnvironment(object):
                 c_name.append(c)
                 # to ensure the same hashing is used for the initial data loading and the rest of the artifacts
                 # Adding the loc to make sure different datasets with the same column names do not mix
-                c_hash.append(Node.md5(loc + c))
+                c_hash.append(Node.md5(root_hash + c))
 
                 self.data_storage.store_dataset(c_hash, initial_data[c_name])
-            nextnode = Dataset(loc, self, c_name=c_name, c_hash=c_hash)
+            nextnode = Dataset(root_hash, self, c_name=c_name, c_hash=c_hash)
             nextnode.computed = True
             node_size_start = datetime.now()
             size = self.data_storage.compute_size(c_hash)
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
-            self.workload_graph.roots.append(loc)
-            self.workload_graph.add_node(loc, **{'root': True, 'type': 'Dataset', 'data': nextnode,
-                                                 'loc': loc,
-                                                 'size': size})
+            self.workload_graph.roots.append(root_hash)
+            self.workload_graph.add_node(root_hash, **{'root': True, 'type': 'Dataset', 'data': nextnode,
+                                                       'loc': loc,
+                                                       'extra_params': extra_params,
+                                                       'size': size})
             return nextnode
 
     def load_from_pandas(self, df, identifier):
@@ -212,6 +217,7 @@ class ExecutionEnvironment(object):
             self.workload_graph.add_node(identifier,
                                          **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                             'loc': identifier,
+                                            'extra_params': 'load_from_memory',
                                             'size': size})
             return nextnode
 

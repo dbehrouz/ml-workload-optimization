@@ -8,21 +8,19 @@ def compute_recreation_cost(graph, modify_graph=True):
     :type modify_graph: bool
     :type graph: nx.DiGraph
     """
-    partial_recreation_cost = {node: -1 for node in graph.nodes}
+    recreation_cost = {node: -1 for node in graph.nodes}
     for n in nx.topological_sort(graph):
         if graph.nodes[n]['root']:
-            partial_recreation_cost[n] = 0
+            recreation_cost[n] = 0
         else:
             cost = 0.0
             for source, _, exec_time in graph.in_edges(n, data='execution_time'):
-                if partial_recreation_cost[source] == -1:
+                if recreation_cost[source] == -1:
                     raise Exception('The partial cost of the node {} should have been computed'.format(source))
                 else:
-                    cost += partial_recreation_cost[source] + exec_time
-            partial_recreation_cost[n] = cost
-    recreation_cost = {}
-    for n in graph.nodes(data='meta_freq'):
-        recreation_cost[n[0]] = n[1] * partial_recreation_cost[n[0]]
+                    cost += recreation_cost[source] + exec_time
+            recreation_cost[n] = cost
+
     if modify_graph:
         for n in graph.nodes(data=True):
             n[1]['recreation_cost'] = recreation_cost[n[0]]

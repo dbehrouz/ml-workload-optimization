@@ -27,7 +27,7 @@ class Materializer:
                 # we are not materializing group by nodes at any cost
                 rho = 0
                 node[1]['data'].clear_content()
-                node[1]['size'] = 0.0
+                # node[1]['size'] = 0.0
             else:
                 if node[1]['size'] == 0.0:
                     print 'nothing to materialize for node {}'.format(node[0])
@@ -61,6 +61,7 @@ class Materializer:
             else:
                 remaining.append(top)
 
+        print 'budget in the loop: {}'.format(current_budget)
         return to_mat, remaining
 
     def materialize(self, should_materialize):
@@ -79,18 +80,18 @@ class Materializer:
                     to_keep = to_keep.union(set(node_data.c_hash))
                 else:
                     node_data.clear_content()
-                    node[1]['size'] = 0.0
+                    # node[1]['size'] = 0.0
             elif node[1]['type'] == 'Feature':
                 node_data = node[1]['data']
                 if node[0] in should_materialize:
                     to_keep.add(node_data.c_hash)
                 else:
                     node_data.clear_content()
-                    node[1]['size'] = 0.0
+                    # node[1]['size'] = 0.0
 
             elif node[0] not in should_materialize:
                 node[1]['data'].clear_content()
-                node[1]['size'] = 0.0
+                # node[1]['size'] = 0.0
         to_delete = []
         for k in data_storage.DATA:
             if k not in to_keep and not k.endswith('_size'):
@@ -167,12 +168,13 @@ class StorageAwareMaterializer(Materializer):
                 root_size += n[1]['size']
                 to_materialize.append(n[0])
 
-        remaining_budget = self.storage_budget
+        remaining_budget = self.storage_budget - root_size
         i = 1
         while remaining_budget >= 0:
             start_list = list(to_materialize)
 
             to_materialize, rhos = self.select_nodes_to_materialize(rhos, remaining_budget, to_materialize)
+            print 'current size: {}'.format(self.ee.history_graph.get_size_of(to_materialize))
             # if node new node is materialized, end the process
             if start_list == to_materialize:
                 break
@@ -226,16 +228,16 @@ class StorageAwareMaterializer(Materializer):
 
 
 class RHO(object):
-    def __init__(self, node_id, recreation_cost, potential, number_of_pipelines, size, use_rc=True, use_pt=True):
+    def __init__(self, node_id, recreation_cost, potential, freq, size, use_rc=True, use_pt=True):
         self.node_id = node_id
         self.recreation_cost = recreation_cost
         self.potential = potential
-        self.number_of_pipelines = number_of_pipelines
+        self.freq = freq
         self.size = size
         self.rho = self.compute_rho(use_rc, use_pt)
 
     def compute_rho(self, use_rc, use_pt):
-        rho = 1.0
+        rho = self.freq
         if use_rc:
             rho *= self.recreation_cost
         if use_pt:
@@ -247,10 +249,10 @@ class RHO(object):
         return self.rho < other.rho
 
     def __repr__(self):
-        return 'node: {}, recreation_cost: {:.3f}, potential: {:.3f}, num_pipelines: {}, size: {:.3f}, rho: {:.5f}' \
+        return 'node: {}, recreation_cost: {:.3f}, potential: {:.3f}, frequency: {}, size: {:.3f}, rho: {:.5f}' \
             .format(self.node_id[0:12],  # 32 is too long to show
                     self.recreation_cost,
                     self.potential,
-                    self.number_of_pipelines,
+                    self.freq,
                     self.size,
                     self.rho)

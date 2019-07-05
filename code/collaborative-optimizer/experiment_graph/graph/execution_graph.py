@@ -1,4 +1,5 @@
 import copy
+from collections import deque
 from datetime import datetime
 
 import networkx as nx
@@ -237,18 +238,26 @@ class ExecutionGraph(BaseGraph):
         :return: subgraph that must be computed
         """
 
-        def get_path(terminal, vertices):
-            vertices.add(terminal)
-            if not self.graph.nodes[terminal]['data'].computed:
-                for v in self.graph.predecessors(terminal):
-                    get_path(v, vertices)
+        execution_set = {vertex}
+        if not self.graph.nodes[vertex]['data'].computed:
+            prevs = self.graph.predecessors
 
-        execution_vertices = set()
-        get_path(vertex, execution_vertices)
-        print execution_vertices
+            queue = deque([(vertex, prevs(vertex))])
+            while queue:
+                current, prev_nodes_list = queue[0]
+                try:
+                    prev_node = next(prev_nodes_list)
+                    if prev_node not in execution_set:
+                        execution_set.add(prev_node)
+                        if not self.graph.nodes[prev_node]['data'].computed:
+                            queue.append((prev_node, prevs(prev_node)))
+
+                except StopIteration:
+                    queue.popleft()
+
         # TODO we should check to make sure the subgraph induction is not slow
         # TODO otherwise we can compute the subgraph directly when finding the vertices
-        return self.graph.subgraph(execution_vertices)
+        return self.graph.subgraph(execution_set)
 
     def fast_compute_paths(self, vertex):
         """faster alternative to brute_force_compute_paths
