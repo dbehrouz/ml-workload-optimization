@@ -1,99 +1,216 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
 In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
-
-\subsection{Reuse ML Operations}
-We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
-If an operation already exists in the experiment graph, we directly access the resulting artifact in the experiment graph instead of executing the operation.
-Before executing a workload, we first transform it into its graph representation, which results in a directed graph, called $\mathcal{WG}$.
-Then, we traverse the experiment graph starting from the root node, using the edges of the workload graph.
-The result of the traversal is a subgraph of the experiment graph, which we refer to as $\mathcal{SG}$.
-The subgraph contains all the vertices and edges that exist in both the experiment graph and the workload graph.
-For every path in $\mathcal{SG}$ which originates at the root node, we return the furthest materialized vertex from the root node as the result and skip all the intermediate operations.
-
-To demonstrate with an example, let us assume a user has executed the code in Listing \ref{listing-experiment-graph} and Figure \ref{fig-experiment-graph}a shows the current experiment graph, where the set of materialized vertices is $\mathcal{MV} = \{v_0, v_2, v_3\}$.
-A new user submits the code in Listing \ref{listing-reuse}.
-Figure \ref{fig-reuse}a shows the workload graph ($\mathcal{WG}$) of the code in Listing \ref{listing-reuse}.
-As described in the Reuse procedure, we traverse the experiment graph, starting at $v_0$, with the edges of $\mathcal{WG}$ which results in the common subgraph, $\mathcal{SG}$, in Figure \ref{fig-reuse}b.
-In the subgraph $\mathcal{SG}$, the furthest vertices in each path originating at $v_0$ are $v_5$ and $v_3$.
-The Reuse procedure selects $v_2$ as the candidate since $v_5$ is not materialized.
-The Reuse procedure results in an optimized graph which skips operations p2 and p3 (Figure \ref{fig-reuse}c).
-% Tilmann: Can you elaborate the benefits? Also, what do the new reused nodes help? There does not seem to be a path to the final result from them. 
-
-\begin{lstlisting}[language=Python, firstnumber = 8,caption=New workload script (Imports are omitted),captionpos=b,label = {listing-reuse}]
-train = pd.read_csv('../input/train.csv') 
-selector =  SelectKBest(k=2)
-top_features = selector.fit_transform(train[['ts','u_id','price']], 
-				      train['y'])
-model = svm.SVC()
-model.fit(top_features, train['y'])
-\end{lstlisting}
-
+%TODO we need to discuss the local optimization and execution planning process in Section 3
+Figure \ref{remote-optimization} shows the multi-step optimization process where we apply the reuse and warmstarting optimizations to the workload graph.
+After constructing the workload DAG, we perform the local optimization which computes the execution subgraph by removing any previously executed operations from the DAG (Step 1).
+Next using this execution subgraph, we look for optimization opportunities (Reuse and Warmstarting) in the experiment graph (Step 2).
+%TODO define non-computed and computed nodes in Section 3
+In Step 2, we query the experiment graph to look if any of the (non-computed) nodes in the workload graph exists and is materialized in the experiment graph.
+Since during the materialization process (Section \ref{sec-materialization}) we have ensured the computation cost of a materialized node outweights its transfer cost, we can safely transfer the materialized node to the workload DAG.
+Furthermore, in Step 2, we also look for warmstarting opportunities for any model training operations.
+The result of Step 2 is another execution subgraph with (possibly) more edges pruned.
+Finaly, we compute the execution plan using the subgraph (Step 3).
 \begin{figure}
-\captionsetup[subfigure]{justification=centering}
-\begin{subfigure}[t]{0.33\linewidth}
 \centering
-\includegraphics{../images/tikz-standalone/reuse-example-wg}
-\caption{Workload Graph ($\mathcal{WG}$)}
-\end{subfigure}%
-\begin{subfigure}[t]{0.33\linewidth}
-\centering
-\includegraphics{../images/tikz-standalone/reuse-example-sg}
-\caption{Common Subgraph ($\mathcal{SG}$)}
-\end{subfigure}%
-\begin{subfigure}[t]{0.33\linewidth}
-\centering
-\includegraphics{../images/tikz-standalone/reuse-example-final}
-\caption{Optimized Graph}
-\end{subfigure}
-\begin{subfigure}[t]{\linewidth}
-\centering
-\includegraphics{../images/tikz-standalone/reuse-example-final-eg}
-\caption{Experiment graph after executing the workload (new nodes are highlighted)}
-\end{subfigure}
-\caption{Steps in the Reuse optimizations}
-\label{fig-reuse}
+\includegraphics[width=\columnwidth]{../images/remote-optimization}
+\caption{Multi-step workload optimization}
+\label{remote-optimization}
 \end{figure}
 
-\subsection{Warmstart Model Training Operations}
-Model training operations include extra hyperparameters that must be set before the training procedure begins.
-Two training operations on the same data artifact using the same training algorithm could potentially have very different results based on the values of the hyperparameters.
-Therefore, we cannot apply the Reuse optimization in cases the hyperparameters of model training operations are different.
-Instead, we apply the \textit{Warmstarting} optimization.
-We first need to describe the concept of model groups.
-For a vertex $v$, the model group $\mathcal{MG}_v$ refers to the set of all the machine learning models and their hyperparameters that are trained on $v$.
-If a workload contains the model training operation $e_{m}$ on the vertex $v_{m}$, before executing the workload, we proceed as follows.
-First, using the same traversal strategy as explained in the Reuse procedure, we look for $v_{m}$ in the experiment graph.
-If operation $e_{m}$ also exists in the experiment graph, then the Reuse procedure will return the resulting node as the result.
-However, if $e_{m}$ does not exist in the experiment graph, then we find the model group $\mathcal{MG}_{v_m}$.
-If $\mathcal{MG}_{v_m}$ is not empty, we warmstart the operation $e_{m}$ with the best performing model from the model group.
-% Tilmann: Does this always make sense? or do we get stuck in local minima this way?
+\subsection{Reuse}
+The reuse process receives the workload execution subgraph as input and checks if there are matching vertices in the experiment graph.
+%TODO define a theorem or somehow mention this rule
+Based on the hashing procedure, we showed that two vertices belonging to two different graphs have the same hash if and only if they have the same execution subgraph.
+Therefore, to find matching vertices in the workload execution subgraph, we query their id in the experiment graph.
+However, in cases where the subgraph is very large and querying the experiment graph incurs a penalty, we must try to minimize the number of queries being made to the experiment graph.
+In this section, we present three approaches for querying the experiment graph, namely, BottomUp reuse, TopDown reuse, and Hybrid reuse.
 
-To demonstrate with an example, after executing both the code in Listings \ref{listing-experiment-graph} and \ref{listing-reuse}, a new users submits the same code as in Listing \ref{listing-reuse}, with a different model hyperparameters (Line 12) shown in Listing \ref{listing-warmstarting}.
-\begin{lstlisting}[language=Python, firstnumber=12, caption= Workload with different hyperparameters,captionpos=b,label = {listing-warmstarting}]
-model = svm.SVC(C=0.1)
-\end{lstlisting}
-Since both models (svm.SVC(C=0.1) and svm.SVC()) are trained on the same vertex ($v_x$ in Figure \ref{fig-reuse}), the Warmstarting procedure selects the existing model node ($v_y$ in Figure \ref{fig-reuse}) to warmstart the training process.
+\textbf{BottomUp reuse.}
+The process of BottomUp reuse is similar to how we construct the execution subgraph.
+Algorithm \ref{algorithm-bottomup} shows the details of BottomUp reuse.
+$vt$ represent the vertex whose data is requested.
+If $vt$ is in the experiment graph, in which case it returns it as the result (Lines 1-2) otherwise, $vt$ is added to a queue (Line 3).
+For all the predecessors of the next item in the queue, we add them to the set of materialized vertices if they exist in the experiment graph and are materialized (Lines 8-9), otherwise, we add them to the end of the queue (Line 11).
+\begin{algorithm}[h]
+\caption{BottomUp Reuse}\label{algorithm-bottomup}
+\begin{algorithmic}[1]
+\Require terminal vertex $vt$, workload execution subgraph  $WG$, experiment graph $EG$ 
+\Ensure set of materialized vertices $\mathcal{M}$ 
+\If {$is\_mat(EG, vt)$}
+	\State return $\{vt\}$
+\EndIf
+\State $Q = Queue(vt)$  
+\State $\mathcal{M} = \emptyset$
+\While {$Q.not\_empty()$}
+	\State $cur = Q.next()$
+	\For {$v \in predecessors (WG, cur)$}
+		\If {$is\_mat(EG, v)$}
+			\State	$\mathcal{M}.append(v)$
+		\Else 
+			\State $q.add(v)$
+		\EndIf
+	\EndFor
+\EndWhile
+\State return $\mathcal{M}$
+\end{algorithmic}
+\end{algorithm}
+BottomUp approach performs well when the difference between the current workload graph and the ones that exist in the experiment graph are in vertices which are far from the root.
+For example in Figure \ref{remote-optimization}, if vertex 7 or 6 were materialized, the BottomUp returns the result after one or two iterations, resulting in very few queries to the experiment graph.
+On the other hand, the current workload differs with existing workloads in vertices close to the root, or in extreme scenarios, it has no similarity at all (a workload which works on a new root vertex), then BottomUp reuse has to traverse the graph until the root and queries the experiment graph for every vertex in the workload graph.
 
-Warmstarting can greatly reduce the total training time.
-However, the type of the machine learning model and the termination criteria play important roles in determining the effect of the warmstarting optimization.
-In the experiment section, we evaluate the effect of warmstarting on different types of models with different termination criteria.
+\textbf{TopDown reuse.}
+Contrary to the BottomUp reuse, in TopDown reuse, we start traversing the workload execution subgraph, from its root vertices.
+\begin{algorithm}[h]
+\caption{TopDown Reuse}\label{algorithm-topdown}
+\begin{algorithmic}[1]
+\Require terminal vertex $vt$, workload execution subgraph  $WG$, experiment graph $EG$ 
+\Ensure set of materialized vertices $\mathcal{M}$ 
 
-\subsubsection{Augmenting the experiment graph}
-When we utilize warmstarting, we extend the experiment graph with a merge operation which merges the dataset and the candidate model for warmstarting.
-The actual training operation is then applied to the merged node.
-As a result, we can keep track of the models that are utilized in warmstarting the training of other models which ensures reproducibility.
+\State $R=roots(WG)$
+\State $\mathcal{M} = \emptyset$
+\For {$r \in R$}
+	\If {$r \notin EG$}
+		\State continue \Comment{skip this iteration}
+	\EndIf
+	\State $Q = Queue(r)$  
+	\If {$is\_mat(EG, r)$}
+		 \State	 $\mathcal{M}.append(r)$
+	\EndIf
+		\While {$Q.not\_empty()$}
+			\State $cur = Q.next()$
+			\For {$v \in children (WG, cur)$}
+				\If {$is\_mat(EG, v)$}
+					\State	$\mathcal{M}.append(v)$
+				\EndIf
+				\If {$v \in EG$} 
+					\State $q.add(v)$
+				\EndIf
+			\EndFor
+		\EndWhile
 
-Figure \ref{fig-warmstarting} shows the experiment graph after execution of the script from Listing \ref{listing-warmstarting}.
-The training operation, f1, is applied to the new vertex $v_n$, which is the result of merging the data artifact $v_x$ and the model $v_y$.
-The training operation f1 has a different hash from the existing operations since the hyperparameters are different.
+\EndFor
+\State return $\mathcal{M}$
+\end{algorithmic}
+\end{algorithm}
+Algorithm \ref{algorithm-topdown} shows the details of TopDown reuse method.
+Since a workload execution graph may have multiple root vertices, we first find all the root vertices (Line 1).
+For every root vertex, if it is not in the experiment graph, we stop the search for this root vertex (Line 5-6).
+Otherwise we do the following.
+We add the vertex to a queue and to the set of materialized vertices, if it is materialized (Lines 7-9).
+While the queue is not empty, for every child of the next item in the queue, we make the following actions.
+If the child is is materialized, we add it to the set of materialized vertices (Line 13-14).
+Then, if we add the child node to the queue only if it is in the experiment graph (Line 15-16).
 
-\begin{figure}[t]
-\centering
-\includegraphics{../images/tikz-standalone/warmstarting-example-final-eg}
-\caption{Experiment graph after warmstarting} % Tilmann: Again, if v9 is the result, how does vx-vz contribute to this?
-\label{fig-warmstarting}
-\end{figure}
+Unlike the BottomUp approach, when a node is materialized, we cannot stop the traversal, a materialized vertex may also have materialized children.
+However, if a vertex does not exist in the experiment graph, we can skip traversing its children.
+%TODO define a theorem or somehow mention this rule
+This results from the hashing procedure defined in Section \ref{sec-ml-workloads}.
+Since the hash of every child vertex is constructed by combining the hash of its parents, if a vertex is not in a graph, its children also cannot exist in the graph.
+Hence, TopDown can perform well in cases where BottomUp reuse performs poorly.
+If the current workload operates on a completely new root (which never appeared in the experiment graph) or the workload contains early data exploration which never appeared in other workloads, TopDown reuse will quickly stop the search process.
+However, if the workload is very similar to previous workloads, the TopDown will perform many queries to the experiment graph.
+An extreme example is when a workload is re-executed.
+TopDown reuse will make one query for every vertex of the workload to the experiment graph before returning the materialized node.
+
+\textbf{Hybrid reuse.}
+Both BottomUp and TopDown reuse perform well in specific scenarios. 
+However, neither of them can adapt to the different characteristics of a workload (e.g., how similar a work is to the previous workloads or how large the execution graph is).
+We devise a dynamic reuse approach, called Hybrid reuse, which adapts to the current workload.
+Algorithm xxx shows the process of Hybrid reuse.
+
+
+%We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
+%If an operation already exists in the experiment graph, we directly access the resulting artifact in the experiment graph instead of executing the operation.
+%Before executing a workload, we first transform it into its graph representation, which results in a directed graph, called $\mathcal{WG}$.
+%Then, we traverse the experiment graph starting from the root node, using the edges of the workload graph.
+%The result of the traversal is a subgraph of the experiment graph, which we refer to as $\mathcal{SG}$.
+%The subgraph contains all the vertices and edges that exist in both the experiment graph and the workload graph.
+%For every path in $\mathcal{SG}$ which originates at the root node, we return the furthest materialized vertex from the root node as the result and skip all the intermediate operations.
+%
+%To demonstrate with an example, let us assume a user has executed the code in Listing \ref{listing-experiment-graph} and Figure \ref{fig-experiment-graph}a shows the current experiment graph, where the set of materialized vertices is $\mathcal{MV} = \{v_0, v_2, v_3\}$.
+%A new user submits the code in Listing \ref{listing-reuse}.
+%Figure \ref{fig-reuse}a shows the workload graph ($\mathcal{WG}$) of the code in Listing \ref{listing-reuse}.
+%As described in the Reuse procedure, we traverse the experiment graph, starting at $v_0$, with the edges of $\mathcal{WG}$ which results in the common subgraph, $\mathcal{SG}$, in Figure \ref{fig-reuse}b.
+%In the subgraph $\mathcal{SG}$, the furthest vertices in each path originating at $v_0$ are $v_5$ and $v_3$.
+%The Reuse procedure selects $v_2$ as the candidate since $v_5$ is not materialized.
+%The Reuse procedure results in an optimized graph which skips operations p2 and p3 (Figure \ref{fig-reuse}c).
+%% Tilmann: Can you elaborate the benefits? Also, what do the new reused nodes help? There does not seem to be a path to the final result from them. 
+%
+%\begin{lstlisting}[language=Python, firstnumber = 8,caption=New workload script (Imports are omitted),captionpos=b,label = {listing-reuse}]
+%train = pd.read_csv('../input/train.csv') 
+%selector =  SelectKBest(k=2)
+%top_features = selector.fit_transform(train[['ts','u_id','price']], 
+%				      train['y'])
+%model = svm.SVC()
+%model.fit(top_features, train['y'])
+%\end{lstlisting}
+%
+%\begin{figure}
+%\captionsetup[subfigure]{justification=centering}
+%\begin{subfigure}[t]{0.33\linewidth}
+%\centering
+%\includegraphics{../images/tikz-standalone/reuse-example-wg}
+%\caption{Workload Graph ($\mathcal{WG}$)}
+%\end{subfigure}%
+%\begin{subfigure}[t]{0.33\linewidth}
+%\centering
+%\includegraphics{../images/tikz-standalone/reuse-example-sg}
+%\caption{Common Subgraph ($\mathcal{SG}$)}
+%\end{subfigure}%
+%\begin{subfigure}[t]{0.33\linewidth}
+%\centering
+%\includegraphics{../images/tikz-standalone/reuse-example-final}
+%\caption{Optimized Graph}
+%\end{subfigure}
+%\begin{subfigure}[t]{\linewidth}
+%\centering
+%\includegraphics{../images/tikz-standalone/reuse-example-final-eg}
+%\caption{Experiment graph after executing the workload (new nodes are highlighted)}
+%\end{subfigure}
+%\caption{Steps in the Reuse optimizations}
+%\label{fig-reuse}
+%\end{figure}
+%
+%\subsection{Warmstart Model Training Operations}
+%Model training operations include extra hyperparameters that must be set before the training procedure begins.
+%Two training operations on the same data artifact using the same training algorithm could potentially have very different results based on the values of the hyperparameters.
+%Therefore, we cannot apply the Reuse optimization in cases the hyperparameters of model training operations are different.
+%Instead, we apply the \textit{Warmstarting} optimization.
+%We first need to describe the concept of model groups.
+%For a vertex $v$, the model group $\mathcal{MG}_v$ refers to the set of all the machine learning models and their hyperparameters that are trained on $v$.
+%If a workload contains the model training operation $e_{m}$ on the vertex $v_{m}$, before executing the workload, we proceed as follows.
+%First, using the same traversal strategy as explained in the Reuse procedure, we look for $v_{m}$ in the experiment graph.
+%If operation $e_{m}$ also exists in the experiment graph, then the Reuse procedure will return the resulting node as the result.
+%However, if $e_{m}$ does not exist in the experiment graph, then we find the model group $\mathcal{MG}_{v_m}$.
+%If $\mathcal{MG}_{v_m}$ is not empty, we warmstart the operation $e_{m}$ with the best performing model from the model group.
+%% Tilmann: Does this always make sense? or do we get stuck in local minima this way?
+%
+%To demonstrate with an example, after executing both the code in Listings \ref{listing-experiment-graph} and \ref{listing-reuse}, a new users submits the same code as in Listing \ref{listing-reuse}, with a different model hyperparameters (Line 12) shown in Listing \ref{listing-warmstarting}.
+%\begin{lstlisting}[language=Python, firstnumber=12, caption= Workload with different hyperparameters,captionpos=b,label = {listing-warmstarting}]
+%model = svm.SVC(C=0.1)
+%\end{lstlisting}
+%Since both models (svm.SVC(C=0.1) and svm.SVC()) are trained on the same vertex ($v_x$ in Figure \ref{fig-reuse}), the Warmstarting procedure selects the existing model node ($v_y$ in Figure \ref{fig-reuse}) to warmstart the training process.
+%
+%Warmstarting can greatly reduce the total training time.
+%However, the type of the machine learning model and the termination criteria play important roles in determining the effect of the warmstarting optimization.
+%In the experiment section, we evaluate the effect of warmstarting on different types of models with different termination criteria.
+%
+%\subsubsection{Augmenting the experiment graph}
+%When we utilize warmstarting, we extend the experiment graph with a merge operation which merges the dataset and the candidate model for warmstarting.
+%The actual training operation is then applied to the merged node.
+%As a result, we can keep track of the models that are utilized in warmstarting the training of other models which ensures reproducibility.
+%
+%Figure \ref{fig-warmstarting} shows the experiment graph after execution of the script from Listing \ref{listing-warmstarting}.
+%The training operation, f1, is applied to the new vertex $v_n$, which is the result of merging the data artifact $v_x$ and the model $v_y$.
+%The training operation f1 has a different hash from the existing operations since the hyperparameters are different.
+%
+%\begin{figure}[t]
+%\centering
+%\includegraphics{../images/tikz-standalone/warmstarting-example-final-eg}
+%\caption{Experiment graph after warmstarting} % Tilmann: Again, if v9 is the result, how does vx-vz contribute to this?
+%\label{fig-warmstarting}
+%\end{figure}
 
 %For iterative training algorithms that are minimizing a loss function, there are two termination criteria, namely, the convergence tolerance and the number of iterations.
 %
