@@ -43,10 +43,10 @@ The most common search methods are grid search, random search, and Bayesian hype
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
 \hladd{A machine learning workload can be represented using a directed acyclic graph (DAG).
-In the DAG, edges represent the operations in the workload and vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations.
+In the DAG, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
 Each workload DAG has one or more root vertices representing the raw datasets that the workload operates on and have no incoming edges.
 The collection of all the DAGs of previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.}
-We represent the experiment graph $G(V, E)$.
+More formally, we represent the experiment graph by $G(V, E)$.
 $V=\{v_i\}, i = 1, \cdots, n$ is the set of all the artifacts in all the workload DAGs.
 $E=\{e_i\}, i = 1, \cdots, m$ is the set of all the executed operations in the workload DAGs.
 A directed edge $e$ from $v_i$ to $v_j$ in $G(V, E)$ indicates that the artifact $v_j$ is derived from the artifact $v_i$ by applying the operation in $e$.
@@ -55,8 +55,8 @@ Every edge $e$ has the attribute $\langle t \rangle$ (accessed by $e.t$) which r
 
 \hladd{Inside each vertex, we store the meta-data of the artifact.
 Depending on how \textit{useful} an artifact is, we may also store the actual underlying data inside the artifact (Section \ref{sec-materialization})
-If the artifact is a raw or a preprocessed dataset, then its meta-data includes the name, type, and total size of each column of the data and its underlying data is represented by the dataframe object (i.e., pandas dataframe \cite{mckinney-proc-scipy-2010}). f
-If the artifact is a machine learning model, its meta-data includes the name, type, hyperparameters, and the error metric of the model and its underlying data is consist of the model weight.
+If the artifact is a raw or a preprocessed dataset, then its meta-data includes the name, type, and total size of each column of the data and its underlying data is represented by the dataframe object (i.e., pandas dataframe \cite{mckinney-proc-scipy-2010}). 
+If the artifact is a machine learning model, its meta-data includes the name, type, hyperparameters, and the error metric of the model and its underlying data is consist of the model weights.
 Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, hyperparameters, and in some cases even the source code of the operation.
 To uniquely identify an edge, we utilize a hash function which receives as input the operation and its hyperparameters (if it has any).
 Since the experiment graph is rooted, we assign a hash value to every vertex which is computed in the following way:
@@ -64,10 +64,11 @@ Since the experiment graph is rooted, we assign a hash value to every vertex whi
     h(v)= 
 \begin{cases}
     id,& \text{if } v \text{ is root}\\
-    h\Big(\sum\limits_{e \in in\_edge(v)} h(e.source) + h(e)\Big)  ,              & \text{otherwise}.
+    h\Big(\sum\limits_{e \in in\_edge(v)} (h(e.source) + h(e) ) \Big)  ,              & \text{otherwise}.
 \end{cases}
 \]
-Intuitively, the hash of root vertices is their unique identifier (location on disk or download URL) and the hash of other vertices is derived by combining the hash of their direct predecessors and edges which connect them to their predecessors.}
+where $in\_edge(v)$ returns the edges with destination $v$. 
+Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their direct predecessors and edges which connect them to their predecessors.}
 
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
@@ -125,12 +126,12 @@ Since at the time of the execution of the script, the experiment graph is empty,
 In order to represent operations which process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
 First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
 The merge operator is a logical operator which does not incur a cost, i.e., it has a run-time of 0 seconds.
-The merged vertex is also a logical vertex with no actual attributes which only contains the vertex id of the merged vertices.
+The merged vertex is also a logical vertex with no actual attributes which only contains the vertex ids of the merged vertices.
 Then, we draw an edge from the merged vertex which represents the actual operation.
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
-\hladd{Furthermore, when computing the hash of a combined vertex, we take the combine order into account.
+\hladd{Furthermore, when computing the hash of a merged vertex, we take the merge order into account.
 For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
-When computing hash of $v_9$, we combine the predecessors in the same order, i.e., $h(v_9) = h(h(v_7) + m + h(v_2) + m)$. }
+When computing hash of $v_9$, we combine the predecessors in the same order, i.e., $h(v_9) = h(h(v_7) + m + h(v_3) + m)$. }
  
 \subsubsection{Notations and Terms}\label{notations-terms}
 Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
@@ -163,8 +164,8 @@ Each competition in Kaggle corresponds to a task.
 The competitions define the set of datasets (roots) and the evaluation function for assessing machine learning models. 
 Given a task, the workload optimization process is as follows.
 First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
-Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training, and for workloads which contain a hyperparameter tuning operation, faster hyperparameter search (\circledtext{2}).
-The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models, and proper search space and/or an initialized Bayesian hyperparameter search process.
+Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training \hldel{, and for workloads which contain a hyperparameter tuning operation, faster hyperparameter search} (\circledtext{2}).
+The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models \hldel{, and proper search space and/or an initialized Bayesian hyperparameter search process}.
 After executing the optimized workload, we return the result to the user (\circledtext{3}).
 Depending on the number of \textit{pipeline subgraphs} in the workload, the result of the execution is one or multiple \textit{terminal models} which the user can choose to submit as their solution to the competition.
 After the execution, we update the experiment graph using the original workload graph (\circledtext{4}).
@@ -178,7 +179,7 @@ Finally, to ensure that we can store the experiment graph given our storage budg
 \end{figure}
 
 In the experiment graph, each task corresponds to one connected component rooted at vertices representing the tasks root datasets.
-Since each task has a unique roots and workloads are not allowed to analyze roots belonging to multiple tasks, it is impossible for two tasks to be connected.
-In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which are rooted at 2, 2, and 1 root datasets, depicted as hollow vertices, respectively.
+Since each task has unique roots and workloads are not allowed to analyze roots belonging to multiple tasks, it is impossible for two tasks to be connected.
+In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which have 2, 2, and 1 root datasets, depicted as hollow vertices, respectively.
 When optimizing a new Kaggle kernel from competition A, the optimizer component (Step \circledtext{2}) only look for optimization opportunities in the connected component A of the experiment graph.
 Similarly, the scope of the materializer (Step \circledtext{5}) is also limited to individual competitions.

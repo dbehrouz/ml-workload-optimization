@@ -31,8 +31,8 @@ The machine learning specific metric consists of the quality score of the machin
 Since many of the artifacts have overlapping data columns, we perform column deduplication and remove duplicated columns before storing them.
 The second algorithm is storage-aware, i.e., it takes into account the deduplication information before deciding on what artifacts to materialize.
 
-Using the graph of the materialized artifacts, which we refer to as the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
-Specifically, we provide three optimizations, namely, reuse, model warmstarting, and fast hyperparameter tuning.
+Using the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
+Specifically, we provide three optimizations, namely, reuse, model warmstarting, \hldel{and fast hyperparameter tuning}.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
 Reuse decreases the data processing time especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
 In model warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.

@@ -1,5 +1,5 @@
 \section{Artifact Materialization}\label{sec-materialization}
-Depending on the number of the executed workloads, the generated artifacts may require a large amount of storage space.
+Depending on the number of the executed workloads, the generated artifacts may require large amount of storage space.
 For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, a popular script which analyzes a dataset of 160 MB, generates up to 17 GB of artifacts.
 Therefore, materializing every artifact under a limited storage budget is not feasible.
 In this section, we introduce two algorithms for materializing the artifacts of the experiment graph under limited storage.
@@ -27,7 +27,7 @@ The first function computes the weighted recreation cost of all the non-merged v
 \[
 WC(G) =  \sum\limits_{v \in V\setminus merged\_vertices}  (1-v.mat) \times v.f \times in\_edge(v).t
 \]
-where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, and $in\_edge(v)$ returns the edge with destination $v$ and run-time $t$.
+where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, and $in\_edge(v).t$ returns the edges with destination $v$ and run-time $t$.
 Merged vertices (represented by $merged\_vertices$) have no impact on $WC(G)$ since they carry no actual data content except for pointers to the original vertices.
 This also ensures $in\_edge(v)$ contains at most one edge.
 Intuitively, the weighted recreation cost computes the total amount of execution time required to recompute all the vertices while considering their frequencies.
@@ -39,7 +39,7 @@ Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no
 \textbf{Estimated Quality Function (EQ).} 
 In order to define the estimated quality function, we need to define the followings first.
 \[
-M(G) = \{v \in V \mid \text{v is a terminal model}\}
+M(G) = \{v \in V \mid v \text{ is a terminal model}\}
 \]
 is the set of all the terminal models in the experiment graph.
 For every vertex $v$ in the graph, 
@@ -65,7 +65,7 @@ Given the two functions, i.e., weighted recreation cost and estimated quality, w
 \begin{equation}
 \begin{split}
 & minimize(WC(G), \dfrac{1}{EQ(G)}), \\
-& \text{subject to:} \sum\limits_{v \in V} v.mat \times v.s <= \mathcal{B}
+& \text{subject to:} \sum\limits_{v \in V} v.mat \times v.s \leq \mathcal{B}
 \end{split}
 \end{equation}
 
@@ -76,8 +76,8 @@ As a result, existing solutions to multi-objective optimization problems are not
 
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
-Every task, $T$, in the experiment graph has storage budget and runs a separate instance of the materialization algorithm.
-For example, in our motivating example (Figure \ref{improved-use-case}), Competitions A, B, and C have dedicated storage budgets and materializer components.
+Every task $T$ in the experiment graph has storage budget and runs a separate instance of the materialization algorithm.
+For example, in Figure \ref{improved-use-case}, there is a materializer component and the competitions A, B, and C each have a dedicated storage budget.
 
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
@@ -94,16 +94,27 @@ For example, in our motivating example (Figure \ref{improved-use-case}), Competi
 \State $Q = $ empty priority queue
 \For {$v$ in $V$}
 	\If{$v.mat = 0$}
-		\State feasibility\_ratio $= \dfrac{\text{feasibility}(G, v)}{v.s}$
-		\State insert $v$ into $Q$ sorted by the feasibility\_ratio
+		\State $utility\_ratio = \dfrac{\text{utility}(G, v)}{v.s}$
+		\State insert $v$ into $Q$ sorted by the utility\_ratio
 	\EndIf
 \EndFor
-\For {$v$ in $S$}
-	\If {$S+v.s \leq \mathcal{B}$}
-		\State $v.mat = 1$
-		\State $S = S + v.s$		
-	\EndIf
-\EndFor
+%\For {$v$ in $Q$}
+%	\If {$S+v.s \leq \mathcal{B}$}
+%		\State $v.mat = 1$
+%		\State $S = S + v.s$
+%	\Else
+%		\State \textbf{break} 		
+%	\EndIf
+%\EndFor
+\While{$Q$ is not empty}
+\State $v =$ pick vertex with highest $utility\_ratio$ 
+\If {$S+v.s \leq \mathcal{B}$}
+\State $v.mat = 1$
+\State $S = S + v.s$
+\Else
+\State \textbf{break} 		
+\EndIf
+\EndWhile
 \end{algorithmic}
 \end{algorithm}
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
@@ -111,17 +122,17 @@ Algorithm \ref{algorithm-materialization} shows the details of our method for se
 First, we start by materializing all the root artifacts.
 This is essential as many of the feature engineering and model building operations are not invertible.
 As a result, we cannot reconstruct the raw datasets if they are not materialized.
-Then, for every non-materialized artifact, we compute the feasibility ratio, which is defined as the value of the $feasibility$ function of an artifact divided by its size.
-Then, we start materializing all the artifacts, sorted by their feasibility ratio, until the storage budget is exhausted.
-The feasibility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
+Then, for every non-materialized artifact, we compute the utility ratio, which is defined as the value of the $utility$ function of an artifact divided by its size.
+Then, we start materializing all the artifacts, sorted by their utility ratio, until the storage budget is exhausted.
+The utility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
 \begin{equation}
 \begin{split}
-feasbility(G,v) = 	& \hldel{|pipelines(v)|} \\
+utility(G,v) = 	& \hldel{|pipelines(v)|} \times \\
 								&	potential(v) \times \\
 								& recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where $pipelines(v)$ is the set of pipeline subgraphs which $v$ belongs to and $|pipelines(v)|$ is the cardinality of the set, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
+where $pipelines(v)$ is the set of \hldel{pipeline subgraphs} which $v$ belongs to and $|pipelines(v)|$ is the cardinality of the set, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
 \[
 \text{recreation\_cost}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
 , i.e., executing all the operations from the root nodes to $v$ multiplied by the frequency of $v$.
@@ -129,7 +140,7 @@ Intuitively, we would like to materialize vertices which are more costly to reco
 The impact of $|pipelines(v)|$ is more implicit.
 Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
 An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
-Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$ .
+Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.
 
 %\begin{figure}
 %\begin{subfigure}{0.5\linewidth}
@@ -164,20 +175,19 @@ As a result, after materialization, there are many duplicated columns across dif
 To further reduce the storage cost, we implement a deduplication mechanism.
 We assign a unique hash to every columns of the artifacts.
 When executing an operation on an artifact, all the columns of the resulting artifact, except for the ones affected by the operation carry the same hash value.
-When storing an artifact, a storage manager unit examines the hash of every column, and only stores the columns that do not exist in the storage unit.
+When storing an artifact, the storage manager unit examines the hash of every column, and only stores the columns that do not exist in the storage unit.
 The storage manager tracks the column hashes of all the artifacts in the experiment graph.
 When a specific artifact is requested, the storage manager combines all the columns which belong to the artifact into a data frame and returns the data frame.
 This results in a large decrease in the storage cost (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifacts, deduplication result in only 8 GB of storage).
 
 % maybe a better name
 \textbf{Greedy Meta-Algorithm.}
-We propose a meta-algorithm which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
-Algorithm \ref{algorithm-compression-aware-materialization} shows the details of our storage aware artifact materialization algorithm.
+We propose a storage aware materialization meta-algorithm (Algorithm \ref{algorithm-compression-aware-materialization}) which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
 \hladd{We define a variable to represent the remaining budget (Line 1).
 While the budget is not exhausted, we proceed as follows.
 We extract the current set of materialized nodes from the graph (Line 3), then we apply the Artifact-Materialization algorithm using the remaining budget to compute new vertices for materialization.
 If the Artifact-Materialization algorithm did not find any new vertices to materialize, we return the current graph (Line 6).
-We compute the compressed size of the graph artifacts (Line 8), by invoking the compress method of the storage manager which computes the size of graph artifacts after deduplication. 
+We compute the compressed size of the graph artifacts (Line 8), by invoking the deduplicate method of the storage manager which computes the size of graph artifacts after deduplication. 
 Next, we update the required storage size of the remaining artifacts (Line 9).
 For example, if the materialized artifact $v_1$ contains some of the columns of the non-materialized artifact $v_2$, then we only need to store the remaining columns of $v_2$ to fully materialize it.
 Therefore, we update the size of $v_2$ to indicate the amount of storage it requires to fully materialize.
@@ -195,7 +205,7 @@ Finally, we compute the remaining budget by deducting the compressed size from t
 	\If  {$prev\_mats = materialized\_nodes(G)$}
 		\State return $G$
 	\EndIf
-	\State $compressed\_size$ = $storage\_manager.compress(G)$
+	\State $compressed\_size$ = $deduplicate(G)$
 	\State $storage\_manager.update\_required\_size(G)$
 	\State  $R = \mathcal{B} -  compressed\_size$
 \EndWhile
