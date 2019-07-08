@@ -1,11 +1,31 @@
-\section{ML Workload Optimizations} \label{sec-ml-workloads}
-In this section, we first describe the common types of operations in machine learning workloads.
+\section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
+\hladd{In this section, we start by defining a machine learning task, which is the unit of any collaborative workload, then we define common types of operations in machine learning workloads, as well as the workload description language.
 Then, we discuss how to capture and store the operations in the experiment graph.
-Lastly, we discuss how do we utilize the experiment graph to optimize new workloads.
+Lastly, we discuss how do we utilize the experiment graph to optimize new workloads.}
 
-\subsection{Operations in ML Workloads}
+\subsection{Preliminaries}
+\hladd{
+\textbf{Task.} 
+In order to promote a collaborative effort, any collaborative data science platform must define the task which the users should solve.
+A task defines the requirements and the goal of machine learning solutions.. 
+A task clearly defines what are the initial datasets which users should analyze and train machine learning models on. 
+A task also specifies the evaluation function for the machine learning workloads.
+An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
+With the task clearly define, users can now write their solutions.
+For example, in Kaggle, a task corresponds to a competition with a predefined set of training datasets, testing datasets, and evaluation functions.
+ 
+\textbf{ML Workload Type.}
+Collaborative data science platforms typically provide two modes of executions for solving tasks.
+They allow users to write an end-to-end scripts which performs data loading, data cleaning, and model training.
+We refer to this type of workload as a \textit{long-running workload}.
+Depending on the size of the initial data, a long-running workload may take anything from seconds upto many hours.
+The other type of workloads are more interactive.
+Typically, though Jupyter notebooks, collaborative data science platforms allow users to write their analysis in an interactive fashion, where upon execution of each operation (or group of operations), they can view the result.
+We refer to this type of workload as an \textit{interactive workload}.}
+
+\textbf{ML Workload Operations.}
 We assume the main units of work are data frame (e.g., pandas, R dataframes, and Spark dataframes) like objects that contain one or many columns, where all the data items in one column are of the same data type.
-Regardless of the type of the workload (interactive or long running script), we can divide the operations in the ML workloads into 3 categories.
+Regardless of the type of the workload (interactive or long running), we divide the operations in the ML workloads into 3 categories.
 \begin{table}
 \centering
 \begin{tabular}{ll}
@@ -22,17 +42,17 @@ Regardless of the type of the workload (interactive or long running script), we 
 \caption{List of feature extraction and feature selection operations}\label{feature-engineering-operations}
 \end{table}
 
-\subsubsection{Data and Feature Engineering}
+\textit{(1) Data and Feature Engineering.}
 This group of operations typically belongs to three categories, i.e., simple data transformations and aggregations, feature selection, and feature extraction.
 All of these operations, receive one or multiple columns of a dataset and return another dataset as result. 
 While different data processing tools may provide specialized data transformation and aggregation operations for data frame objects, most of them provide the same or similar operations such as map, reduce, group by, concatenation, and join. 
 In Table \ref{feature-engineering-operations}, we show a list of the most common feature extraction and feature selection operations.
 
-\subsubsection{Model Training}
+\textit{Model Training.}
 Model training operations are a group of operations that receive a dataset and return a machine learning model.
 The result of model training operations can either be used in other data and feature engineering operations (e.g., applying PCA to reduce the number of dimensions of the data) or can be used to perform prediction (for classification and regression tasks) on unseen data.
 
-\subsubsection{Hyperparameter Tuning}
+\textit{Hyperparameter Tuning.}
 Before training a machine learning model, one has to set the hyperparameters of the model to appropriate values.
 Typically, the best values for the hyperparameters of a model vary across different datasets.
 The goal of hyperparameter tuning operations is to find the set of hyperparameters that yield the model with the best performance on a dataset.
@@ -40,12 +60,14 @@ A hyperparameter tuning operation is defined by a budget, a search method, and a
 The budget specifies how many models with different hyperparameter values, within the specified search space, should be trained and the search method specifies what search strategy to incorporate.
 The most common search methods are grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
 
-
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
+\textbf{Workload DAG.}
 A machine learning workload can be represented using a directed acyclic graph (DAG).
 In the DAG, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
-Each workload DAG has one or more root vertices representing the raw datasets that the workload operates on and have no incoming edges.
-The collection of all the DAGs of previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.
+Each workload DAG has one or more root vertices representing the raw datasets which are defined as part of the task definition in a collaborative platform.
+
+\textbf{Experiment Graph. }
+For every task, the collection of all the DAGs of the previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.
 More formally, we represent the experiment graph by $G(V, E)$.
 $V=\{v_i\}, i = 1, \cdots, n$ is the set of all the artifacts in all the workload DAGs.
 $E=\{e_i\}, i = 1, \cdots, m$ is the set of all the executed operations in the workload DAGs.
@@ -68,31 +90,43 @@ Since the experiment graph is rooted, we assign a hash value to every vertex whi
 \end{cases}
 \]
 where $in\_edge(v)$ returns the edges with destination $v$. 
-Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their direct predecessors and edges which connect them to their predecessors.
+Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their parents and edges which connect them to their parents.
+%This hashing procedure results in two important properties.
+%
+%\textit{Property 1}.
+%The two vertices, $v_1$ and $v_2$ in graphs $G_1$ and $G_2$ are the same if and only if $h(v_1)$ in $G_1$ is the same as $h(v_2)$ in $G_2$.
+%
+%\textit{Property 2}.
+%If a vertex $v_1$ in graph $G_1$ does not exist in $G_2$ , then no successors of $v_1$ can exist in $G_2$.}
 
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
 
+\hladd{\textbf{Workload DAG generation.}
+Instead of designing a new DSL, we extend the existing pandas and scikit learn python packages which are frequently used for data analysis and machine learning workloads.
+A parser component reads the user code and instead of executing it line-by-line, it creates the edges and vertices of the workload DAG.
+The actual execution is invoked with \textit{.get()} command of the artifacts.}
 Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing \ref{listing-experiment-graph}.
 
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
-import numpy as np
-import pandas as pd
+import custom_pandas as pd
 
-from sklearn import svm
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_extraction.text import CountVectorizer
+from custom_sklearn import svm
+from custom_sklearn.feature_selection import SelectKBest
+from custom_sklearn.feature_extraction.text import CountVectorizer
 
 train = pd.read_csv('../input/train.csv') 
 print train.columns # [ad_desc,ts,u_id,price,y]
 vectorizer = CountVectorizer()
 count_vectorized = vectorizer.fit_transform(train['ad_desc'])
 selector =  SelectKBest(k=2)
-top_features = selector.fit_transform(train[['ts','u_id','price']], 
-				      train['y'])
+top_features = selector.fit_transform(
+                                  train[['ts','u_id','price']],  
+                                  train['y'])
 top_features # print the content of the data frame			     
 X = pd.concat([count_vectorized,top_features], axis = 1)
 model = svm.SVC().fit(X, train['y'])
+model.get()
 \end{lstlisting}
 
 \begin{figure}
@@ -131,55 +165,86 @@ Then, we draw an edge from the merged vertex which represents the actual operati
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
 Furthermore, when computing the hash of a merged vertex, we take the merge order into account.
 For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
-When computing hash of $v_9$, we combine the predecessors in the same order, i.e., $h(v_9) = h(h(v_7) + m + h(v_3) + m)$. 
+When computing hash of $v_8$, we combine the parents in the same order, i.e., $h(v_8) = h(h(v_7) + m + h(v_3) + m)$. 
+After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
+
  
-\subsubsection{Notations and Terms}\label{notations-terms}
-Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
-
-\textbf{Task.} A \textit{task} defines the goal of the machine learning workloads. 
-A task clearly defines what are the initial datasets which users should analyze and train machine learning models on. 
-We refer to the set of initial datasets as $roots$ since during the graph representation, they become the root vertices of the graph, i.e., they have no incoming edges.
-A task also specifies the evaluation function for the machine learning workloads.
-An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
-
-\textbf{Workload graph.} Given a task, a \textit{workload graph} is the (directed acyclic) graph representation of a user-defined script with the goal of analyzing the datasets in $roots$ of the task and training machine learning models which maximize the evaluation function of the task.
-A workload graph is rooted at one or all of the vertices representing the root datasets of the task.
-
-\textbf{Terminal model.} A \textit{terminal model} is a vertex inside a workload graph which represents a fully trained machine learning model.
-The quality of the terminal model can be measured by the evaluation function of the task.
-A workload graph may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
+%\subsubsection{Notations and Terms}\label{notations-terms}
+%Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
+%
+%\textbf{Task.} A \textit{task} defines the goal of the machine learning workloads. 
+%A task clearly defines what are the initial datasets which users should analyze and train machine learning models on. 
+%We refer to the set of initial datasets as $roots$ since during the graph representation, they become the root vertices of the graph, i.e., they have no incoming edges.
+%A task also specifies the evaluation function for the machine learning workloads.
+%An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
+%
+%\textbf{Workload graph.} Given a task, a \textit{workload graph} is the (directed acyclic) graph representation of a user-defined script with the goal of analyzing the datasets in $roots$ of the task and training machine learning models which maximize the evaluation function of the task.
+%A workload graph is rooted at one or all of the vertices representing the root datasets of the task.
+%
+%\textbf{Terminal model.} A \textit{terminal model} is a vertex inside a workload graph which represents a fully trained machine learning model.
+%The quality of the terminal model can be measured by the evaluation function of the task.
+%A workload graph may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
 
 %\textbf{Pipeline subgraph.} Any unique subgraph inside a workload graph which starts at one or multiple root vertices and ends with one and only one terminal model is a \textit{pipeline subgraph}.
 %A workload graph may contain $0$ or multiple pipeline subgraphs.
 %A vertex (artifact) may belong to multiple pipelines, e.g., a preprocessed dataset which a user utilizes to train multiple machine learning models with different training algorithms.
 
-\subsection{Workload Optimizer for Kaggle Use Case}
-By utilizing an experiment graph, we design a workload optimizer framework.
-We integrate the workload optimizer into collaborative data science platforms to improve the execution of the workloads.
-Here, we describe the integration process of the workload optimizer for optimizing and executing kernels in the Kaggle use case (our motivating example).
-Furthermore, we map the components of the Kaggle use case and our workload optimizer framework to the terms defined in Section \ref{notations-terms}.
-
-Figure \ref{improved-use-case} shows the process of workload optimization in the Kaggle Infrastructure.
-Each competition in Kaggle corresponds to a task.
-The competitions define the set of datasets (roots) and the evaluation function for assessing machine learning models. 
-Given a task, the workload optimization process is as follows.
-First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
-Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations and warmstarting the model training (\circledtext{2}).
-The result of the optimization is another workload graph which contains precomputed artifacts and warmstarted models.
-After executing the optimized workload, we return the result to the user (\circledtext{3}).
-Depending on the number of \textit{pipeline subgraphs} in the workload, the result of the execution is one or multiple \textit{terminal models} which the user can choose to submit as their solution to the competition.
-After the execution, we update the experiment graph using the original workload graph (\circledtext{4}).
-Finally, to ensure that we can store the experiment graph given our storage budget, we execute our materialization algorithms to decide what artifacts to materialize (\circledtext{5}).
+\hladd{
+\subsection{System Architecture and Workflow}
+Figure \ref{system-workflow} shows the process of workload optimization.
+First, a parser component generates the workload DAG from the user scripts (Step 1).
+Upon the invocation of the $get()$ method of an artifact, a local optimization process is invoked.
+We refer to the vertex for which the $get()$ method is invoked as the terminal vertex.
+The local optimization process extracts the subgraph which must be executed in order to compute the terminal vertex.
+To compute the subgraph, local optimizer traverses the graph in reverse order start at the terminal vertex.
+If it visits a vertex which is already computed or it reaches a root in the graph, it stops the search and returns the subgraph of the visited vertices and the edges connecting them, which we refer to as \textit{workload execution subgraph} (Step 2).
+The local optimization process is crucial specially in interactive workloads where many of the vertices of the workload DAGs may have been previously computed and their results are available.
+The remote optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3).
+The result of the remote optimization process is another execution subgraph, which we refer to as the \textit{optimized execution subgraph}.
+Then, a execution planner receives the optimized execution subgraph and returns the sorted list of the operations (edges) by performing a topological sort of the vertices starting the root (or previously computed vertices) (Step 4).
+After the execution, the experiment graph is updated to include the vertices and edges of the workload DAG.
+Finally, after the update, a materializer component decides which artifacts to materialize based on the available storage budget.
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{../images/kaggle-workload-optimizer}
-\caption{Improving the execution of Kaggle Kernels with Workload Optimizer}
-\label{improved-use-case}
+\includegraphics[width=\columnwidth]{../images/system-workflow}
+\caption{The workflow of the collaborative workload optimizer}
+\label{system-workflow}
 \end{figure}
 
-In the experiment graph, each task corresponds to one connected component rooted at vertices representing the tasks root datasets.
-Since each task has unique roots and workloads are not allowed to analyze roots belonging to multiple tasks, it is impossible for two tasks to be connected.
-In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which have 2, 2, and 1 root datasets, depicted as hollow vertices, respectively.
-When optimizing a new Kaggle kernel from competition A, the optimizer component (Step \circledtext{2}) only look for optimization opportunities in the connected component A of the experiment graph.
-Similarly, the scope of the materializer (Step \circledtext{5}) is also limited to individual competitions.
+
+\subsection{Workload Optimizer for Kaggle Use Case}
+In this section, we describe how our collaborative workload optimizer can be integrated into Kaggle's collaborative data science platform to improve the execution of the kernels.
+We select the competition \textit{Home Credit Default Risk}\footnote{https://www.kaggle.com/c/home-credit-default-risk/}.
+The task of the competition is to train a classification model which predicts whether a client is able to repay their loans.
+The task has 8 training datasets and 1 test datasets.
+The goal of the submitted solutions is to maximize the area under the ROC curve between the predicted values and observed target values.
+After a kernel is submitted, it goes through every step of the the collaborative workload optimizer in Figure \ref{system-workflow}.
+We maintain a separate experiment graph for the competition.
+At the time of the first kernel submission, the experiment graph is empty, therefore, Step 3 of Figure \ref{system-workflow} will be skipped and the execution plan is directly generated from the workload execution subgraph.
+When the experiment graph is updated, the remote optimizer component tries to optimize the workload using the experiment graph.
+For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} in the competition has been copied more than 5000 times.
+This indicates the kernel has been executed at least 5000 times, although it is very likely that users run scripts more than once.
+Each run of the kernel roughly take around 200 seconds.
+In our experiment we show that we are able to reduce the execution time to less than 10 seconds when the same kernel is executed more than once.}
+%
+%First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
+%Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations and warmstarting the model training (\circledtext{2}).
+%The result of the optimization is another workload graph which contains precomputed artifacts and warmstarted models.
+%After executing the optimized workload, we return the result to the user (\circledtext{3}).
+%Depending on the number of \textit{pipeline subgraphs} in the workload, the result of the execution is one or multiple \textit{terminal models} which the user can choose to submit as their solution to the competition.
+%After the execution, we update the experiment graph using the original workload graph (\circledtext{4}).
+%Finally, to ensure that we can store the experiment graph given our storage budget, we execute our materialization algorithms to decide what artifacts to materialize (\circledtext{5}).
+%
+%\begin{figure}
+%\centering
+%\includegraphics[width=\columnwidth]{../images/kaggle-workload-optimizer}
+%\caption{Improving the execution of Kaggle Kernels with Workload Optimizer}
+%\label{improved-use-case}
+%\end{figure}
+%
+%In the experiment graph, each task corresponds to one connected component rooted at vertices representing the tasks root datasets.
+%Since each task has unique roots and workloads are not allowed to analyze roots belonging to multiple tasks, it is impossible for two tasks to be connected.
+%In Figure \ref{improved-use-case}, the experiment graph has three connected components representing the three competitions, A, B, and C which have 2, 2, and 1 root datasets, depicted as hollow vertices, respectively.
+%When optimizing a new Kaggle kernel from competition A, the optimizer component (Step \circledtext{2}) only look for optimization opportunities in the connected component A of the experiment graph.
+%Similarly, the scope of the materializer (Step \circledtext{5}) is also limited to individual competitions.

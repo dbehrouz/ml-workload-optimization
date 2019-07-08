@@ -1,22 +1,14 @@
+\hladd{
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
 In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
-%TODO we need to discuss the local optimization and execution planning process in Section 3
-Figure \ref{remote-optimization} shows the multi-step optimization process where we apply the reuse and warmstarting optimizations to the workload graph.
-After constructing the workload DAG, we perform the local optimization which computes the execution subgraph by removing any previously executed operations from the DAG (Step 1).
-Next using this execution subgraph, we look for optimization opportunities (Reuse and Warmstarting) in the experiment graph (Step 2).
-%TODO define non-computed and computed nodes in Section 3
-In Step 2, we query the experiment graph to look if any of the (non-computed) nodes in the workload graph exists and is materialized in the experiment graph.
-Since during the materialization process (Section \ref{sec-materialization}) we have ensured the computation cost of a materialized node outweights its transfer cost, we can safely transfer the materialized node to the workload DAG.
-Furthermore, in Step 2, we also look for warmstarting opportunities for any model training operations.
-The result of Step 2 is another execution subgraph with (possibly) more edges pruned.
-Finaly, we compute the execution plan using the subgraph (Step 3).
-\begin{figure}
-\centering
-\includegraphics[width=\columnwidth]{../images/remote-optimization}
-\caption{Multi-step workload optimization}
-\label{remote-optimization}
-\end{figure}
+
+Both reuse and warmstarting optimizations are part of the remote optimization step of Figure \ref{system-workflow}.
+After computing workload execution subgraph (result of Step 2, Figure  \ref{system-workflow}), we query the experiment graph to look if any of the (non-computed) nodes in the workload execution subgraph exists and is materialized in the experiment graph.
+Since during the materialization process (Section \ref{sec-materialization}) we have ensured the computation cost of a materialized vertex outweights its transfer cost, we can safely transfer the materialized vertex to the machine executing the workload.
+Furthermore, We also look for warmstarting opportunities for any model training operations.
+The result of Step 3 is another execution subgraph with (possibly) more edges pruned.
+Finaly, we compute the execution plan using the the optimized execution subgraph (Step 4, Figure \ref{system-workflow}).
 
 \subsection{Reuse}
 The reuse process receives the workload execution subgraph as input and checks if there are matching vertices in the experiment graph.
@@ -46,7 +38,7 @@ For any other vertex which is not materialized, we recursively examine its prede
 \State $Q \coloneqq  Queue(vt)$  
 \State $\mathcal{M} \coloneqq \emptyset$
 \While {$Q.not\_empty()$}
-	\State $cur  \coloneqq  Q.next()$
+	\State $cur  \coloneqq  Q.pop()$
 	\For {$v \in predecessors (SG, cur)$}
 		\If {$is\_mat(EG, v)$}
 			\State	$\mathcal{M}.append(v)$
@@ -81,7 +73,7 @@ Contrary to the BottomUp reuse, in TopDown reuse, we start traversing the worklo
 		 \State	 $\mathcal{M}.append(r)$
 	\EndIf
 		\While {$Q.not\_empty()$}
-			\State $cur \coloneqq  Q.next()$
+			\State $cur \coloneqq  Q.pop()$
 			\For {$v \in children (SG, cur)$}
 				\If {$is\_mat(EG, v)$}
 					\State	$\mathcal{M}.append(v)$
@@ -162,6 +154,7 @@ The intuition behind this heuristic is that if the parents of a node have a high
 \end{algorithm}
 The advantage of the Hybrid reuse is that it requires at most $log(N)$ queries to the experiment graph, where $N$ is the size of the workload execution graph.
 This is in contrast to the TopDown and BottomUp reuses, where in certain scenarios they may require $N$ queries to to experiment graph.
+}
 
 %We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
 %If an operation already exists in the experiment graph, we directly access the resulting artifact in the experiment graph instead of executing the operation.
