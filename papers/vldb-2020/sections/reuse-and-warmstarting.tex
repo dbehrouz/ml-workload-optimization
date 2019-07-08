@@ -143,18 +143,18 @@ The intuition behind this heuristic is that if the parents of a node have a high
 \While {$step \leq log(N) $}
 		\State $step = step \times 2$
 		\If {$v \notin EG$}
-				\State $v = R\_BFS(v, SG, N/step)$
+				\State $v \coloneqq R\_BFS(v, SG, N/step)$
 		\ElsIf {$v \in EG  \land \neg is\_mat(EG,v)$}
 				\State $prev \coloneqq avg (\mathcal{U}(parents(EG, v))$
 				\State $next \coloneqq avg (\mathcal{U}(children(EG, v))$
 				\If{$prev \geq next $}
-						 \State $v = R\_BFS(v, SG, N/step)$
+						 \State $v \coloneqq R\_BFS(v, SG, N/step)$
 				\Else
-					\State $v = F\_BFS(v, SG, N/step)$
+					\State $v \coloneqq F\_BFS(v, SG, N/step)$
 				\EndIf
 		\ElsIf {$is\_math(EG, v)$}
 				\State $\mathcal{M}.append(v)$
-				\State $v = F\_BFS(v, SG, N/step)$
+				\State $v \coloneqq F\_BFS(v, SG, N/step)$
 		\EndIf
 \EndWhile
 \State return $\mathcal{M}$
