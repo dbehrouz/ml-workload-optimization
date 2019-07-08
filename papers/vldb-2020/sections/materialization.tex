@@ -44,14 +44,14 @@ M(G) = \{v \in V \mid v \text{ is a terminal model}\}
 is the set of all the terminal models in the experiment graph.
 For every vertex $v$ in the graph, 
 \[
-M(v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
+M(G, v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
 \]
 is either $v$ itself, when $v$ is a terminal model, or the set of all terminal models to which $v$ is connected.
 \[
-potential(v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
+potential(G, v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
 \]
 is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task and $\alpha \in [0,1]$ is the damping factor.
-If $v$ itself is a model, then $potential(v) = quality(v)$.
+If $v$ itself is a model, then $potential(G, v) = quality(v)$.
 When $v$ is not a model, the further $v$ is from a model artifact the smaller the damping factor multiplier becomes, which reduces the quality gained by materializing the artifact $v$.
 Intuitively, a high potential artifact is an artifact which results in a high-quality terminal model with only a few operations.
 
@@ -85,17 +85,17 @@ For example, in Figure \ref{improved-use-case}, there are three separate experim
 \begin{algorithmic}[1]
 \Require  $G(V,E)=$ experiment graph, $\mathcal{B}=$ storage budget of task
 \Ensure experiment graph with materialized vertices
-\State $S= 0$ \Comment {current size of the materialized artifacts}
+\State $S \coloneqq 0$ \Comment {current size of the materialized artifacts}
 \For  {$v$ in roots(G)} \Comment{materialize all the root nodes}
 	\If{$v.mat= 0$}
-		\State $v.mat = 1$
-		\State $S = S + v.s$
+		\State $v.mat \coloneqq 1$
+		\State $S \coloneqq S + v.s$
 	\EndIf
 \EndFor
-\State $Q = $ empty priority queue
+\State $Q \coloneqq $ empty priority queue
 \For {$v$ in $V$}
 	\If{$v.mat = 0$}
-		\State $utility\_ratio = \dfrac{\text{utility}(G, v)}{v.s}$
+		\State $utility\_ratio \coloneqq \dfrac{\text{utility}(G, v)}{v.s}$
 		\State insert $v$ into $Q$ sorted by the utility\_ratio
 	\EndIf
 \EndFor
@@ -108,10 +108,10 @@ For example, in Figure \ref{improved-use-case}, there are three separate experim
 %	\EndIf
 %\EndFor
 \While{$Q$ is not empty}
-\State $v =$ pick vertex with highest $utility\_ratio$ 
+\State $v \coloneqq $ pick vertex with highest $utility\_ratio$ 
 \If {$S+v.s \leq \mathcal{B}$}
-\State $v.mat = 1$
-\State $S = S + v.s$
+\State $v.mat \coloneqq 1$
+\State $S \coloneqq S + v.s$
 \Else
 \State \textbf{break} 		
 \EndIf
@@ -128,20 +128,18 @@ Then, we start materializing all the artifacts, sorted by their utility ratio, u
 The utility function computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact:
 \begin{equation}
 \begin{split}
-utility(G,v) = 	& \hldel{|pipelines(v)|} \times \\
-								&	potential(v) \times \\
-								& recreation\_cost(G,v)  
+utility(G,v) = 	potential(G, v) \times recreation\_cost(G,v)  
  \end{split}
 \end{equation}
-where $pipelines(v)$ is the set of \hldel{pipeline subgraphs} which $v$ belongs to and $|pipelines(v)|$ is the cardinality of the set, $potential(v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
+where $potential(G, v)$ computes the potential quality of artifact $v$, and $recreation\_cost(G,v)$ indicates the weighted cost of recreating the artifact $v$ computed as:
 \[
 \text{recreation\_cost}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
 , i.e., executing all the operations from the root nodes to $v$ multiplied by the frequency of $v$.
 Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
-The impact of $|pipelines(v)|$ is more implicit.
+\hldel{The impact of $|pipelines(v)|$ is more implicit.
 Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
 An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
-Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.
+Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.}
 
 %\begin{figure}
 %\begin{subfigure}{0.5\linewidth}
@@ -188,8 +186,8 @@ We propose a storage aware materialization meta-algorithm (Algorithm \ref{algori
 While the budget is not exhausted, we proceed as follows.
 We extract the current set of materialized nodes from the graph (Line 3), then we apply the Artifact-Materialization algorithm using the remaining budget to compute new vertices for materialization.
 If the Artifact-Materialization algorithm did not find any new vertices to materialize, we return the current graph (Line 6).
-We compute the compressed size of the graph artifacts (Line 8), by invoking the deduplicate method of the storage manager which computes the size of graph artifacts after deduplication. 
-Next, we update the required storage size of the remaining artifacts (Line 9).
+We compute the compressed size of the graph artifacts (Line 7), by invoking the deduplicate method of the storage manager which computes the size of graph artifacts after deduplication. 
+Next, we update the required storage size of the remaining artifacts (Line 8).
 For example, if the materialized artifact $v_1$ contains some of the columns of the non-materialized artifact $v_2$, then we only need to store the remaining columns of $v_2$ to fully materialize it.
 Therefore, we update the size of $v_2$ to indicate the amount of storage it requires to fully materialize.
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
@@ -207,7 +205,7 @@ Finally, we compute the remaining budget by deducting the compressed size from t
 		\State return $G$
 	\EndIf
 	\State $compressed\_size$ = $deduplicate(G)$
-	\State $storage\_manager.update\_required\_size(G)$
+	\State $update\_required\_size(G)$
 	\State  $R = \mathcal{B} -  compressed\_size$
 \EndWhile
 \end{algorithmic}
