@@ -1,19 +1,20 @@
 \begin{abstract}
-Collaborative data science platforms, such as Google Colaboratory and Kaggle, affected the way users solve machine learning tasks.
+\hladd{Collaborative data science platforms, such as Google Colaboratory and Kaggle, affected the way users solve machine learning tasks.
 Instead of solving a task in isolation, users write their machine learning workloads and execute them on these platforms and share the workloads with others.
-This enables other users to learn from, modify, and make improvements to the existing workloads.
-However, collaborative platforms suffers from two inefficiencies.
-First, storing all the artifacts, such as raw datasets, generated features, and models with their hyperparameters, requires massive amounts of storage.
-As a result, only some of the artifacts such as raw data and machine learning models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
-\hl{Second, even if all the artifacts are stored, manually finding desired artifacts is a time-consuming process.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar... *Behrouz: I wanted to use the word manually (or something equal) to contrast between the current 'manual' querying or reading the scripts vs our way of reuse or warmstarting that doesn't require user's intervention.
+This enables new users to learn from and modify existing workloads, which will ultimately lead to more efficient solutions for solving the task.
+As a result, many executed operations in collaborative platforms, especially the data preprocessing operations, are repeatedly executed by different users.
+However, current collaborative platforms only store scripts, raw training datasets, and in some cases the final machine learning models and ignore any intermediate artifacts such as preprocessed and cleaned data.
+As a result, the platforms miss an opportunity for improving the execution time of future machine learning workloads.
+%First, storing all the artifacts, , requires massive amounts of storage.
+%As a result, only some of the artifacts such as raw data and machine learning models are stored and users must re-execute the scripts and operations to reconstruct the desired artifact.
+%\hl{Second, even if all the artifacts are stored, manually finding desired artifacts is a time-consuming process.} % Tilmann: this is only a conclusion of the first problem, better say finding the artifacts is slow or similar... *Behrouz: I wanted to use the word manually (or something equal) to contrast between the current 'manual' querying or reading the scripts vs our way of reuse or warmstarting that doesn't require user's intervention.
 
 The contributions of this paper are two-fold.
-First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges, respectively. 
-%TODO Maybe we should rephrease "with high expected rates of future reuse" since we are also looking into quality
-Since storing all the artifacts is not feasible, we propose two algorithms for selecting the artifacts with high likelihood of future reuse.
-We then store the selected artifacts in memory for quick access, a process which we call artifact materialization.
+First, we utilize a graph to store the artifacts and operations of machine learning workloads as vertices and edges, which we refer to as the experiment graph.
+Since storing all the artifacts is not feasible, as the size of the intermediate artifacts may grow exponentially, we propose two algorithms for materializing the artifacts with high likelihoods of future reuse.
 The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning models to decide what artifacts to materialize.
-Second, using the graph, we propose three optimizations, namely reuse, model warmstarting, and fast hyperparameter tuning, to speed up the execution of the future workloads and increase the efficiency of collaborative data science platforms.
+Second, using the experiment graph, we propose a novel approach for quickly finding artifacts to reuse or to warmstart model training operations in future workloads.}
+%TODO one sentence the impact
 
 %Machine learning workloads have varying characteristics.
 %Some involve a large user base where a combination of experts and novice users are trying to design machine learning pipelines and execute them on specific tasks, such as online education, data science challenges.

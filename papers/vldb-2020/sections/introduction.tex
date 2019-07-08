@@ -6,7 +6,7 @@ Many of these workloads are executed in an interactive approach in notebook envi
 
 Recent collaborative data science platforms facilitate workload sharing.
 As a result, data scientists can study other workloads, learn from them, and improve them to train better machine learning models.
-Some platforms such as Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} provide an intuitive way of sharing scripts and raw data and allow execution of the scripts on the platform using Jupyter notebooks. 
+\hladd{Some platforms such as Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} provide an intuitive way of sharing scripts and raw data and allow execution of the data science workloads on the platform either as long-running processes (such as python, or R scripts) or in an interactive fashion using Jupyter notebooks. }
 Other platforms such as OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and ProvDB \cite{miao2018provdb} enable the data scientists to store the operations and artifacts of their machine learning workloads, i.e., raw datasets, intermediate datasets resulting from the operations, and models with their hyperparameters.
 These platforms are typically referred to as experiment databases \cite{Vanschoren2012}.
 Data scientists can then query other users' operations and artifacts to search for more detailed information such as the types of operations, preprocessed datasets, models, hyperparameters, and evaluation metrics for specific machine learning tasks.
@@ -32,7 +32,7 @@ Since many of the artifacts have overlapping data columns, we perform column ded
 The second algorithm is storage-aware, i.e., it takes into account the deduplication information before deciding on what artifacts to materialize.
 
 Using the experiment graph, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
-Specifically, we provide three optimizations, namely, reuse, model warmstarting, \hldel{and fast hyperparameter tuning}.
+Specifically, we provide two optimizations, namely, reuse and model warmstarting.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
 Reuse decreases the data processing time especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
 In model warmstarting, we devise a method to detect if we can warmstart the model in the workload with an existing materialized model artifact.
@@ -54,4 +54,11 @@ In summary, we make the following contributions:
 \item We propose automatic reuse and model warmstarting optimizations for new workloads using the experiment graph.
 \end{itemize}
 
+\hladd{
 The rest of this document is organized as follows.
+In Section \ref{sec-background}, we provide some background information and show an example.
+Section \ref{sec-ml-workloads} discusses the details of our system's workflow.
+Section \ref{sec-materialization} introduces our materialization algorithms.
+In Section \ref{sec-reuse-and-warmstarting}, we discuss the details of the reuse and warmstarting techniques.
+In Section \ref{sec-evaluation}, we show the result of our evaluations.
+Section \ref{sec-reuse-and-warmstarting} discusses the related work and finally, in Section \ref{sec-conclusion}, we conclude this work.}
