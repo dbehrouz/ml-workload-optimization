@@ -76,8 +76,9 @@ As a result, existing solutions to multi-objective optimization problems are not
 
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
-Every task $T$ in the experiment graph has storage budget and runs a separate instance of the materialization algorithm.
-For example, in Figure \ref{improved-use-case}, there is a materializer component and the competitions A, B, and C each have a dedicated storage budget.
+Every task $T$ is associated with an experiment graph.
+Each task also has a storage budget and runs a separate instance of the materialization algorithm.
+For example, in Figure \ref{improved-use-case}, there are three separate experiment graphs for the competitions A, B, and C, each having a dedicated storage budget and running a separate materializer component.
 
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}

@@ -23,7 +23,7 @@ Second, even if all the artifacts are stored, going through the available script
 As a result, many data scientists execute their machine learning workload without checking if they can reuse part of the workload from the existing ones. 
 
 % S
-We propose a solution for efficiently storing the artifacts inside a graph, where vertices are the artifacts and edges are the operations connecting the artifacts and automatically optimize new workloads using the graph.
+We propose a solution for efficiently storing the artifacts inside a graph, which we refer to as the \textit{experiment graph}, where vertices are the artifacts and edges are the operations connecting the artifacts and automatically optimize new workloads using the graph.
 We propose two algorithms to select promising artifacts and store them in memory for quick access, a process which we refer to as the artifact materialization.
 The first algorithm utilizes two different types of metrics for materializing the artifacts, i.e., general and machine learning specific metrics.
 The general metrics include the size and access frequency of the artifacts and the run-time of the operations.
@@ -31,7 +31,7 @@ The machine learning specific metric consists of the quality score of the machin
 Since many of the artifacts have overlapping data columns, we perform column deduplication and remove duplicated columns before storing them.
 The second algorithm is storage-aware, i.e., it takes into account the deduplication information before deciding on what artifacts to materialize.
 
-Using the \textit{experiment graph}, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
+Using the experiment graph, we automatically extract information to optimize the process of design and execution of future machine learning workloads.
 Specifically, we provide three optimizations, namely, reuse, model warmstarting, \hldel{and fast hyperparameter tuning}.
 In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
 Reuse decreases the data processing time especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
