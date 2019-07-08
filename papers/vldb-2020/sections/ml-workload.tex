@@ -5,7 +5,7 @@ Lastly, we discuss how do we utilize the experiment graph to optimize new worklo
 
 \subsection{Operations in ML Workloads}
 We assume the main units of work are data frame (e.g., pandas, R dataframes, and Spark dataframes) like objects that contain one or many columns, where all the data items in one column are of the same data type.
-\hladd{Regardless of the type of the workload (interactive or script), we can divide the operations in the ML workloads into 3 categories.}
+Regardless of the type of the workload (interactive or long running script), we can divide the operations in the ML workloads into 3 categories.
 \begin{table}
 \centering
 \begin{tabular}{ll}
@@ -42,10 +42,10 @@ The most common search methods are grid search, random search, and Bayesian hype
 
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
-\hladd{A machine learning workload can be represented using a directed acyclic graph (DAG).
+A machine learning workload can be represented using a directed acyclic graph (DAG).
 In the DAG, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
 Each workload DAG has one or more root vertices representing the raw datasets that the workload operates on and have no incoming edges.
-The collection of all the DAGs of previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.}
+The collection of all the DAGs of previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.
 More formally, we represent the experiment graph by $G(V, E)$.
 $V=\{v_i\}, i = 1, \cdots, n$ is the set of all the artifacts in all the workload DAGs.
 $E=\{e_i\}, i = 1, \cdots, m$ is the set of all the executed operations in the workload DAGs.
@@ -53,7 +53,7 @@ A directed edge $e$ from $v_i$ to $v_j$ in $G(V, E)$ indicates that the artifact
 Every vertex $v$ has the attributes $\langle f, s \rangle$ (accessed by $v.f$ and $v.s$) which represent the frequency, i.e., number of different workloads an artifact appears in, and storage size of the artifact.
 Every edge $e$ has the attribute $\langle t \rangle$ (accessed by $e.t$) which represents the run-time (in seconds) of the operation.
 
-\hladd{Inside each vertex, we store the meta-data of the artifact.
+Inside each vertex, we store the meta-data of the artifact.
 Depending on how \textit{useful} an artifact is, we may also store the actual underlying data inside the artifact (Section \ref{sec-materialization})
 If the artifact is a raw or a preprocessed dataset, then its meta-data includes the name, type, and total size of each column of the data and its underlying data is represented by the dataframe object (i.e., pandas dataframe \cite{mckinney-proc-scipy-2010}). 
 If the artifact is a machine learning model, its meta-data includes the name, type, hyperparameters, and the error metric of the model and its underlying data is consist of the model weights.
@@ -68,7 +68,7 @@ Since the experiment graph is rooted, we assign a hash value to every vertex whi
 \end{cases}
 \]
 where $in\_edge(v)$ returns the edges with destination $v$. 
-Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their direct predecessors and edges which connect them to their predecessors.}
+Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their direct predecessors and edges which connect them to their predecessors.
 
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
@@ -129,9 +129,9 @@ The merge operator is a logical operator which does not incur a cost, i.e., it h
 The merged vertex is also a logical vertex with no actual attributes which only contains the vertex ids of the merged vertices.
 Then, we draw an edge from the merged vertex which represents the actual operation.
 For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
-\hladd{Furthermore, when computing the hash of a merged vertex, we take the merge order into account.
+Furthermore, when computing the hash of a merged vertex, we take the merge order into account.
 For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
-When computing hash of $v_9$, we combine the predecessors in the same order, i.e., $h(v_9) = h(h(v_7) + m + h(v_3) + m)$. }
+When computing hash of $v_9$, we combine the predecessors in the same order, i.e., $h(v_9) = h(h(v_7) + m + h(v_3) + m)$. 
  
 \subsubsection{Notations and Terms}\label{notations-terms}
 Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
@@ -149,9 +149,9 @@ A workload graph is rooted at one or all of the vertices representing the root d
 The quality of the terminal model can be measured by the evaluation function of the task.
 A workload graph may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
 
-\hldel{\textbf{Pipeline subgraph.} Any unique subgraph inside a workload graph which starts at one or multiple root vertices and ends with one and only one terminal model is a \textit{pipeline subgraph}.
-A workload graph may contain $0$ or multiple pipeline subgraphs.
-A vertex (artifact) may belong to multiple pipelines, e.g., a preprocessed dataset which a user utilizes to train multiple machine learning models with different training algorithms.}
+%\textbf{Pipeline subgraph.} Any unique subgraph inside a workload graph which starts at one or multiple root vertices and ends with one and only one terminal model is a \textit{pipeline subgraph}.
+%A workload graph may contain $0$ or multiple pipeline subgraphs.
+%A vertex (artifact) may belong to multiple pipelines, e.g., a preprocessed dataset which a user utilizes to train multiple machine learning models with different training algorithms.
 
 \subsection{Workload Optimizer for Kaggle Use Case}
 By utilizing an experiment graph, we design a workload optimizer framework.
@@ -164,8 +164,8 @@ Each competition in Kaggle corresponds to a task.
 The competitions define the set of datasets (roots) and the evaluation function for assessing machine learning models. 
 Given a task, the workload optimization process is as follows.
 First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
-Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations, warmstarting the model training \hldel{, and for workloads which contain a hyperparameter tuning operation, faster hyperparameter search} (\circledtext{2}).
-The result of the optimization is another workload graph which contains precomputed artifacts, warmstarted models \hldel{, and proper search space and/or an initialized Bayesian hyperparameter search process}.
+Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations and warmstarting the model training (\circledtext{2}).
+The result of the optimization is another workload graph which contains precomputed artifacts and warmstarted models.
 After executing the optimized workload, we return the result to the user (\circledtext{3}).
 Depending on the number of \textit{pipeline subgraphs} in the workload, the result of the execution is one or multiple \textit{terminal models} which the user can choose to submit as their solution to the competition.
 After the execution, we update the experiment graph using the original workload graph (\circledtext{4}).

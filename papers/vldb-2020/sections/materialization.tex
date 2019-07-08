@@ -136,10 +136,10 @@ where $potential(G, v)$ computes the potential quality of artifact $v$, and $rec
 \text{recreation\_cost}(G,v) = v.f \times \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t\]
 , i.e., executing all the operations from the root nodes to $v$ multiplied by the frequency of $v$.
 Intuitively, we would like to materialize vertices which are more costly to recompute and have larger impacts on the overall quality of the experiment graph.
-\hldel{The impact of $|pipelines(v)|$ is more implicit.
-Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
-An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
-Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.}
+%The impact of $|pipelines(v)|$ is more implicit.
+%Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
+%An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
+%Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.
 
 %\begin{figure}
 %\begin{subfigure}{0.5\linewidth}
@@ -182,7 +182,7 @@ This results in a large decrease in the storage cost (e.g., for the same script 
 % maybe a better name
 \textbf{Greedy Meta-Algorithm.}
 We propose a storage aware materialization meta-algorithm (Algorithm \ref{algorithm-compression-aware-materialization}) which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
-\hladd{We define a variable to represent the remaining budget (Line 1).
+We define a variable to represent the remaining budget (Line 1).
 While the budget is not exhausted, we proceed as follows.
 We extract the current set of materialized nodes from the graph (Line 3), then we apply the Artifact-Materialization algorithm using the remaining budget to compute new vertices for materialization.
 If the Artifact-Materialization algorithm did not find any new vertices to materialize, we return the current graph (Line 6).
@@ -210,7 +210,7 @@ Finally, we compute the remaining budget by deducting the compressed size from t
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
-}
+
 %TODO if existing algorithms produce good results, this can be a good follow up work and we do not need 
 %\textbf{Fractional Greedy Algorithm.}
 %\todo[inline]{I have some rough ideas one what we can do here, but need to work on it a bit more. We can find all the artifacts that have common columns, and give some sort of weight to artifacts who have the highest amount of columns that are shared between other artifacts. }
