@@ -49,7 +49,8 @@ We refer to this type of workloads as \textit{interactive workloads}.
 \textbf{Workload DAG.}
 A machine learning workload can be represented using a directed acyclic graph (DAG).
 In the DAG, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
-Each workload DAG has one or more root vertices representing the raw datasets which are defined as part of the task definition in a collaborative platform.
+Each workload DAG has one or more initial vertices representing the raw datasets which are defined as part of the task definition in a collaborative platform.
+We refer to the initial vertices as the roots.
 
 \textbf{Experiment Graph. }
 For every task, the collection of all the DAGs of the previously executed machine learning workloads forms a rooted graph (with potentially multiple root vertices) which we refer to as the \textit{experiment graph}.

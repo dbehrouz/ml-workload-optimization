@@ -25,7 +25,7 @@ Here, we first formulate the problem of artifact materialization as a multi-obje
 \textbf{Weighted Recreation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the non-merged vertices in the graph:
 \[
-WC(G) =  \sum\limits_{v \in V}  (1-v.mat) \times v.f \times in\_edge(v).t
+WC(G) \coloneqq   \sum\limits_{v \in V}  (1-v.mat) \times v.f \times in\_edge(v).t
 \]
 where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, and $in\_edge(v).t$ returns the edges with destination $v$ and run-time $t$.
 Merged vertices have no impact on $WC(G)$ since they carry no actual data content except for pointers to the original vertices, therefore, we are not computing the weighted recreation cost for the merged vertices.
@@ -38,16 +38,16 @@ Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no
 \textbf{Estimated Quality Function (EQ).} 
 In order to define the estimated quality function, we need to define the followings first.
 \[
-M(G) = \{v \in V \mid v \text{ is a terminal model}\}
+M(G) \coloneqq  \{v \in V \mid v \text{ is a terminal model}\}
 \]
 is the set of all the terminal models in the experiment graph.
 For every vertex $v$ in the graph, 
 \[
-M(G, v) = \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
+M(G, v) \coloneqq  \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
 \]
 is either $v$ itself, when $v$ is a terminal model, or the set of all terminal models to which $v$ is connected.
 \[
-potential(G, v) = \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
+potential(G, v) \coloneqq  \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
 \]
 is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task and $\alpha \in [0,1]$ is the damping factor.
 If $v$ itself is a model, then $potential(G, v) = quality(v)$.
@@ -56,7 +56,7 @@ Intuitively, a high potential artifact is an artifact which results in a high-qu
 
 Now, we define the estimated quality function as:
 \[
-EQ(G) =  \sum\limits_{v \in V}  v.mat \times potential(v)
+EQ(G) \coloneqq   \sum\limits_{v \in V}  v.mat \times potential(v)
 \]
 
 \textbf{Multi-Objective Optimization.}
@@ -83,7 +83,7 @@ For example, in Figure \ref{improved-use-case}, there are three separate experim
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, $\mathcal{B}=$ storage budget of task
+\Require  $G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task
 \Ensure experiment graph with materialized vertices
 \State $S \coloneqq 0$ \Comment {current size of the materialized artifacts}
 \For  {$v$ in roots(G)} \Comment{materialize all the root nodes}
@@ -108,66 +108,44 @@ For example, in Figure \ref{improved-use-case}, there are three separate experim
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
-}
+
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
-% is the definition of root artifact clear? I defined it in Section 3.3 Workload Optimizer for Kaggle Use Cases
-First, we start by materializing all the root artifacts.
+}
+First, we start by materializing all the root vertices.
 This is essential as many of the feature engineering and model building operations are not invertible.
 As a result, we cannot reconstruct the raw datasets if they are not materialized.
 \hladd{
-Then, for every non-materialized vertex, we compute the utility of the vertex.
-Then, we start materializing all the vertices, sorted by their utility, until the storage budget is exhausted.
-The utility function ($\mathcal{U}(G,v) $) computes the goodness of an artifact with respect to its recreation cost, how often it is used downstream, and the estimated quality gained from the artifact.
-To define the utility function, we must first define the recreation cost function which is the following:  
+Then, for every non-materialized vertex, we compute the utility value of the vertex (Lines 7-10).
+Then, we start materializing all the vertices, sorted by their utility, until the storage budget is exhausted (Lines 11-15).
+The utility function ($\mathcal{U}(G,v) $) computes the goodness of an artifact with respect to its recreation cost, how often it is reused, and the estimated quality gained from the artifact.
+To define the utility function, we first define the recreation cost function as the following:  
 \[
-recreation\_cost(G,v) =\sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t
+recreation\_cost(G,v) \coloneqq \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t
 \]
-which is the total time of executing all the operations from the root vertices to $v$.
-We also define $tr$ as the data transfer rate between the experiment graph and the machines running the workloads.
+which is the total execution time of all the operations from the root vertices to $v$.
+We also define $transfer(v)$ as the amount of times to transfer vertex $v$ from the experiment graph to the machine running the workload.
+The $transfer$ function depends on the size of the vertex and the infrastructure type of the system.
 Then, the utility function is defined as: 
 \[
-\mathcal{U}(G,v) = 	
+\mathcal{U}(G,v) \coloneqq  	
 		\begin{cases}
-		0, & \text{if }  \dfrac{v.s}{tr} \ge rc(G,v)  \\ 
+		0, & \text{if }  transfer(v) \ge rc(G,v)  \\ 
 		\dfrac{v.f \times p(G, v) \times rc(G,v)}{v.s}, & \text{otherwise}.
 		\end{cases}
 \]
 where $p(G, v)$ and $rc(G,v)$ are the potential and recreation cost of $v$ (for ease of readability we replace $potential(G,v)$ with $p(G,v)$ and $recreation\_cost(G,v)$ with $rc(G,v)$) and $v.f$ and $v.s$ are the frequency and size of the vertex.
-$ \frac{v.s}{tr}$ is the amount of time required to transfer the content of vertex $v$ from the experiment graph to the machine which is running the workload.
-If transfer time is greater than the recomputation cost of an artifact, we do not materialize the artifact.
-Otherwise, we materialize vertices which are more costly to recompute, have larger impacts on the overall quality of the experiment graph, and have higher frequency.}
-%The impact of $|pipelines(v)|$ is more implicit.
-%Intuitively, an artifact with a high $|pipelines(v)|$ has appeared in several pipelines each leading to a different terminal model.
-%An example of such artifact is a clean and preprocessed dataset with high-quality features, where multiple users have utilized it to train different terminal models with different training algorithms and hyperparameters.
-%Therefore, in the presence of similar estimated quality, recreation cost, and size, we are prioritizing artifacts with higher $|pipelines(v)|$.
+If transfer cost is greater than the recomputation cost, we do not materialize the vertex since re-executing the operations is faster than copying the vertex.
+Taking the transfer cost into account enables us to adapt the materialization algorithm to different system architecture types (i.e., single node vs distributed) and storage unit types (i.e., in-memory or on-disk experiment graphs).
+If recreation cost dominates the transfer time, then, we materialize vertices which are more costly to recompute, have larger impacts on the overall quality of the experiment graph, and have a higher frequency.
 
-%\begin{figure}
-%\begin{subfigure}{0.5\linewidth}
-%\centering
-%\input{../images/tikz/graph-mat-step-1.tex}
-%\caption{Original Graph}
-%\end{subfigure}%
-%\begin{subfigure}{0.5\linewidth}
-%\centering
-%\input{../images/tikz/graph-mat-step-2.tex}
-%\caption{Materialized Graph}
-%\end{subfigure}
-%\begin{subfigure}{\linewidth}
-%\setlength\tabcolsep{3.5pt} % This is to ensure the table does not go out of bound
-%\begin{tabular}{l | | >{\bfseries}r | r  |>{\bfseries}r | r | r | >{\bfseries}r | >{\bfseries}r | >{\bfseries}r |>{\bfseries}r }
-%\hline
-%\textbf{vertex} & $\boldsymbol{v_0}$ & $v_1$ & $\boldsymbol{v_2}$ & $v_3$ & $v_4$ & $\boldsymbol{v_5}$ & $\boldsymbol{v_6}$ & $\boldsymbol{v_7}$ &$\boldsymbol{v_8}$ \\
-%\hline
-%\textbf{size (MB)}    & 10 & 8 & 2 & 40 & 42 & 1 & 30 & 2   & 3        \\
-%\textbf{$\boldsymbol{\rho}$ (s)} & ---   & 3 & 3 & 78 & 81 & 52 & 141 & 107 & 154	  \\
-%\textbf{ratio}& ---   & 0.37 & 1.5 & 1.95 & 1.93 & 52 & 4.7 & 53.5 & 51.3	\\
-%\hline
-%\end{tabular}
-%\caption{List of vertices, their sizes, recreation costs, and the cost over size ratio (Bold vertices are materialized).}
-%\end{subfigure}
-%\caption{Artifact materialization based on Algorithm \ref{algorithm-materialization} when storage capacity is 55 (MB)}
-%\label{fig-materialization-example}
-%\end{figure}
+\textbf{Run-time and Complexity.}
+The complexity of the materialization algorithm is $\mathcal{O}(|V|)$ where $|V|$ is the number of vertices in the experiment graph.
+As users execute more workloads, the size of the experiment graph increases and running the materialization algorithm becomes more costly.
+However, once the utility of a vertex is computed, it does not change until it appears in a new user workload.
+Therefore, in our implementation, we compute the utilities for all the new vertices (Lines 7 - 10, Algorithm \ref{algorithm-materialization}) once and only recompute the utility if the vertex appears in a new workload.
+By precomputing the utilities we reduce the complexity of each run of the materialization algorithm to $\mathcal{O}(|W|)$, where $|W|$ is the number of vertices in the workload DAG.
+}
+
 \subsection{Storage-Aware Materialization Algorithm}
 Since many feature engineering operations only operate on one or a few columns of a dataset, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.
 As a result, after materialization, there are many duplicated columns across different artifacts.
@@ -195,18 +173,18 @@ Finally, we compute the remaining budget by deducting the compressed size from t
 \begin{algorithm}[h]
 \caption{Storage-Aware-Artifact-Materialization}\label{algorithm-compression-aware-materialization}
 \begin{algorithmic}[1]
-\Require  $G(V,E)=$ experiment graph, $\mathcal{B}=$ storage budget of task
+\Require  $G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task
 \Ensure experiment graph with materialized vertices
-\State $R = \mathcal{B}$ 
+\State $R \coloneqq  \mathcal{B}$ 
 \While {$R > 0$}
-	\State $prev\_mats = materialized\_nodes(G)$
-	\State $G$  = \textit{Artifact-Materialization}($G, R$)
+	\State $prev\_mats \coloneqq  materialized\_nodes(G)$
+	\State $G \coloneqq $ \textit{Artifact-Materialization}($G, R$)
 	\If  {$prev\_mats = materialized\_nodes(G)$}
 		\State return $G$
 	\EndIf
-	\State $compressed\_size$ = $deduplicate(G)$
+	\State $compressed\_size \coloneqq  deduplicate(G)$
 	\State $update\_required\_size(G)$
-	\State  $R = \mathcal{B} -  compressed\_size$
+	\State  $R \coloneqq  \mathcal{B} -  compressed\_size$
 \EndWhile
 \end{algorithmic}
 \end{algorithm}
