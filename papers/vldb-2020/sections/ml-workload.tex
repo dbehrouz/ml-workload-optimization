@@ -1,64 +1,49 @@
 \section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
-\hladd{In this section, we start by defining a machine learning task, which is the unit of any collaborative workload, then we define common types of operations in machine learning workloads, as well as the workload description language.
-Then, we discuss how to capture and store the operations in the experiment graph.
-Lastly, we discuss how do we utilize the experiment graph to optimize new workloads.}
-
-\subsection{Preliminaries}
 \hladd{
-\textbf{Task.} 
-In order to promote a collaborative effort, any collaborative data science platform must define the task which the users should solve.
-A task defines the requirements and the goal of machine learning solutions.. 
-A task clearly defines what are the initial datasets which users should analyze and train machine learning models on. 
-A task also specifies the evaluation function for the machine learning workloads.
-An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
-With the task clearly define, users can now write their solutions.
-For example, in Kaggle, a task corresponds to a competition with a predefined set of training datasets, testing datasets, and evaluation functions.
+In this section, we first define the required terms which refer to different entities in collaborative data science platforms. 
+Then, we discuss the details of the experiment graph construction and workflow of our system and optimization process.
+Finally, we show how a real collaborative data science platform can utilize our system to improve the execution of machine learning workloads.
+}
+
+\subsection{Preliminaries and Definitions}
+\hladd{
+\textbf{ML Task.} 
+In order to promote a collaborative effort, collaborative data science platforms must define the task which the users should solve.
+A task specifies the requirements and the goal of machine learning solutions.
+In our system, the definition of an ML task contains the following.
+(1) The type of the machine learning model, i.e., classification, regression, or clustering.
+(2) One or multiple datasets grouped into training and test (except for unsupervised tasks, which do not require a test dataset).
+(3) An evaluation function which assigns a score to the user-provided solution.
+An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation test dataset $D_2$.
+For example, in Kaggle, a task corresponds to a competition with a predefined set of training datasets, testing datasets, and an evaluation function.
+
+\textbf{ML Workload Data Types and Operations.}
+In our system, we support 3 data types.
+(1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects (e.g., pandas dataframe \cite{mckinney-proc-scipy-2010}).
+(2) An \textit{Aggregate} which contains a single value or list of values.
+(3) A \textit{Model} which represents a trained machine learning model.
+
+Each data type results from one of the following 3 types of operations.
+(1) Data preprocessing and feature engineering operations which include simple data transformation and aggregation, feature selection, and feature extraction operations.
+This group of operations either return another Dataset (e.g., resulting from map, filter, or one-hot encoding) or an Aggregate (e.g., resulting from reduce or column correlation).
+(2) Model training operations which train a machine learning model on a Dataset.
+The result of model training operations can either be used in other data and feature engineering operations (e.g., a PCA model) or can be used to perform prediction on a test dataset.
+Model training operations return a Model type.
+(3) Hyperparameter tuning operations which have the task of finding the best hyperparameters for a machine learning model.
+The most common tuning approaches are grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
+In all three approaches, several models with different hyperparameters are trained and the model which performs the best is returned as the final result.
+In our system, instead of only returning the best performing model, we also capture all the runs with different hyperparameters.
+As a result, hyperparameter tuning operations returns a set of Models.
  
 \textbf{ML Workload Type.}
 Collaborative data science platforms typically provide two modes of executions for solving tasks.
-They allow users to write an end-to-end scripts which performs data loading, data cleaning, and model training.
-We refer to this type of workload as a \textit{long-running workload}.
-Depending on the size of the initial data, a long-running workload may take anything from seconds upto many hours.
-The other type of workloads are more interactive.
-Typically, though Jupyter notebooks, collaborative data science platforms allow users to write their analysis in an interactive fashion, where upon execution of each operation (or group of operations), they can view the result.
-We refer to this type of workload as an \textit{interactive workload}.}
-
-\textbf{ML Workload Operations.}
-We assume the main units of work are data frame (e.g., pandas, R dataframes, and Spark dataframes) like objects that contain one or many columns, where all the data items in one column are of the same data type.
-Regardless of the type of the workload (interactive or long running), we divide the operations in the ML workloads into 3 categories.
-\begin{table}
-\centering
-\begin{tabular}{ll}
-\hline
-	   Feature Extraction & Feature Selection\\ \hline
-        feature hasher & variance threshold  \\
-        one hot encoding & select k best \\
-        count vectorizer& select percentile \\ 
-        tfidf transformer & recursive feature elimination \\
-        hashing vectorizer & select from model \\
-        extract\_patch\_2d &  \\
-        \hline
-\end{tabular}
-\caption{List of feature extraction and feature selection operations}\label{feature-engineering-operations}
-\end{table}
-
-\textit{(1) Data and Feature Engineering.}
-This group of operations typically belongs to three categories, i.e., simple data transformations and aggregations, feature selection, and feature extraction.
-All of these operations, receive one or multiple columns of a dataset and return another dataset as result. 
-While different data processing tools may provide specialized data transformation and aggregation operations for data frame objects, most of them provide the same or similar operations such as map, reduce, group by, concatenation, and join. 
-In Table \ref{feature-engineering-operations}, we show a list of the most common feature extraction and feature selection operations.
-
-\textit{Model Training.}
-Model training operations are a group of operations that receive a dataset and return a machine learning model.
-The result of model training operations can either be used in other data and feature engineering operations (e.g., applying PCA to reduce the number of dimensions of the data) or can be used to perform prediction (for classification and regression tasks) on unseen data.
-
-\textit{Hyperparameter Tuning.}
-Before training a machine learning model, one has to set the hyperparameters of the model to appropriate values.
-Typically, the best values for the hyperparameters of a model vary across different datasets.
-The goal of hyperparameter tuning operations is to find the set of hyperparameters that yield the model with the best performance on a dataset.
-A hyperparameter tuning operation is defined by a budget, a search method, and a search space.
-The budget specifies how many models with different hyperparameter values, within the specified search space, should be trained and the search method specifies what search strategy to incorporate.
-The most common search methods are grid search, random search, and Bayesian hyperparameter search \cite{bergstra2012random,snoek2012practical}.
+They allow users to write an end-to-end script which performs data loading, data cleaning, and model training.
+We refer to this type of workloads as \textit{long-running workloads}.
+Depending on the size of the initial data, a long-running workload may take anything from seconds up to many hours.
+The other type of workloads is more interactive.
+Typically, through Jupyter notebooks, collaborative data science platforms allow users to write their analysis in an interactive fashion, whereupon execution of each operation (or group of operations), they can view the result and fine-tune their analysis code.
+We refer to this type of workloads as \textit{interactive workloads}.
+}
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
 \textbf{Workload DAG.}
@@ -102,33 +87,15 @@ Intuitively, the hash of a root vertex is its unique identifier (location on dis
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
 
-\hladd{\textbf{Workload DAG generation.}
-Instead of designing a new DSL, we extend the existing pandas and scikit learn python packages which are frequently used for data analysis and machine learning workloads.
+\hladd{
+\textbf{Workload DAG generation.}
+Instead of designing a new DSL, we extend the existing pandas \cite{mckinney-proc-scipy-2010} and scikit-learn \cite{sklearn_api} python packages which are frequently used for data analysis and machine learning workloads.
+Listing \ref{listing-experiment-graph} shows an example of a workload script.
+With only a slight modification of the import commands, we are able to load our system's modules.
 A parser component reads the user code and instead of executing it line-by-line, it creates the edges and vertices of the workload DAG.
-The actual execution is invoked with \textit{.get()} command of the artifacts.}
-Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing \ref{listing-experiment-graph}.
-
-\begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
-import custom_pandas as pd
-
-from custom_sklearn import svm
-from custom_sklearn.feature_selection import SelectKBest
-from custom_sklearn.feature_extraction.text import CountVectorizer
-
-train = pd.read_csv('../input/train.csv') 
-print train.columns # [ad_desc,ts,u_id,price,y]
-vectorizer = CountVectorizer()
-count_vectorized = vectorizer.fit_transform(train['ad_desc'])
-selector =  SelectKBest(k=2)
-top_features = selector.fit_transform(
-                                  train[['ts','u_id','price']],  
-                                  train['y'])
-top_features # print the content of the data frame			     
-X = pd.concat([count_vectorized,top_features], axis = 1)
-model = svm.SVC().fit(X, train['y'])
-model.get()
-\end{lstlisting}
-
+The actual execution is invoked with \textit{.get()} command of a vertex (Line 18, Listing \ref{listing-experiment-graph}.
+}
+Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing  Listing \ref{listing-experiment-graph}.
 \begin{figure}
 \begin{subfigure}[b]{0.4\linewidth}
 \centering
@@ -156,6 +123,28 @@ svm.fit & $\langle 100s\rangle$ & f\\
 \label{fig-experiment-graph}
 \end{figure}
 Table \ref{fig-experiment-graph}b shows both the label of every edge operation, i.e., time, and the hash of the operations and their hyperparameters.
+
+\begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-experiment-graph}]
+import custom_pandas as pd
+
+from custom_sklearn import svm
+from custom_sklearn.feature_selection import SelectKBest
+from custom_sklearn.feature_extraction.text import CountVectorizer
+
+train = pd.read_csv('../input/train.csv') 
+print train.columns # [ad_desc,ts,u_id,price,y]
+vectorizer = CountVectorizer()
+count_vectorized = vectorizer.fit_transform(train['ad_desc'])
+selector =  SelectKBest(k=2)
+top_features = selector.fit_transform(
+                                  train[['ts','u_id','price']],  
+                                  train['y'])
+top_features # print the content of the data frame			     
+X = pd.concat([count_vectorized,top_features], axis = 1)
+model = svm.SVC().fit(X, train['y'])
+model.get()
+\end{lstlisting}
+
 Since at the time of the execution of the script, the experiment graph is empty, all the artifacts (vertices) have a frequency of 1.
 In order to represent operations which process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
 First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
@@ -167,43 +156,26 @@ Furthermore, when computing the hash of a merged vertex, we take the merge order
 For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
 When computing hash of $v_8$, we combine the parents in the same order, i.e., $h(v_8) = h(h(v_7) + m + h(v_3) + m)$. 
 After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
-
- 
-%\subsubsection{Notations and Terms}\label{notations-terms}
-%Apart from the experiment graph, $G(V, E)$, we need to define several other terms and notations.
-%
-%\textbf{Task.} A \textit{task} defines the goal of the machine learning workloads. 
-%A task clearly defines what are the initial datasets which users should analyze and train machine learning models on. 
-%We refer to the set of initial datasets as $roots$ since during the graph representation, they become the root vertices of the graph, i.e., they have no incoming edges.
-%A task also specifies the evaluation function for the machine learning workloads.
-%An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation dataset $D_2$, where $roots = \{D_1, D_2\}$.
-%
-%\textbf{Workload graph.} Given a task, a \textit{workload graph} is the (directed acyclic) graph representation of a user-defined script with the goal of analyzing the datasets in $roots$ of the task and training machine learning models which maximize the evaluation function of the task.
-%A workload graph is rooted at one or all of the vertices representing the root datasets of the task.
-%
-%\textbf{Terminal model.} A \textit{terminal model} is a vertex inside a workload graph which represents a fully trained machine learning model.
-%The quality of the terminal model can be measured by the evaluation function of the task.
-%A workload graph may contain $0$ (workloads for only performing exploratory data analysis) or multiple terminal models.
-
-%\textbf{Pipeline subgraph.} Any unique subgraph inside a workload graph which starts at one or multiple root vertices and ends with one and only one terminal model is a \textit{pipeline subgraph}.
-%A workload graph may contain $0$ or multiple pipeline subgraphs.
-%A vertex (artifact) may belong to multiple pipelines, e.g., a preprocessed dataset which a user utilizes to train multiple machine learning models with different training algorithms.
-
 \hladd{
 \subsection{System Architecture and Workflow}
 Figure \ref{system-workflow} shows the process of workload optimization.
 First, a parser component generates the workload DAG from the user scripts (Step 1).
-Upon the invocation of the $get()$ method of an artifact, a local optimization process is invoked.
-We refer to the vertex for which the $get()$ method is invoked as the terminal vertex.
+Upon the invocation of the $get()$ method of an artifact, a local optimization process beings.
+We refer to the vertex for which the $get()$ method is invoked as the terminal vertex (Vertex 7).
 The local optimization process extracts the subgraph which must be executed in order to compute the terminal vertex.
-To compute the subgraph, local optimizer traverses the graph in reverse order start at the terminal vertex.
-If it visits a vertex which is already computed or it reaches a root in the graph, it stops the search and returns the subgraph of the visited vertices and the edges connecting them, which we refer to as \textit{workload execution subgraph} (Step 2).
-The local optimization process is crucial specially in interactive workloads where many of the vertices of the workload DAGs may have been previously computed and their results are available.
-The remote optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3).
+The Local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
+In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
+Therefore, the local optimizer stops the traversal when it reaches a previously computed vertex.
+The subgraph of all the visited vertices and the edges connecting them, which we refer to as the  \textit{workload execution subgraph}, is the result of the local optimization step (Step 2).
+For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
+Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
+The remote optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3). 
 The result of the remote optimization process is another execution subgraph, which we refer to as the \textit{optimized execution subgraph}.
-Then, a execution planner receives the optimized execution subgraph and returns the sorted list of the operations (edges) by performing a topological sort of the vertices starting the root (or previously computed vertices) (Step 4).
-After the execution, the experiment graph is updated to include the vertices and edges of the workload DAG.
-Finally, after the update, a materializer component decides which artifacts to materialize based on the available storage budget.
+For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model inside the vertex) of Vertex 5.
+Therefore, during the remote optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
+Then, an execution planner receives the optimized execution subgraph and sorts the edges based on their topological order, which are then executed (Step 4).
+After the execution, the experiment graph is updated to include the vertices and edges of the workload graph (Step 5).
+Finally, after the update, a materializer component decides which artifacts to materialize based on the available storage budget (Step 6).
 
 \begin{figure}
 \centering
@@ -214,19 +186,20 @@ Finally, after the update, a materializer component decides which artifacts to m
 
 
 \subsection{Workload Optimizer for Kaggle Use Case}
-In this section, we describe how our collaborative workload optimizer can be integrated into Kaggle's collaborative data science platform to improve the execution of the kernels.
+In this section, we describe how our system can be integrated into Kaggle's collaborative data science platform to improve the execution of the kernels.
 We select the competition \textit{Home Credit Default Risk}\footnote{https://www.kaggle.com/c/home-credit-default-risk/}.
 The task of the competition is to train a classification model which predicts whether a client is able to repay their loans.
 The task has 8 training datasets and 1 test datasets.
-The goal of the submitted solutions is to maximize the area under the ROC curve between the predicted values and observed target values.
-After a kernel is submitted, it goes through every step of the the collaborative workload optimizer in Figure \ref{system-workflow}.
-We maintain a separate experiment graph for the competition.
-At the time of the first kernel submission, the experiment graph is empty, therefore, Step 3 of Figure \ref{system-workflow} will be skipped and the execution plan is directly generated from the workload execution subgraph.
-When the experiment graph is updated, the remote optimizer component tries to optimize the workload using the experiment graph.
-For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} in the competition has been copied more than 5000 times.
-This indicates the kernel has been executed at least 5000 times, although it is very likely that users run scripts more than once.
-Each run of the kernel roughly take around 200 seconds.
-In our experiment we show that we are able to reduce the execution time to less than 10 seconds when the same kernel is executed more than once.}
+The goal of the submitted solutions is to maximize the evaluation function, the area under the ROC curve between the predicted values and observed target values.
+After a kernel is submitted, it goes through every step of the workload optimizer system in Figure \ref{system-workflow}.
+For every competition, we maintain a separate experiment graph.
+At the time of the first kernel submission, the experiment graph is empty, therefore, the workload optimizer system skips Step 3 of Figure \ref{system-workflow} and generates the execution plan directly from the workload execution subgraph.
+If the experiment graph is not empty, the remote optimizer tries to optimize the workload using the experiment graph.
+For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} in the competition has been copied by more than 5000 different users.
+This indicates the kernel has been executed at least 5000 times, although it is very likely that many of the users run the script more than once.
+Each execution of the kernel takes nearly 200 seconds.
+In our experiments, we show that we are able to reduce the execution time to less than 10 seconds when the same kernel is executed more than once.
+}
 %
 %First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
 %Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations and warmstarting the model training (\circledtext{2}).
