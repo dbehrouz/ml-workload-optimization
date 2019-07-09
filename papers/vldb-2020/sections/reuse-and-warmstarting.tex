@@ -2,35 +2,38 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
 In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
+Both optimizations are part of the the remote optimization step of Figure \ref{system-workflow} and can greatly reduce the execution time of a workload.
 
-Both reuse and warmstarting optimizations are part of the remote optimization step of Figure \ref{system-workflow}.
-After computing workload execution subgraph (result of Step 2, Figure  \ref{system-workflow}), we query the experiment graph to look if any of the (non-computed) nodes in the workload execution subgraph exists and is materialized in the experiment graph.
-Since during the materialization process (Section \ref{sec-materialization}) we have ensured the computation cost of a materialized vertex outweights its transfer cost, we can safely transfer the materialized vertex to the machine executing the workload.
-Furthermore, We also look for warmstarting opportunities for any model training operations.
-The result of Step 3 is another execution subgraph with (possibly) more edges pruned.
-Finaly, we compute the execution plan using the the optimized execution subgraph (Step 4, Figure \ref{system-workflow}).
+\todo[inline]{Formulate Warmstarting and add a subsection.}
+%Furthermore, if the workload execution subgraph contains a model training operation, the remote optimizer looks for similar models in the experiment graph, and sets the initial weight parameters of the model in the workload execution subgraph to the model in experiment graph before executing the training operation.
+%This process, which is called model warmstarting, can greatly reduce the training time of machine learning models.
+
+%Furthermore, We also look for warmstarting opportunities for any model training operations.
+%The result of Step 3 is another execution subgraph with (possibly) more edges pruned.
+%Finaly, we compute the execution plan using the the optimized execution subgraph (Step 4, Figure \ref{system-workflow}).
 
 \subsection{Reuse}
-The reuse process receives the workload execution subgraph as input and checks if there are matching vertices in the experiment graph.
-%TODO define a theorem or somehow mention this rule
-Based on the hashing procedure, we showed that two vertices belonging to two different graphs have the same hash if and only if they have the same execution subgraph.
-Therefore, to find matching vertices in the workload execution subgraph, we query their id in the experiment graph.
-However, in cases where the subgraph is very large and querying the experiment graph incurs a penalty, we must try to minimize the number of queries being made to the experiment graph.
-In this section, we present three approaches for querying the experiment graph, namely, BottomUp reuse, TopDown reuse, and Hybrid reuse.
+After computing the workload execution subgraph (the result of step 2, Figure  \ref{system-workflow}), the remote optimizer tries to find any matching vertex in the experiment graph, and transfer them if they are materialized.
+Since during the materialization process, we ensure the recomputation cost of a materialized vertex outweighs its transfer cost, we can safely transfer the materialized vertex to the machine executing the workload and guarantee the total execution time will improve.
+
+The vertex hashing procedure in Section \ref{sec-ml-workloads} indicates that two vertexes from two different graphs are the same if they have the same id (hash value).
+Since id of a vertex captures the exact list of proceeding operations (edges) from the root vertices, if two vertices have the same hash, they also have the same list of proceeding operations.
+Therefore, to find matching vertices in the workload execution subgraph, remote optimizer queries their ids in the experiment graph.
+However, in cases where the workload execution subgraph is very large and querying the experiment graph incurs a penalty (e.g., the experiment graph is stored on a remote machine), we must minimize the number of queries to the experiment graph.
+In this section, we present three approaches for searching in the experiment graph, namely, BottomUp reuse, TopDown reuse, and Hybrid reuse.
 
 \textbf{BottomUp reuse.}
 The process of BottomUp reuse is similar to how we construct the execution subgraph.
-Algorithm \ref{algorithm-bottomup} shows the details of BottomUp reuse.
-$v_t$ represent the vertex whose data is requested.
+Algorithm \ref{algorithm-bottomup} shows the details of the BottomUp reuse.
+$v_t$ represent the terminal vertex whose data is requested.
 The BottomUp reuse utilizes the following early-stopping principle. 
-If a vertex from the workload execution subgraph ($SG$) exist in the experiment graph ($EG$) and is materialized, then we can skip traversing its parents and return add the vertex to the set of returning materialized vertices.
+If a vertex from the workload execution subgraph ($SG$) exist in the experiment graph ($EG$) and is materialized, then we skip traversing its parents and add the vertex to the set of materialized vertices.
 Therefore, in Line 1, if $v_t$ is materialized, we return it as the result and in Lines 8-11, we only continue the search if the vertex ($v$) is not materialized ($is\_mat(EG, v)$ function returns true if $v$ is materialized in $EG$).
-For any other vertex which is not materialized, we recursively examine its predecessors until we reach there are no more vertices left.
-
+For any other vertex which is not materialized, we recursively examine its parents until there are no more vertices left (i.e., we reach the root vertices).
 \begin{algorithm}[h]
 \caption{BottomUp Reuse}\label{algorithm-bottomup}
 \begin{algorithmic}[1]
-\Require terminal vertex $v_t$, workload execution subgraph  $SG$, experiment graph $EG$ 
+\Require $v_t$: terminal vertex, $SG$: workload execution subgraph, $EG$: experiment graph 
 \Ensure set of materialized vertices $\mathcal{M}$ 
 \If {$is\_mat(EG, v_t)$}
 	\State return $\{v_t\}$
@@ -50,17 +53,17 @@ For any other vertex which is not materialized, we recursively examine its prede
 \State return $\mathcal{M}$
 \end{algorithmic}
 \end{algorithm}
-BottomUp approach performs well when the difference between the current workload graph and the ones that exist in the experiment graph are in vertices which are far from the root.
-For example in Figure \ref{remote-optimization}, if vertex 7 or 6 were materialized, the BottomUp returns the result after one or two iterations, resulting in very few queries to the experiment graph.
-On the other hand, the current workload differs with existing workloads in vertices close to the root, or in extreme scenarios, it has no similarity at all (a workload which works on a new root vertex), then BottomUp reuse has to traverse the graph until the root and queries the experiment graph for every vertex in the workload graph.
+BottomUp reuse performs well when the terminal vertex or vertices close to the terminal are materialized in the experiment graph.
+However, in extreme cases, where none of the vertices of the workload execution subgraph are in the experiment graph, BottomUp reuse still has to examine all the vertices.
+Therefore, BottomUp reuse has a complexity of $\mathcal{O}(|SG|)$, where $|SG|$ is the number of vertices in the workload execution workload subgraph, which means the remote optimizer may make upto $|SG|$ calls to the experiment graph.
 
 \textbf{TopDown reuse.}
-Contrary to the BottomUp reuse, in TopDown reuse, we start traversing the workload execution subgraph, from its root vertices.
+Contrary to the BottomUp reuse, in TopDown, we start traversing the workload execution subgraph, from its root vertices.
 
 \begin{algorithm}[h]
 \caption{TopDown Reuse}\label{algorithm-topdown}
 \begin{algorithmic}[1]
-\Require terminal vertex $v_t$, workload execution subgraph  $SG$, experiment graph $EG$ 
+\Require $v_t$: terminal vertex, $SG$: workload execution subgraph, $EG$: experiment graph 
 \Ensure set of materialized vertices $\mathcal{M}$ 
 \State $R=roots(SG)$
 \State $\mathcal{M} \coloneqq \emptyset$
@@ -87,41 +90,42 @@ Contrary to the BottomUp reuse, in TopDown reuse, we start traversing the worklo
 \State return $\mathcal{M}$
 \end{algorithmic}
 \end{algorithm}
-Algorithm \ref{algorithm-topdown} shows the details of TopDown reuse method.
+Algorithm \ref{algorithm-topdown} shows the details of the TopDown reuse algorithm.
 The TopDown reuse operates on the following early-stopping principle.
-If a vertex from the workload execution subgraph ($SG$) does not exist in the experiment graph ($EG$), we terminate the traversal of its children.
+If a vertex from the workload execution subgraph ($SG$) does not exist in the experiment graph ($EG$), we skip the traversal of its children.
 This follows from the graph construction procedure, where each vertex is derived from its parents, as a result, it is impossible for a child vertex to exist in a graph where its parents do not.
 Therefore, in Lines 4 and 14, we continue the traversal for a vertex if and only if the vertex is in the experiment graph.
 Since a workload execution graph may have multiple root vertices, the TopDown reuse algorithm first finds all the root vertices (Line 1).
 Then, for every root vertex, TopDown examines all of its children and add them to the set of materialized vertices if they are in the experiment graph and are materialized ($is\_mat$ returns true).
 Unlike the BottomUp approach, when a node is materialized, we cannot stop the traversal, since a materialized vertex may also have materialized children.
 
-TopDown can perform well in cases where BottomUp reuse performs poorly.
+TopDown performs well when only the vertices close to the root are materialized.
 If the current workload operates on a completely new root (which never appeared in the experiment graph) or the workload contains early data exploration which never appeared in experiment graph, TopDown reuse will quickly stop the search process.
-However, if the workload is very similar to previous workloads, the TopDown will perform many queries to the experiment graph.
-An extreme example is when a workload is re-executed.
-TopDown reuse will make one query for every vertex of the workload to the experiment graph before returning the materialized node.
+However, in extreme cases, where a the terminal vertex is materialized in the experiment graph (i.e., a workload is re-executed), then TopDown must traverse the entire workload execution subgraph.
+Therefore, TopDown reuse also has a complexity of $\mathcal{O}(|SG|)$ and makes at most $|SG|$ calls to the experiment graph.
 
 \textbf{Hybrid reuse.}
 Both BottomUp and TopDown reuse perform well in specific scenarios. 
 However, neither of them can adapt to the different characteristics of a workload (e.g., how similar a work is to the previous workloads or how large the execution graph is).
 We devise a dynamic reuse approach, called Hybrid reuse, which adapts to the current workload.
 Algorithm \ref{algorithm-hybrid} shows the process of Hybrid reuse.
-Hybrid reuse combines the two early-stopping principles utilized in TopDown and BottomUp reuse algorithms to prune the vertices without traversing them.
-The BottomUp principle states that if a vertex is materialized in the experiment graph, we can skip traversing its predecessors.
-The TopDown principle states that if a vertex is not in the experiment graph, then its children are also not in the experiment graph.
-The Hyrbid reuse proceeds as follows.
-It first traverse the vertices of the execution subgraph in reverse breadth-first-search order starting from the terminal vertex by calling the $R\_BFS(v, G, n\_visits)$, where $n\_visits$ indicate how many vertices should be traversed (Line 4).
-However, unlike the BottomUp approach, the $R\_BFS$ procedure, only returns the vertex after $n\_visists$ vertices are visited and does not check if every vertex is in experiment graph or not.
-Then, if the vertex returned is not in the experiment graph (Line 7), by following the TopDown principle, we can safely prune the bottom half of the graph and perform another reverse traversal.
-If the vertex is materialized (Line 16), the algorithm utilizes the BottomUp principle and prunes the top half the graph.
-Furthermore, when the vertex is materialized, the algorithm adds it to the list of the materialized vertices, and continues to traverse the graph in a forward breadth-first-search approach.
-When the vertex is in the experiment graph but it is not materialized (Line 9), then there is no guarantee on if any part of the graph can be pruned.
-However, we utilize the following heuristic to decide which part of the graph to prune.
-We first compute the average value of the utility function for the parents and children of the vertex.
-If the average value of the parents is greater than the children, then we prune the bottom half and continue to search using $R\_BFS$ in the top half of the graph.
-Otherwise, we prune the top half and search in the bottom half using $F\_BFS$.
-The intuition behind this heuristic is that if the parents of a node have a higher utility than its children, then there's a higher probability that there are vertices with higher potential and frequencies in the predecessors of the vertex which leads to higher utility value and increased chance of being materialized.
+Hybrid reuse combines the two early-stopping principles utilized in TopDown and BottomUp reuse algorithms to prune as many vertices without traversing them.
+The two methods $R\_BFS(v, G, n\_visits)$ and $F\_BFS(v, G, n\_visits)$, perform a graph breadth-first-search traversal starting from vertex $v$ and return the vertex after $n\_visits$ visits.
+$R\_BFS(v, G, n\_visits)$ traverses backward (visiting the parents vertices) and $F\_BFS(v, G, n\_visits)$ traverses from top to bottom (visiting children vertices).
+Unlike BottomUp and TopDown reuse, $R\_BFS$ and $F\_BFS$, do not make calls to the experiment graph.
+
+Hyrbid reuse first traverses the vertices of the execution subgraph in reverse breadth-first-search order starting from the terminal vertex by calling the $R\_BFS$ (Line 4) and returns the vertex after it visits half of the vertices of the graph.
+Hybrid reuse then iteratively prunes half of the remaining vertices and adds any materialized vertex from the experiment graph to the set of materialized vertices.
+In Line 7, if the vertex is not in the experiment graph, using the TopDown early-stopping principle, we prune the bottom half of the graph and search in the top half (i.e., $R\_BFS$ on Line 8).
+If the vertex is materialized (Line 16), the algorithm first adds it to the list of materialized vertices, then uses the BottomUp early-stopping principle to prune the top half the graph (i.e., $F\_BFS$ on Line 18).
+When the vertex is in the experiment graph but it is not materialized (Line 9), the algorithm cannot safely prune the graph, as a materialized vertex can appear both in the top half or the bottom half.
+Hybrid reuse utilizes the following heuristic to decide which half of the graph to prune.
+First, it computes the average value of the utility function for the parents and children of the vertex (Lines 10 and 11).
+If the average utility of the parents is larger, then it prunes the bottom half, otherwise, it prunes the top half.
+The intuition behind this heuristic is the following.
+The materialization algorithm always materializes vertices based on their utility value.
+If the utility of parents of a vertex is larger than the utility of its children, then there is a higher probability that more vertices in the top half of the graph are materialized.
+
 
 \begin{algorithm}[h]
 \caption{Hybrid Reuse}\label{algorithm-hybrid}
@@ -152,8 +156,8 @@ The intuition behind this heuristic is that if the parents of a node have a high
 \State return $\mathcal{M}$
 \end{algorithmic}
 \end{algorithm}
-The advantage of the Hybrid reuse is that it requires at most $log(N)$ queries to the experiment graph, where $N$ is the size of the workload execution graph.
-This is in contrast to the TopDown and BottomUp reuses, where in certain scenarios they may require $N$ queries to to experiment graph.
+The advantage of the Hybrid reuse is that it requires at most $log(|SG|)$ calls to the experiment graph since in every iteration we are pruning half of the graph.
+This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|SG|$ calls to the experiment graph.
 }
 
 %We devise a strategy to detect overlapping operations in both the current workload and the experiment graph.
