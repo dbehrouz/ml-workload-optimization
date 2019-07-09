@@ -15,15 +15,15 @@ In our system, the definition of an ML task contains the following.
 (2) One or multiple datasets grouped into training and test (except for unsupervised tasks, which do not require a test dataset).
 (3) An evaluation function which assigns a score to the user-provided solution.
 An example of a task is to train a classification model on the training dataset $D_1$ which maximizes the F1 score on the evaluation test dataset $D_2$.
-For example, in Kaggle, a task corresponds to a competition with a predefined set of training datasets, testing datasets, and an evaluation function.
+%For example, in Kaggle, a task corresponds to a competition with a predefined set of training datasets, testing datasets, and an evaluation function.
 
-\textbf{ML Workload Data Types and Operations.}
-In our system, we support 3 data types.
+\textbf{ML Workload Data and Operations.}
+In our system, we support three types of data.
 (1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects (e.g., pandas dataframe \cite{mckinney-proc-scipy-2010}).
 (2) An \textit{Aggregate} which contains a single value or list of values.
 (3) A \textit{Model} which represents a trained machine learning model.
 
-Each data type results from one of the following 3 types of operations.
+Each data type results from one of the following three types of operations.
 (1) Data preprocessing and feature engineering operations which include simple data transformation and aggregation, feature selection, and feature extraction operations.
 This group of operations either return another Dataset (e.g., resulting from map, filter, or one-hot encoding) or an Aggregate (e.g., resulting from reduce or column correlation).
 (2) Model training operations which train a machine learning model on a Dataset.
@@ -36,13 +36,13 @@ In our system, instead of only returning the best performing model, we also capt
 As a result, hyperparameter tuning operations returns a set of Models.
  
 \textbf{ML Workload Type.}
-Collaborative data science platforms typically provide two modes of executions for solving tasks.
-They allow users to write an end-to-end script which performs data loading, data cleaning, and model training.
-We refer to this type of workloads as \textit{long-running workloads}.
+Collaborative data science platforms typically provide two modes of executions for solving tasks:
+\textit{long-running workloads} and \textit{interactive workloads}.
+The user can write an end-to-end script which performs data loading, data cleaning, and model training. We refer to this type of workloads as long-running workloads.
 Depending on the size of the initial data, a long-running workload may take anything from seconds up to many hours.
 The other type of workloads is more interactive.
 Typically, through Jupyter notebooks, collaborative data science platforms allow users to write their analysis in an interactive fashion, whereupon execution of each operation (or group of operations), they can view the result and fine-tune their analysis code.
-We refer to this type of workloads as \textit{interactive workloads}.
+We refer to this type of workloads as interactive workloads.
 }
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
@@ -58,11 +58,11 @@ More formally, we represent the experiment graph by $G(V, E)$.
 $V=\{v_i\}, i = 1, \cdots, n$ is the set of all the artifacts in all the workload DAGs.
 $E=\{e_i\}, i = 1, \cdots, m$ is the set of all the executed operations in the workload DAGs.
 A directed edge $e$ from $v_i$ to $v_j$ in $G(V, E)$ indicates that the artifact $v_j$ is derived from the artifact $v_i$ by applying the operation in $e$.
-Every vertex $v$ has the attributes $\langle f, s \rangle$ (accessed by $v.f$ and $v.s$) which represent the frequency, i.e., number of different workloads an artifact appears in, and storage size of the artifact.
+Every vertex $v$ has the attributes $\langle f, s \rangle$ (accessed by $v.f$ and $v.s$) which represent the frequency, i.e., number of different workloads an artifact appeared in, and storage size of the artifact.
 Every edge $e$ has the attribute $\langle t \rangle$ (accessed by $e.t$) which represents the run-time (in seconds) of the operation.
 
 Inside each vertex, we store the meta-data of the artifact.
-Depending on how \textit{useful} an artifact is, we may also store the actual underlying data inside the artifact (Section \ref{sec-materialization})
+Depending on how \textit{useful} an artifact is, we may also store the actual underlying data inside the artifact (Section \ref{sec-materialization}).
 If the artifact is a raw or a preprocessed dataset, then its meta-data includes the name, type, and total size of each column of the data and its underlying data is represented by the dataframe object (i.e., pandas dataframe \cite{mckinney-proc-scipy-2010}). 
 If the artifact is a machine learning model, its meta-data includes the name, type, hyperparameters, and the error metric of the model and its underlying data is consist of the model weights.
 Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, hyperparameters, and in some cases even the source code of the operation.
@@ -165,15 +165,15 @@ Upon the invocation of the $get()$ method of an artifact, a local optimization p
 We refer to the vertex for which the $get()$ method is invoked as the terminal vertex (Vertex 7).
 The local optimization process extracts the subgraph which must be executed in order to compute the terminal vertex.
 The Local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
+It stops the traversal when it reaches a previously computed vertex.
 In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
-Therefore, the local optimizer stops the traversal when it reaches a previously computed vertex.
 The subgraph of all the visited vertices and the edges connecting them, which we refer to as the  \textit{workload execution subgraph}, is the result of the local optimization step (Step 2).
 For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
 Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
-The remote optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3). 
-The result of the remote optimization process is another execution subgraph, which we refer to as the \textit{optimized execution subgraph}.
-For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model inside the vertex) of Vertex 5.
-Therefore, during the remote optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
+The global optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3).
+The result of the global optimization process is another execution subgraph, which we refer to as the \textit{optimized execution subgraph}.
+For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model) of Vertex 5.
+Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
 Then, an execution planner receives the optimized execution subgraph and sorts the edges based on their topological order, which are then executed (Step 4).
 After the execution, the experiment graph is updated to include the vertices and edges of the workload graph (Step 5).
 Finally, after the update, a materializer component decides which artifacts to materialize based on the available storage budget (Step 6).
@@ -195,7 +195,7 @@ The goal of the submitted solutions is to maximize the evaluation function, the 
 After a kernel is submitted, it goes through every step of the workload optimizer system in Figure \ref{system-workflow}.
 For every competition, we maintain a separate experiment graph.
 At the time of the first kernel submission, the experiment graph is empty, therefore, the workload optimizer system skips Step 3 of Figure \ref{system-workflow} and generates the execution plan directly from the workload execution subgraph.
-If the experiment graph is not empty, the remote optimizer tries to optimize the workload using the experiment graph.
+If the experiment graph is not empty, the global optimizer tries to optimize the workload using the experiment graph.
 For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} in the competition has been copied by more than 5000 different users.
 This indicates the kernel has been executed at least 5000 times, although it is very likely that many of the users run the script more than once.
 Each execution of the kernel takes nearly 200 seconds.
