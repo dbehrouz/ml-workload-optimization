@@ -159,29 +159,28 @@ When computing hash of $v_8$, we combine the parents in the same order, i.e., $h
 After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
 \hladd{
 \subsection{System Architecture and Workflow}
-Figure \ref{system-workflow} shows the process of workload optimization.
+Figure \ref{system-workflow} shows the components of the collaborative workload optimizer system.
 First, a parser component generates the workload DAG from the user scripts (Step 1).
 Upon the invocation of the $get()$ method of an artifact, a local optimization process beings.
-We refer to the vertex for which the $get()$ method is invoked as the terminal vertex (Vertex 7).
-The local optimization process extracts the subgraph which must be executed in order to compute the terminal vertex.
+The local optimizer extracts the subgraph which must be executed in order to compute the terminal vertex.
 The Local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
 It stops the traversal when it reaches a previously computed vertex.
 In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
-The subgraph of all the visited vertices and the edges connecting them, which we refer to as the  \textit{workload execution subgraph}, is the result of the local optimization step (Step 2).
-For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
-Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
-The global optimizer component receives the workload execution subgraph and looks for optimization opportunities in the experiment graph (Step 3).
-The result of the global optimization process is another execution subgraph, which we refer to as the \textit{optimized execution subgraph}.
-For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model) of Vertex 5.
-Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
-Then, an execution planner receives the optimized execution subgraph and sorts the edges based on their topological order, which are then executed (Step 4).
-After the execution, the experiment graph is updated to include the vertices and edges of the workload graph (Step 5).
-Finally, after the update, a materializer component decides which artifacts to materialize based on the available storage budget (Step 6).
+The subgraph of all the visited vertices and the edges connecting them, which we refer to as the  \textit{local execution DAG}, is the result of the local optimizer (Step 2).
+%For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
+%Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
+The global optimizer component receives the local execution subgraph and looks for optimization opportunities, i.e., reusing materialized vertices or warmstarting model training, in the experiment graph.
+The result of the global optimization process is another execution subgraph, which we refer to as the \textit{global execution subgraph} (Step 3).
+%For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model) of Vertex 5.
+%Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
+Then, an execution planner receives the global execution subgraph and sorts the edges based on their topological order, which are then executed by the execution engine (Step 4).
+After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG.
+Furthermore, the updater component also decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 5).
 
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{../images/system-workflow}
-\caption{The workflow of the collaborative workload optimizer}
+\caption{System overview of the collaborative workload optimizer}
 \label{system-workflow}
 \end{figure}
 
