@@ -76,7 +76,7 @@ Since the experiment graph is rooted, we assign a hash value to every vertex whi
 \end{cases}
 \]
 where $in\_edge(v)$ returns the edges with destination $v$. 
-Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived by combining the hashes of their parents and edges which connect them to their parents.
+Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived recursively by combining the hashes of their parents and edges which connect them to their parents.
 %This hashing procedure results in two important properties.
 %
 %\textit{Property 1}.
