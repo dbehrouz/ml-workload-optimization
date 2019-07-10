@@ -166,14 +166,15 @@ The local optimizer extracts the subgraph which must be executed in order to com
 The Local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
 It stops the traversal when it reaches a previously computed vertex.
 In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
-The subgraph of all the visited vertices and the edges connecting them, which we refer to as the  \textit{local execution DAG}, is the result of the local optimizer (Step 2).
+The subgraph of all the visited vertices and the edges connecting them is another DAG, which we refer to as the \textit{local execution DAG}, and is the result of the local optimizer (Step 2).
 %For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
 %Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
-The global optimizer component receives the local execution subgraph and looks for optimization opportunities, i.e., reusing materialized vertices or warmstarting model training, in the experiment graph.
-The result of the global optimization process is another execution subgraph, which we refer to as the \textit{global execution subgraph} (Step 3).
+The global optimizer component receives the local execution DAG and looks for optimization opportunities, i.e., reusing materialized vertices or warmstarting model training, in the experiment graph.
+The result of the global optimization process is another subgraph, which we refer to as the \textit{global execution DAG} (Step 3).
 %For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model) of Vertex 5.
 %Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
-Then, an execution planner receives the global execution subgraph and sorts the edges based on their topological order, which are then executed by the execution engine (Step 4).
+Then, an execution planner receives the global execution DAG and generates the execution schedule by sorting the edges based on their topological order, which is then executed by the execution engine (Step 4).
+If the experiment graph is empty, then the execution planner users local execution DAG to generate the execution schedule.
 After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG.
 Furthermore, the updater component also decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 5).
 
