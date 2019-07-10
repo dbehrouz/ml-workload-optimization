@@ -80,7 +80,6 @@ Every task $T$ is associated with an experiment graph.
 Each task also has a storage budget and runs a separate instance of the materialization algorithm.
 For example, in Figure \ref{improved-use-case}, there are three separate experiment graphs for the competitions A, B, and C, each having a dedicated storage budget and running a separate materializer component.
 
-\hladd{
 \begin{algorithm}[h]
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
 \begin{algorithmic}[1]
@@ -111,11 +110,9 @@ For example, in Figure \ref{improved-use-case}, there are three separate experim
 \end{algorithm}
 
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
-}
 First, we start by materializing all the root vertices.
 This is essential as many of the feature engineering and model building operations are not invertible.
 As a result, we cannot reconstruct the raw datasets if they are not materialized.
-\hladd{
 Then, for every non-materialized vertex, we compute the utility value of the vertex (Lines 7-10).
 Then, we start materializing all the vertices, sorted by their utility, until the storage budget is exhausted (Lines 11-15).
 The utility function ($\mathcal{U}(G,v) $) computes the goodness of an artifact with respect to its recreation cost, how often it is reused, and the estimated quality gained from the artifact.
@@ -145,7 +142,6 @@ As users execute more workloads, the size of the experiment graph increases and 
 However, once the utility of a vertex is computed, it does not change until it appears in a new user workload.
 Therefore, in our implementation, we compute the utilities for all the new vertices (Lines 7 - 10, Algorithm \ref{algorithm-materialization}) once and only recompute the utility if the vertex appears in a new workload.
 By precomputing the utilities we reduce the complexity of each run of the materialization algorithm to $\mathcal{O}(|W|)$, where $|W|$ is the number of vertices in the workload DAG.
-}
 
 \subsection{Storage-Aware Materialization Algorithm}
 Since many feature engineering operations only operate on one or a few columns of a dataset, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.

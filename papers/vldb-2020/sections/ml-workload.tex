@@ -1,12 +1,9 @@
 \section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
-\hladd{
 In this section, we first define the required terms which refer to different entities in collaborative data science platforms. 
 Then, we discuss the details of the experiment graph construction and workflow of our system and optimization process.
 Finally, we show how a real collaborative data science platform can utilize our system to improve the execution of machine learning workloads.
-}
 
 \subsection{Preliminaries and Definitions}
-\hladd{
 \textbf{ML Task.} 
 In order to promote a collaborative effort, collaborative data science platforms must define the task which the users should solve.
 A task specifies the requirements and the goal of machine learning solutions.
@@ -43,7 +40,6 @@ Depending on the size of the initial data, a long-running workload may take anyt
 The other type of workloads is more interactive.
 Typically, through Jupyter notebooks, collaborative data science platforms allow users to write their analysis in an interactive fashion, whereupon execution of each operation (or group of operations), they can view the result and fine-tune their analysis code.
 We refer to this type of workloads as interactive workloads.
-}
 
 \subsection{Experiment Graph Representation}\label{sub-graph-construction}
 \textbf{Workload DAG.}
@@ -88,14 +84,12 @@ Intuitively, the hash of a root vertex is its unique identifier (location on dis
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
 
-\hladd{
 \textbf{Workload DAG generation.}
 Instead of designing a new DSL, we extend the existing pandas \cite{mckinney-proc-scipy-2010} and scikit-learn \cite{sklearn_api} python packages which are frequently used for data analysis and machine learning workloads.
 Listing \ref{listing-experiment-graph} shows an example of a workload script.
 With only a slight modification of the import commands, we are able to load our system's modules.
 A parser component reads the user code and instead of executing it line-by-line, it creates the edges and vertices of the workload DAG.
 The actual execution is invoked with \textit{.get()} command of a vertex (Line 18, Listing \ref{listing-experiment-graph}.
-}
 Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing  Listing \ref{listing-experiment-graph}.
 \begin{figure}
 \begin{subfigure}[b]{0.4\linewidth}
@@ -157,7 +151,7 @@ Furthermore, when computing the hash of a merged vertex, we take the merge order
 For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
 When computing hash of $v_8$, we combine the parents in the same order, i.e., $h(v_8) = h(h(v_7) + m + h(v_3) + m)$. 
 After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
-\hladd{
+
 \subsection{System Architecture and Workflow}
 Figure \ref{system-workflow} shows the components of the collaborative workload optimizer system.
 First, a parser component generates the workload DAG from the user scripts (Step 1).
@@ -200,7 +194,6 @@ For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrse
 This indicates the kernel has been executed at least 5000 times, although it is very likely that many of the users run the script more than once.
 Each execution of the kernel takes nearly 200 seconds.
 In our experiments, we show that we are able to reduce the execution time to less than 10 seconds when the same kernel is executed more than once.
-}
 %
 %First, we parse a kernel and construct the \textit{workload graph} (\circledtext{1}).
 %Then, an \textbf{optimizer} component receives the workload graph and utilizes the existing experiment graph to look for optimization opportunities, namely, reusing the existing operations and warmstarting the model training (\circledtext{2}).

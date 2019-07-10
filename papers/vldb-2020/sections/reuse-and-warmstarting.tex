@@ -1,4 +1,3 @@
-\hladd{
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
 With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
 In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
@@ -122,6 +121,7 @@ If the current workload operates on a completely new root (which never appeared 
 However, in extreme cases, where the terminal vertex is materialized in the experiment graph (i.e., a workload is re-executed), then TopDown must traverse the entire local execution DAG.
 Therefore, TopDown reuse also has a complexity of $\mathcal{O}(|V_L|)$ and makes at most $|V_L|$ calls to the experiment graph.
 
+\todo[inline]{Hybrid reuse still needs a bit of work, I'm currently implementing it to see its impact and if it is even useful}
 \textbf{Hybrid reuse.}
 Both BottomUp and TopDown reuse perform well in specific scenarios. 
 However, neither of them can adapt to the different characteristics of a workload (e.g., how similar a new workload is to the previous workloads or how large the execution DAG is).
@@ -175,4 +175,3 @@ Therefore, if the utility of parents of a vertex is larger than the utility of i
 \end{algorithm}
 The advantage of the Hybrid reuse is that it requires at most $log(|V_L|)$ calls to the experiment graph since in every iteration we are pruning half of the graph.
 This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|V_L|$ calls to the experiment graph.
-}
