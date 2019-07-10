@@ -28,7 +28,7 @@ In the rest of this section, we present our reuse algorithm.
 %Finaly, we compute the execution plan using the the optimized execution subgraph (Step 4, Figure \ref{system-workflow}).
 
 \subsection{Reuse}
-Since during the materialization process, we ensure the recomputation cost of a materialized vertex outweighs its transfer cost (i.e. $transfer(v) \geq recreation\_cost(G,v)$), we can safely transfer the materialized vertex to the machine executing the workload and guarantee the total execution time will improve.
+Since during the materialization process, we ensure the recomputation cost of a materialized vertex outweighs its transfer cost (i.e. $trf(v) \geq rc(G,v)$), we can safely transfer the materialized vertex to the machine executing the workload and guarantee the total execution time will improve.
 
 The global optimizer component compares the local execution DAG with the experiment graph to find any vertices that are materialized in the experiment graph and returns them instead of computing them.
 The vertex hashing procedure in Section \ref{sec-ml-workloads} indicates that two vertices from two different graphs are the same if they have the same id (hash value).
