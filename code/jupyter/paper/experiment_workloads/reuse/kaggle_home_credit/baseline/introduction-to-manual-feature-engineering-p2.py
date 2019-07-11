@@ -24,9 +24,6 @@ warnings.filterwarnings('ignore')
 
 plt.style.use('fivethirtyeight')
 
-# Memory management
-import gc
-
 
 def run(root_data):
     def agg_numeric(df, parent_var, df_name):
@@ -319,10 +316,6 @@ def run(root_data):
             # Merge the numeric and categorical
             df_by_loan = df_counts.merge(df_agg, on=group_vars[0], how='outer')
 
-            gc.enable()
-            del df_agg, df_counts
-            gc.collect()
-
             # Merge to get the client id in dataframe
             df_by_loan = df_by_loan.merge(df[[group_vars[0], group_vars[1]]], on=group_vars[0], how='left')
 
@@ -338,20 +331,11 @@ def run(root_data):
             # Merge to get the client id in dataframe
             df_by_loan = df_agg.merge(df[[group_vars[0], group_vars[1]]], on=group_vars[0], how='left')
 
-            gc.enable()
-            del df_agg
-            gc.collect()
-
             # Remove the loan id
             df_by_loan = df_by_loan.drop(columns=[group_vars[0]])
 
             # Aggregate numeric stats by column
             df_by_client = agg_numeric(df_by_loan, parent_var=group_vars[1], df_name=df_names[1])
-
-        # Memory management
-        gc.enable()
-        del df, df_by_loan
-        gc.collect()
 
         return df_by_client
 
@@ -506,6 +490,8 @@ def run(root_data):
         feature_importances = pd.DataFrame({'feature': feature_names, 'importance': feature_importance_values})
 
         return feature_importances
+
+    fi = model(train, test)
 
 
 if __name__ == "__main__":
