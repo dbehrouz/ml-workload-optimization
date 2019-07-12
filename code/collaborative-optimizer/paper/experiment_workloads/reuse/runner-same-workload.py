@@ -16,21 +16,24 @@ from datetime import datetime
 from importlib import import_module
 
 from benchmark_helper import BenchmarkMetrics
+from experiment_helper import Parser
 
-ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+parser = Parser(sys.argv)
+ROOT = parser.get('root', '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/')
+ROOT_PACKAGE_DIRECTORY = ROOT + 'code/collaborative-optimizer'
 sys.path.append(ROOT_PACKAGE_DIRECTORY)
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
 
-EXPERIMENT = 'kaggle_home_credit'
-WORKLOAD = 'introduction_to_manual_feature_engineering_p2'
+EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
+WORKLOAD = parser.get('workload', 'introduction_to_manual_feature_engineering_p2')
 ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
 DATABASE_PATH = ROOT_DATA_DIRECTORY + '/experiment_graphs/{}/environment_same_workload'.format(EXPERIMENT)
 
-
-RESULT_FOLDER = ROOT_PACKAGE_DIRECTORY + 'experiment_results/reuse/same-workload/{}'.format(EXPERIMENT)
-OUTPUT_CSV = RESULT_FOLDER + 'experiment_results.csv'
-REP = 3
+MODE = parser.get('mode', 'local')
+RESULT_FOLDER = ROOT + 'experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
+OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
+REP = parser.get('rep', 3)
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
