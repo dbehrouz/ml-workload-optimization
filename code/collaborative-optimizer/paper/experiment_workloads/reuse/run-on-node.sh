@@ -1,16 +1,34 @@
 #!/usr/bin/env bash
 
+# install packages
+pip2 install -U pandas --user
+pip2 install -U scikit-learn --user
+pip2 install -U networkx --user
+pip2 install -U kaggle --user
+pip2 install -U  matplotlib --user
+pip2 install -U seaborn --user
 # copy scripts
-rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-40.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
+rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
 
 # preprocessing kaggle home credit
+kaggle competitions download -c home-credit-default-risk
+unzip '*.zip'
+mkdir original_train_test
+mv application_train.csv original_train_test/
+mv application_test.csv original_train_test/
 python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/kaggle_home_credit/competition_preprocessing.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization'
 
 
 # Runing on Local machine
 python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering_p2' 'mode=local' 'rep=3'
+'experiment=kaggle_home_credit' 'workload=start_here_a_gentle_introduction' 'mode=local' 'rep=3'
 
 # Running on cloud
 python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/runner-same-workload.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization' \
+'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering' 'mode=remote' 'rep=3'
+
+python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/runner-same-workload.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization' \
 'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering_p2' 'mode=remote' 'rep=3'
+
+python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/runner-same-workload.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization' \
+'experiment=kaggle_home_credit' 'workload=start_here_a_gentle_introduction' 'mode=remote' 'rep=3'
