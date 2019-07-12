@@ -24,14 +24,14 @@ warnings.filterwarnings('ignore')
 
 def run(execution_environment, root_data, verbose=0):
     # Read in bureau
-    bureau = execution_environment.load(root_data + '/home-credit-default-risk/bureau.csv')
+    bureau = execution_environment.load(root_data + '/kaggle_home_credit/bureau.csv')
     bureau.head().data(verbose=verbose)
     previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count()
     previous_loan_counts = previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
     previous_loan_counts.head().data(verbose=verbose)
 
     # Join to the training dataframe
-    train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
+    train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
     train = train.merge(previous_loan_counts, on='SK_ID_CURR', how='left')
 
     train = train.replace_columns('previous_loan_counts', train['previous_loan_counts'].fillna(0))
@@ -229,7 +229,7 @@ def run(execution_environment, root_data, verbose=0):
     bureau_counts.head().data(verbose=verbose)
 
     # Read in bureau balance
-    bureau_balance = execution_environment.load(root_data + '/home-credit-default-risk/bureau_balance.csv')
+    bureau_balance = execution_environment.load(root_data + '/kaggle_home_credit/bureau_balance.csv')
     bureau_balance.head().data(verbose=verbose)
 
     # Counts of each type of status for each previous loan
@@ -253,9 +253,9 @@ def run(execution_environment, root_data, verbose=0):
     bureau_balance_by_client.head().data(verbose=verbose)
 
     # Read in new copies of all the dataframes
-    train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
-    bureau = execution_environment.load(root_data + '/home-credit-default-risk/bureau.csv')
-    bureau_balance = execution_environment.load(root_data + '/home-credit-default-risk/bureau_balance.csv')
+    train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
+    bureau = execution_environment.load(root_data + '/kaggle_home_credit/bureau.csv')
+    bureau_balance = execution_environment.load(root_data + '/kaggle_home_credit/bureau_balance.csv')
 
     bureau_counts = count_categorical(bureau, group_var='SK_ID_CURR', df_name='bureau')
     bureau_counts.head().data(verbose=verbose)
@@ -333,9 +333,9 @@ def run(execution_environment, root_data, verbose=0):
     len(missing_train_vars)
 
     # Read in the test dataframe
-    test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
+    test = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
 
-    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = execution_environment.load(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     # Merge with the value counts of bureau
     test = test.merge(bureau_counts, on='SK_ID_CURR', how='left')
@@ -581,8 +581,8 @@ def run(execution_environment, root_data, verbose=0):
 
         return df
 
-    train_control = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
-    test_control = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
+    train_control = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
+    test_control = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
 
     fi = model(train_control, test_control)
 
@@ -613,7 +613,7 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/materialized-no-groupby'
+    DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
 
     ee.load_history_from_disk(DATABASE_PATH)
     run(ee, root_data, verbose=1)

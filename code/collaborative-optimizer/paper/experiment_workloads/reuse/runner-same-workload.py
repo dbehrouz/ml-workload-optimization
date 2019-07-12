@@ -25,6 +25,7 @@ from experiment_graph.benchmark_helper import BenchmarkMetrics
 from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
+verbose = parser.get('verbose', 0)
 ROOT = parser.get('root', '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/')
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
@@ -35,7 +36,7 @@ ROOT_DATA_DIRECTORY = ROOT + '/data'
 DATABASE_PATH = ROOT + '/experiment_graphs/{}/environment_same_workload'.format(EXPERIMENT)
 
 MODE = parser.get('mode', 'local')
-RESULT_FOLDER = ROOT + 'experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
+RESULT_FOLDER = ROOT + '/experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
 OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
 REP = int(parser.get('rep', 3))
 
@@ -62,7 +63,7 @@ for i in range(1, REP + 1):
     print '{}-Start of the Optimized Workload'.format(execution_start)
     optimized_workload = import_module(EXPERIMENT + '.optimized.' + WORKLOAD)
     ee.new_workload()
-    optimized_workload.run(ee, ROOT_DATA_DIRECTORY)
+    optimized_workload.run(ee, ROOT_DATA_DIRECTORY, verbose=verbose)
     ee.update_history()
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

@@ -6,7 +6,6 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
@@ -15,7 +14,6 @@ import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
 import pandas as pd
 import seaborn as sns
-import numpy as np
 
 # Experiment Graph
 
@@ -24,6 +22,8 @@ warnings.filterwarnings('ignore')
 
 
 def run(execution_environment, root_data, verbose=0):
+    print 'running with verbosity {}'.format(verbose)
+
     def agg_numeric(df, parent_var, df_name):
         """Aggregates the numeric values in a dataframe. This can
         be used to create features for each instance of the grouping variable.
@@ -132,13 +132,11 @@ def run(execution_environment, root_data, verbose=0):
         print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
         print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
 
-    import sys
-
     def return_size(df):
         """Return size of dataframe in gigabytes"""
         return round(df.compute_size() / 1e9, 2)
 
-    previous = execution_environment.load(root_data + '/home-credit-default-risk/previous_application.csv')
+    previous = execution_environment.load(root_data + '/kaggle_home_credit/previous_application.csv')
     previous.head().data(verbose=verbose)
 
     # Calculate aggregate statistics for each numeric column
@@ -151,10 +149,10 @@ def run(execution_environment, root_data, verbose=0):
     print('Previous counts shape: ', previous_counts.shape().data(verbose=verbose))
     previous_counts.head().data(verbose=verbose)
 
-    train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
-    test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
+    train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
+    test = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
 
-    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = execution_environment.load(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     # Merge in the previous information
     train = train.merge(previous_counts, on='SK_ID_CURR', how='left')
@@ -269,7 +267,7 @@ def run(execution_environment, root_data, verbose=0):
 
         return df_by_client
 
-    cash = execution_environment.load(root_data + '/home-credit-default-risk/POS_CASH_balance.csv')
+    cash = execution_environment.load(root_data + '/kaggle_home_credit/POS_CASH_balance.csv')
     cash.head()
 
     cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
@@ -281,7 +279,7 @@ def run(execution_environment, root_data, verbose=0):
 
     train, test = remove_missing_columns(train, test)
 
-    credit = execution_environment.load(root_data + '/home-credit-default-risk/credit_card_balance.csv')
+    credit = execution_environment.load(root_data + '/kaggle_home_credit/credit_card_balance.csv')
     credit.head()
 
     credit_by_client = aggregate_client(credit, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['credit', 'client'])
@@ -294,7 +292,7 @@ def run(execution_environment, root_data, verbose=0):
 
     train, test = remove_missing_columns(train, test)
 
-    installments = execution_environment.load(root_data + '/home-credit-default-risk/installments_payments.csv')
+    installments = execution_environment.load(root_data + '/kaggle_home_credit/installments_payments.csv')
     installments.head()
 
     installments_by_client = aggregate_client(installments, group_vars=['SK_ID_PREV', 'SK_ID_CURR'],
@@ -440,7 +438,7 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    # DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/materialized-no-groupby'
+    # DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
 
     # ee.load_history_from_disk(DATABASE_PATH)
     run(ee, root_data, verbose=1)

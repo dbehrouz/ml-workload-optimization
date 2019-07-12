@@ -26,15 +26,15 @@ warnings.filterwarnings('ignore')
 
 def run(execution_environment, root_data, verbose=0):
     print(os.listdir(root_data))
-    app_train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
+    app_train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
     print('Training data shape: ', app_train.shape().data(verbose))
     app_train.head().data(verbose)
 
-    app_test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
+    app_test = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
     print('Testing data shape: ', app_test.shape().data(verbose))
     app_test.head().data(verbose)
 
-    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = execution_environment.load(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     app_train['TARGET'].value_counts().data(verbose)
 
@@ -656,9 +656,10 @@ if __name__ == "__main__":
 
     ee = ExecutionEnvironment('dedup')
     execution_start = datetime.now()
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
+                             '-optimizer '
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/environment_dedup'
+    DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/environment_dedup'
     ee.load_history_from_disk(DATABASE_PATH)
     ee.new_workload()
     run(ee, root_data, verbose=1)
