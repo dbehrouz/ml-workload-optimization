@@ -6,6 +6,12 @@ Here, we split the training data into train/test so we can compute the ROC curve
 
 from sklearn.model_selection import train_test_split
 import pandas as pd
+import sys
+
+SOURCE_CODE_ROOT = sys.argv[1]
+sys.path.append(SOURCE_CODE_ROOT)
+
+from paper.experiment_helper import Parser
 
 RANDOM_STATE = 151789
 
@@ -25,6 +31,6 @@ def split_and_store(root_data, test_size=0.2):
 
 
 if __name__ == "__main__":
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
+    parser = Parser(sys.argv)
+    root_data = parser.get('root', '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization') + '/data'
     split_and_store(root_data)

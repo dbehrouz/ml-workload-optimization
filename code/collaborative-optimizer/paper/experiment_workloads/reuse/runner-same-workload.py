@@ -15,13 +15,17 @@ import uuid
 from datetime import datetime
 from importlib import import_module
 
-from benchmark_helper import BenchmarkMetrics
-from experiment_helper import Parser
+if len(sys.argv) > 1:
+    SOURCE_CODE_ROOT = sys.argv[1]
+else:
+    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
+
+sys.path.append(SOURCE_CODE_ROOT)
+from experiment_graph.benchmark_helper import BenchmarkMetrics
+from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
 ROOT = parser.get('root', '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/')
-ROOT_PACKAGE_DIRECTORY = ROOT + 'code/collaborative-optimizer'
-sys.path.append(ROOT_PACKAGE_DIRECTORY)
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
 
@@ -33,7 +37,7 @@ DATABASE_PATH = ROOT + '/experiment_graphs/{}/environment_same_workload'.format(
 MODE = parser.get('mode', 'local')
 RESULT_FOLDER = ROOT + 'experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
 OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
-REP = parser.get('rep', 3)
+REP = int(parser.get('rep', 3))
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
