@@ -27,8 +27,8 @@ from experiment_graph.execution_environment import ExecutionEnvironment
 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 WORKLOAD = parser.get('workload', 'introduction_to_manual_feature_engineering_p2')
-ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_DATA_DIRECTORY + '/experiment_graphs/{}/environment_same_workload'.format(EXPERIMENT)
+ROOT_DATA_DIRECTORY = ROOT + '/data'
+DATABASE_PATH = ROOT + '/experiment_graphs/{}/environment_same_workload'.format(EXPERIMENT)
 
 MODE = parser.get('mode', 'local')
 RESULT_FOLDER = ROOT + 'experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
