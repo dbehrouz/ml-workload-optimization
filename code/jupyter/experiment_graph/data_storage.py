@@ -75,6 +75,10 @@ class StorageManager(object):
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
+    @abstractmethod
+    def get_dtype(self, column_hash):
+        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
+
     @staticmethod
     def compute_series_size(pandas_series):
         return pandas_series.memory_usage(index=True, deep=True) / AS_KB
@@ -91,6 +95,9 @@ class DedupedStorageManager(StorageManager):
         Essentially, it is a simple dictionary of column hash and Series.
         This ensures no column are stored more than once
     """
+
+    def get_dtype(self, column_hash):
+        return self.DATA[column_hash].dtype
 
     def __init__(self):
         super(DedupedStorageManager, self).__init__()
@@ -151,6 +158,9 @@ class NaiveStorageManager(StorageManager):
 
     def __init__(self):
         super(NaiveStorageManager, self).__init__()
+
+    def get_dtype(self, column_hash):
+        return self.DATA[column_hash].dtype
 
     def get_column(self, c_name, c_hash):
         return copy.deepcopy(pd.Series(self.DATA[c_hash], name=c_name))

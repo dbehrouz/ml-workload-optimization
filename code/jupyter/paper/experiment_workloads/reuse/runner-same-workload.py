@@ -22,18 +22,22 @@ sys.path.append(ROOT_PACKAGE_DIRECTORY)
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
 
-ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
-DATABASE_PATH = ROOT_DATA_DIRECTORY + '/experiment_graphs/home-credit-default-risk/environment_same_workload'
-
-OUTPUT_CSV = 'results/run_times_same_workload.csv'
-RESULT_FOLDER = 'results'
-EXPERIMENT = 'kaggle_home_credit'
-REP = 3
+EXPERIMENT = 'home-credit-default-risk'
 WORKLOAD = 'start_here_a_gentle_introduction'
+ROOT_DATA_DIRECTORY = ROOT_PACKAGE_DIRECTORY + '/data'
+DATABASE_PATH = ROOT_DATA_DIRECTORY + '/experiment_graphs/{}/environment_same_workload'.format(EXPERIMENT)
+
+
+RESULT_FOLDER = ROOT_PACKAGE_DIRECTORY + '/reuse/same-workload/{}'.format(EXPERIMENT)
+OUTPUT_CSV = RESULT_FOLDER + 'experiment_results.csv'
+REP = 3
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 ee = ExecutionEnvironment()
+
+if not os.path.isdir(RESULT_FOLDER + '/details/'):
+    os.mkdir(RESULT_FOLDER + '/details/')
 
 with open(RESULT_FOLDER + '/details/{}.csv'.format(e_id), 'w') as result:
     result.write(','.join(BenchmarkMetrics.keys) + "\n")

@@ -788,6 +788,16 @@ class Feature(Node):
         self.computed = False
         self.size = 0.0
 
+    def dtype(self, verbose=0):
+        if not self.computed:
+            self.execution_environment.optimizer.optimize(
+                self.execution_environment.history_graph,
+                self.execution_environment.workload_graph,
+                self.id,
+                verbose)
+            self.computed = True
+        return self.execution_environment.data_storage.get_dtype(self.c_hash)
+
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
@@ -926,6 +936,13 @@ class Feature(Node):
 
     def p_fillna(self, value):
         return self.hash_and_store_series('fill{}'.format(value), self.get_materialized_data().fillna(value))
+
+    def astype(self, target_type):
+        return self.generate_feature_node('astype', {'target_type': target_type})
+
+    def p_astype(self, target_type):
+        return self.hash_and_store_series('astype{}'.format(target_type),
+                                          self.get_materialized_data().astype(target_type))
 
     # combined node
     def concat(self, nodes):

@@ -1,87 +1,69 @@
 #!/usr/bin/env python
 
-"""Baseline workload 3 for Home Credit Default Risk Competition
-   The code here, is the original code posted as a notebook for the Kaggle competitiong.
-   The notebook can be found here: https://www.kaggle.com/willkoehrsen/introduction-to-manual-feature-engineering-p2
-"""
+"""Optimized workload 2 for Home Credit Default Risk Competition
+    This is the optimized version of the baseline introduction_to_manual_feature_engineering script.
 
-# pandas and numpy for data manipulation
+   For now, I removed the Kfold and Gradient Boosted Tree models
+   TODO: Add Kfold and Gradient Boosted Tree
+"""
+import os
+import warnings
+# matplotlib and seaborn for plotting
 from datetime import datetime
-import lightgbm as lgb
+
+import matplotlib.pyplot as plt
+# numpy and pandas for data manipulation
 import pandas as pd
+import seaborn as sns
 import numpy as np
 
-# matplotlib and seaborn for plotting
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import roc_auc_score
-# Suppress warnings from pandas
-import warnings
+# Experiment Graph
 
-from sklearn.preprocessing import LabelEncoder
-
+# Suppress warnings
 warnings.filterwarnings('ignore')
 
-plt.style.use('fivethirtyeight')
 
-
-def run(root_data):
+def run(execution_environment, root_data, verbose=0):
     def agg_numeric(df, parent_var, df_name):
-        """
-        Groups and aggregates the numeric values in a child dataframe
-        by the parent variable.
+        """Aggregates the numeric values in a dataframe. This can
+        be used to create features for each instance of the grouping variable.
 
         Parameters
         --------
             df (dataframe):
-                the child dataframe to calculate the statistics on
-            parent_var (string):
-                the parent variable used for grouping and aggregating
+                the dataframe to calculate the statistics on
+            group_var (string):
+                the variable by which to group df
             df_name (string):
                 the variable used to rename the columns
 
         Return
         --------
             agg (dataframe):
-                a dataframe with the statistics aggregated by the `parent_var` for
-                all numeric columns. Each observation of the parent variable will have
-                one row in the dataframe with the parent variable as the index.
-                The columns are also renamed using the `df_name`. Columns with all duplicate
-                values are removed.
+                a dataframe with the statistics aggregated for
+                all numeric columns. Each instance of the grouping variable will have
+                the statistics (mean, min, max, sum; currently supported) calculated.
+                The columns are also renamed to keep track of features created.
 
         """
-
+        df_columns = df.data(verbose=verbose).columns
         # Remove id variables other than grouping variable
-        for col in df:
+        for col in df_columns:
             if col != parent_var and 'SK_ID' in col:
                 df = df.drop(columns=col)
 
-        # Only want the numeric variables
-        parent_ids = df[parent_var].copy()
-        numeric_df = df.select_dtypes('number').copy()
-        numeric_df[parent_var] = parent_ids
+        numeric_df = df.select_dtypes('number')
 
         # Group by the specified variable and calculate the statistics
         agg = numeric_df.groupby(parent_var).agg(['count', 'mean', 'max', 'min', 'sum'])
 
         # Need to create new column names
-        columns = []
-
-        # Iterate through the variables names
-        for var in agg.columns.levels[0]:
-            if var != parent_var:
-                # Iterate through the stat names
-                for stat in agg.columns.levels[1]:
-                    # Make a new column name for the variable and stat
-                    columns.append('%s_%s_%s' % (df_name, var, stat))
-
-        agg.columns = columns
-
-        # Remove the columns with all redundant values
-        _, idx = np.unique(agg, axis=1, return_index=True)
-        agg = agg.iloc[:, idx]
-
-        return agg
+        column_names = [parent_var]
+        columns = agg.data(verbose=verbose).columns
+        for c in columns:
+            if c != parent_var:
+                column_names.append('{}_{}'.format(df_name, c))
+        return agg.set_columns(column_names)
 
     def agg_categorical(df, parent_var, df_name):
         """
@@ -108,48 +90,35 @@ def run(root_data):
             The columns are also renamed and columns with duplicate values are removed.
 
         """
+        categorical = df.select_dtypes('object').onehot_encode()
 
-        # Select the categorical columns
-        categorical = pd.get_dummies(df.select_dtypes('object'))
-
-        # Make sure to put the identifying id on the column
-        categorical[parent_var] = df[parent_var]
+        categorical = categorical.add_columns(parent_var, df[parent_var])
 
         # Groupby the group var and calculate the sum and mean
         categorical = categorical.groupby(parent_var).agg(['sum', 'count', 'mean'])
 
-        column_names = []
+        column_names = [parent_var]
+        columns = categorical.data(verbose=verbose).columns
+        for c in columns:
+            if c != parent_var:
+                column_names.append('{}_{}'.format(df_name, c))
 
-        # Iterate through the columns in level 0
-        for var in categorical.columns.levels[0]:
-            # Iterate through the stats in level 1
-            for stat in ['sum', 'count', 'mean']:
-                # Make a new column name
-                column_names.append('%s_%s_%s' % (df_name, var, stat))
+        return categorical.set_columns(column_names)
 
-        categorical.columns = column_names
-
-        # Remove duplicate columns by values
-        _, idx = np.unique(categorical, axis=1, return_index=True)
-        categorical = categorical.iloc[:, idx]
-
-        return categorical
-
-    # Plots the disribution of a variable colored by value of the target
+    # Plots the distribution of a variable colored by value of the target
     def kde_target(var_name, df):
-
         # Calculate the correlation coefficient between the new variable and the target
         corr = df['TARGET'].corr(df[var_name])
 
         # Calculate medians for repaid vs not repaid
-        avg_repaid = df.ix[df['TARGET'] == 0, var_name].median()
-        avg_not_repaid = df.ix[df['TARGET'] == 1, var_name].median()
+        avg_repaid = df[df['TARGET'] == 0][var_name].median()
+        avg_not_repaid = df[df['TARGET'] == 1][var_name].median()
 
         plt.figure(figsize=(12, 6))
 
         # Plot the distribution for target == 0 and target == 1
-        sns.kdeplot(df.ix[df['TARGET'] == 0, var_name], label='TARGET == 0')
-        sns.kdeplot(df.ix[df['TARGET'] == 1, var_name], label='TARGET == 1')
+        sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(verbose=verbose), label='TARGET == 0')
+        sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(verbose=verbose), label='TARGET == 1')
 
         # label the plot
         plt.xlabel(var_name)
@@ -158,34 +127,34 @@ def run(root_data):
         plt.legend()
 
         # print out the correlation
-        print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr))
+        print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
         # Print out average values
-        print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid)
-        print('Median value for loan that was repaid =     %0.4f' % avg_repaid)
+        print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
+        print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
 
     import sys
 
     def return_size(df):
         """Return size of dataframe in gigabytes"""
-        return round(sys.getsizeof(df) / 1e9, 2)
+        return round(df.compute_size() / 1e9, 2)
 
-    previous = pd.read_csv(root_data + '/home-credit-default-risk/previous_application.csv')
-    previous.head()
+    previous = execution_environment.load(root_data + '/home-credit-default-risk/previous_application.csv')
+    previous.head().data(verbose=verbose)
 
     # Calculate aggregate statistics for each numeric column
     previous_agg = agg_numeric(previous, 'SK_ID_CURR', 'previous')
-    print('Previous aggregation shape: ', previous_agg.shape)
-    previous_agg.head()
+    print('Previous aggregation shape: ', previous_agg.shape().data(verbose=verbose))
+    previous_agg.head().data(verbose=verbose)
 
     # Calculate value counts for each categorical column
     previous_counts = agg_categorical(previous, 'SK_ID_CURR', 'previous')
-    print('Previous counts shape: ', previous_counts.shape)
-    previous_counts.head()
+    print('Previous counts shape: ', previous_counts.shape().data(verbose=verbose))
+    previous_counts.head().data(verbose=verbose)
 
-    train = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
-    test = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
+    train = execution_environment.load(root_data + '/home-credit-default-risk/application_train.csv')
+    test = execution_environment.load(root_data + '/home-credit-default-risk/application_test.csv')
 
-    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = execution_environment.load(root_data + '/home-credit-default-risk/application_test_labels.csv')
 
     # Merge in the previous information
     train = train.merge(previous_counts, on='SK_ID_CURR', how='left')
@@ -195,46 +164,46 @@ def run(root_data):
     test = test.merge(previous_agg, on='SK_ID_CURR', how='left')
 
     # Function to calculate missing values by column# Funct
-    def missing_values_table(df, print_info=False):
+    def missing_values_table(dataset):
         # Total missing values
-        mis_val = df.isnull().sum()
+        mis_val = dataset.isnull().sum().data(verbose=verbose)
 
-        # Percentage of missing values
-        mis_val_percent = 100 * df.isnull().sum() / len(df)
+        mis_val_percent = 100 * mis_val / len(dataset.data(verbose=verbose))
 
         # Make a table with the results
         mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
-
         # Rename the columns
-        mis_val_table_ren_columns = mis_val_table.rename(
-            columns={0: 'Missing Values', 1: '% of Total Values'})
-
+        mis_val_table_ren_columns = mis_val_table.rename(columns={
+            0: 'Missing Values',
+            1: '% of Total Values'
+        })
         # Sort the table by percentage of missing descending
         mis_val_table_ren_columns = mis_val_table_ren_columns[
             mis_val_table_ren_columns.iloc[:, 1] != 0].sort_values(
             '% of Total Values', ascending=False).round(1)
 
-        if print_info:
-            # Print some summary information
-            print ("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
-                                                                       "There are " + str(
-                mis_val_table_ren_columns.shape[0]) +
-                   " columns that have missing values.")
+        # Print some summary information
+        print("Your selected dataframe has " + str(dataset.shape().data(verbose=verbose)[1]) + " columns.\n"
+                                                                                               "There are " + str(
+            mis_val_table_ren_columns.shape[0]) +
+              " columns that have missing values.")
 
         # Return the dataframe with missing information
         return mis_val_table_ren_columns
 
     def remove_missing_columns(train, test, threshold=90):
-        # Calculate missing stats for train and test (remember to calculate a percent!)
-        train_miss = pd.DataFrame(train.isnull().sum())
-        train_miss['percent'] = 100 * train_miss[0] / len(train)
 
-        test_miss = pd.DataFrame(test.isnull().sum())
-        test_miss['percent'] = 100 * test_miss[0] / len(test)
+        # Total missing values
+        train_miss = train.isnull().sum().data(verbose=verbose)
+        train_miss_percent = 100 * train_miss / train.shape().data(verbose=verbose)[0]
+
+        # Total missing values
+        test_miss = test.isnull().sum().data(verbose=verbose)
+        test_miss_percent = 100 * test_miss / test.shape().data(verbose=verbose)[0]
 
         # list of missing columns for train and test
-        missing_train_columns = list(train_miss.index[train_miss['percent'] > threshold])
-        missing_test_columns = list(test_miss.index[test_miss['percent'] > threshold])
+        missing_train_columns = list(train_miss.index[train_miss_percent > threshold])
+        missing_test_columns = list(test_miss.index[test_miss_percent > threshold])
 
         # Combine the two lists together
         missing_columns = list(set(missing_train_columns + missing_test_columns))
@@ -270,7 +239,7 @@ def run(root_data):
         df_agg = agg_numeric(df, parent_var=group_vars[0], df_name=df_names[0])
 
         # If there are categorical variables
-        if any(df.dtypes == 'object'):
+        if any(df.dtypes().data(verbose=verbose) == 'category'):
 
             # Count the categorical columns
             df_counts = agg_categorical(df, parent_var=group_vars[0], df_name=df_names[0])
@@ -300,152 +269,160 @@ def run(root_data):
 
         return df_by_client
 
-    cash = pd.read_csv(root_data + '/home-credit-default-risk/POS_CASH_balance.csv')
+    cash = execution_environment.load(root_data + '/home-credit-default-risk/POS_CASH_balance.csv')
     cash.head()
 
     cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
     cash_by_client.head()
 
-    print 'Cash by Client Shape: '.format(cash_by_client.shape)
+    print 'Cash by Client Shape: '.format(cash_by_client.shape().data(verbose=verbose))
     train = train.merge(cash_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(cash_by_client, on='SK_ID_CURR', how='left')
 
     train, test = remove_missing_columns(train, test)
 
-    credit = pd.read_csv(root_data + '/home-credit-default-risk/credit_card_balance.csv')
+    credit = execution_environment.load(root_data + '/home-credit-default-risk/credit_card_balance.csv')
     credit.head()
 
     credit_by_client = aggregate_client(credit, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['credit', 'client'])
     credit_by_client.head()
 
-    print 'Credit by client shape: '.format(credit_by_client.shape)
+    print 'Credit by client shape: '.format(credit_by_client.shape().data(verbose=verbose))
 
     train = train.merge(credit_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(credit_by_client, on='SK_ID_CURR', how='left')
 
     train, test = remove_missing_columns(train, test)
 
-    installments = pd.read_csv(root_data + '/home-credit-default-risk/installments_payments.csv')
+    installments = execution_environment.load(root_data + '/home-credit-default-risk/installments_payments.csv')
     installments.head()
 
     installments_by_client = aggregate_client(installments, group_vars=['SK_ID_PREV', 'SK_ID_CURR'],
                                               df_names=['installments', 'client'])
     installments_by_client.head()
 
-    print 'Installments by client shape: '.format(installments_by_client.shape)
+    print 'Installments by client shape: '.format(installments_by_client.shape().data(verbose=verbose))
 
     train = train.merge(installments_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(installments_by_client, on='SK_ID_CURR', how='left')
 
     train, test = remove_missing_columns(train, test)
 
-    print 'Final Training Shape: {}'.format(train.shape)
-    print 'Final Testing Shape: {}'.format(test.shape)
+    print 'Final Training Shape: {}'.format(train.shape().data(verbose=verbose))
+    print 'Final Testing Shape: {}'.format(test.shape().data(verbose=verbose))
 
     print 'Final training size: {}'.format(return_size(train))
     print 'Final testing size: {}'.format(return_size(test))
 
-    def model(features, test_features, encoding='ohe'):
+    from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
+
+    def model(lgb_featres, test_features, encoding='ohe'):
 
         """Train and test a light gradient boosting model using
         cross validation.
 
         Parameters
         --------
-            features (pd.DataFrame):
+            features (Dataset):
                 dataframe of training features to use
                 for training a model. Must include the TARGET column.
-            test_features (pd.DataFrame):
+            test_features (Dataset):
                 dataframe of testing features to use
                 for making predictions with the model.
             encoding (str, default = 'ohe'):
-                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label encoding
+                method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label
+                encoding
                 n_folds (int, default = 5): number of folds to use for cross validation
 
         Return
         --------
-            submission (pd.DataFrame):
+            submission (Dataset):
                 dataframe with `SK_ID_CURR` and `TARGET` probabilities
                 predicted by the model.
-            feature_importances (pd.DataFrame):
+            feature_importances (Dataset):
                 dataframe with the feature importances from the model.
-            valid_metrics (pd.DataFrame):
+            valid_metrics (Dataset):
                 dataframe with training and validation metrics (ROC AUC) for each fold and overall.
 
         """
 
         # Extract the ids
-        train_ids = features['SK_ID_CURR']
+        train_ids = lgb_featres['SK_ID_CURR']
         test_ids = test_features['SK_ID_CURR']
 
         # Extract the labels for training
-        labels = features['TARGET']
+        labels = lgb_featres['TARGET']
 
         # Remove the ids and target
-        features = features.drop(columns=['SK_ID_CURR', 'TARGET'])
+        lgb_featres = lgb_featres.drop(columns=['SK_ID_CURR', 'TARGET'])
         test_features = test_features.drop(columns=['SK_ID_CURR'])
 
         # One Hot Encoding
         if encoding == 'ohe':
-            features = pd.get_dummies(features)
-            test_features = pd.get_dummies(test_features)
+            lgb_featres = lgb_featres.onehot_encode()
+            test_features = test_features.onehot_encode()
 
-            # Align the dataframes by the columns
-            features, test_features = features.align(test_features, join='inner', axis=1)
+            features_columns = lgb_featres.data(verbose=verbose).columns
+            test_features_columns = test_features.data(verbose=verbose).columns
+            for c in features_columns:
+                if c not in test_features_columns:
+                    lgb_featres = lgb_featres.drop(c)
 
             # No categorical indices to record
             cat_indices = 'auto'
 
-        # Integer label encoding
-        elif encoding == 'le':
-
-            # Create a label encoder
-            label_encoder = LabelEncoder()
-
-            # List for storing categorical indices
-            cat_indices = []
-
-            # Iterate through each column
-            for i, col in enumerate(features):
-                if features[col].dtype == 'object':
-                    # Map the categorical features to integers
-                    features[col] = label_encoder.fit_transform(np.array(features[col].astype(str)).reshape((-1,)))
-                    test_features[col] = label_encoder.transform(
-                        np.array(test_features[col].astype(str)).reshape((-1,)))
-
-                    # Record the categorical indices
-                    cat_indices.append(i)
+        # # Integer label encoding
+        # elif encoding == 'le':
+        #
+        #     # Create a label encoder
+        #     label_encoder = LabelEncoder()
+        #
+        #     # List for storing categorical indices
+        #     cat_indices = []
+        #
+        #     # Iterate through each column
+        #     for i, col in enumerate(lgb_featres):
+        #         if lgb_featres[col].dtype == 'object':
+        #             # Map the categorical features to integers
+        #             lgb_featres[col] = label_encoder.fit_transform(np.array(lgb_featres[col].astype(str)).reshape((-1,)))
+        #             test_features[col] = label_encoder.transform(
+        #                 np.array(test_features[col].astype(str)).reshape((-1,)))
+        #
+        #             # Record the categorical indices
+        #             cat_indices.append(i)
 
         # Catch error if label encoding scheme is not valid
         else:
             raise ValueError("Encoding must be either 'ohe' or 'le'")
 
-        print('Training Data Shape: ', features.shape)
-        print('Testing Data Shape: ', test_features.shape)
+        print('Training Data Shape: ', lgb_featres.shape().data(verbose=verbose))
+        print('Testing Data Shape: ', test_features.shape().data(verbose=verbose))
 
         # Extract feature names
-        feature_names = list(features.columns)
+        feature_names = list(lgb_featres.data(verbose=verbose).columns)
 
-        # TODO change n_estimators to 10000, he original number from the script
-        model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
-                                   class_weight='balanced', learning_rate=0.05,
-                                   reg_alpha=0.1, reg_lambda=0.1,
-                                   subsample=0.8, n_jobs=-1, random_state=50)
+        # Create the model
+        model = LGBMClassifier(n_estimators=10, objective='binary',
+                               class_weight='balanced', learning_rate=0.05,
+                               reg_alpha=0.1, reg_lambda=0.1,
+                               subsample=0.8, n_jobs=-1, random_state=50)
 
         # Train the model
-        model.fit(features, labels, eval_metric='auc',
-                  categorical_feature=cat_indices,
-                  verbose=200)
+        model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
+                                                    'categorical_feature': cat_indices,
+                                                    'verbose': 200})
 
         # Record the best iteration
-        best_iteration = model.best_iteration_
-        predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
-        score = roc_auc_score(test_labels['TARGET'], predictions)
+        best_iteration = model.best_iteration()
+
+        # Make predictions
+        score = model.score(test_features,
+                            test_labels['TARGET'],
+                            score_type='auc',
+                            custom_args={'num_iteration': best_iteration}).data(verbose=verbose)
         print 'LGBMClassifier with AUC score: {}'.format(score)
 
-        feature_importance_values = model.feature_importances_
-
-        feature_importances = pd.DataFrame({'feature': feature_names, 'importance': feature_importance_values})
+        feature_importances = model.feature_importances(feature_names)
 
         return feature_importances
 
@@ -453,11 +430,21 @@ def run(root_data):
 
 
 if __name__ == "__main__":
+    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
+    import sys
+
+    sys.path.append(ROOT_PACKAGE_DIRECTORY)
+    from experiment_graph.execution_environment import ExecutionEnvironment
+
+    ee = ExecutionEnvironment('dedup')
     execution_start = datetime.now()
 
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/jupyter'
     root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    run(root_data)
+    # DATABASE_PATH = root_data + '/experiment_graphs/home-credit-default-risk/materialized-no-groupby'
+
+    # ee.load_history_from_disk(DATABASE_PATH)
+    run(ee, root_data, verbose=1)
+    # ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
