@@ -21,7 +21,7 @@ warnings.filterwarnings('ignore')
 
 def run(root_data):
     # Read in bureau
-    bureau = pd.read_csv(root_data + '/home-credit-default-risk/bureau.csv')
+    bureau = pd.read_csv(root_data + '/kaggle_home_credit/bureau.csv')
     bureau.head()
 
     # Groupby the client id (SK_ID_CURR), count the number of previous loans, and rename the column
@@ -30,7 +30,7 @@ def run(root_data):
     previous_loan_counts.head()
 
     # Join to the training dataframe
-    train = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
+    train = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
     train = train.merge(previous_loan_counts, on='SK_ID_CURR', how='left')
 
     # Fill the missing values with 0
@@ -277,7 +277,7 @@ def run(root_data):
     bureau_counts.head()
 
     # Read in bureau balance
-    bureau_balance = pd.read_csv(root_data + '/home-credit-default-risk/bureau_balance.csv')
+    bureau_balance = pd.read_csv(root_data + '/kaggle_home_credit/bureau_balance.csv')
     bureau_balance.head()
 
     # Counts of each type of status for each previous loan
@@ -308,9 +308,9 @@ def run(root_data):
     gc.collect()
 
     # Read in new copies of all the dataframes
-    train = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
-    bureau = pd.read_csv(root_data + '/home-credit-default-risk/bureau.csv')
-    bureau_balance = pd.read_csv(root_data + '/home-credit-default-risk/bureau_balance.csv')
+    train = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
+    bureau = pd.read_csv(root_data + '/kaggle_home_credit/bureau.csv')
+    bureau_balance = pd.read_csv(root_data + '/kaggle_home_credit/bureau_balance.csv')
 
     bureau_counts = count_categorical(bureau, group_var='SK_ID_CURR', df_name='bureau')
     bureau_counts.head()
@@ -386,9 +386,9 @@ def run(root_data):
     len(missing_train_vars)
 
     # Read in the test dataframe
-    test = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
+    test = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')
 
-    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = pd.read_csv(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     # Merge with the value counts of bureau
     test = test.merge(bureau_counts, on='SK_ID_CURR', how='left')
@@ -638,8 +638,8 @@ def run(root_data):
 
         return df
 
-    train_control = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
-    test_control = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
+    train_control = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
+    test_control = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')
 
     fi = model(train_control, test_control)
 

@@ -169,7 +169,7 @@ def run(root_data):
         """Return size of dataframe in gigabytes"""
         return round(sys.getsizeof(df) / 1e9, 2)
 
-    previous = pd.read_csv(root_data + '/home-credit-default-risk/previous_application.csv')
+    previous = pd.read_csv(root_data + '/kaggle_home_credit/previous_application.csv')
     previous.head()
 
     # Calculate aggregate statistics for each numeric column
@@ -182,10 +182,10 @@ def run(root_data):
     print('Previous counts shape: ', previous_counts.shape)
     previous_counts.head()
 
-    train = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
-    test = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
+    train = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
+    test = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')
 
-    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = pd.read_csv(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     # Merge in the previous information
     train = train.merge(previous_counts, on='SK_ID_CURR', how='left')
@@ -300,7 +300,7 @@ def run(root_data):
 
         return df_by_client
 
-    cash = pd.read_csv(root_data + '/home-credit-default-risk/POS_CASH_balance.csv')
+    cash = pd.read_csv(root_data + '/kaggle_home_credit/POS_CASH_balance.csv')
     cash.head()
 
     cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
@@ -312,7 +312,7 @@ def run(root_data):
 
     train, test = remove_missing_columns(train, test)
 
-    credit = pd.read_csv(root_data + '/home-credit-default-risk/credit_card_balance.csv')
+    credit = pd.read_csv(root_data + '/kaggle_home_credit/credit_card_balance.csv')
     credit.head()
 
     credit_by_client = aggregate_client(credit, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['credit', 'client'])
@@ -325,7 +325,7 @@ def run(root_data):
 
     train, test = remove_missing_columns(train, test)
 
-    installments = pd.read_csv(root_data + '/home-credit-default-risk/installments_payments.csv')
+    installments = pd.read_csv(root_data + '/kaggle_home_credit/installments_payments.csv')
     installments.head()
 
     installments_by_client = aggregate_client(installments, group_vars=['SK_ID_PREV', 'SK_ID_CURR'],

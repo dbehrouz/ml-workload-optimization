@@ -29,11 +29,11 @@ warnings.filterwarnings('ignore')
 
 def run(root_data):
     print(os.listdir(root_data))
-    app_train = pd.read_csv(root_data + '/home-credit-default-risk/application_train.csv')
+    app_train = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
     print('Training data shape: ', app_train.shape)
     app_train.head()
 
-    app_test = pd.read_csv(root_data + '/home-credit-default-risk/application_test.csv')
+    app_test = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')
     print('Testing data shape: ', app_test.shape)
     app_test.head()
 
@@ -41,7 +41,7 @@ def run(root_data):
 
     app_train['TARGET'].astype(int).plot.hist()
 
-    test_labels = pd.read_csv(root_data + '/home-credit-default-risk/application_test_labels.csv')
+    test_labels = pd.read_csv(root_data + '/kaggle_home_credit/application_test_labels.csv')
 
     # Function to calculate missing values by column# Funct
     def missing_values_table(df):
