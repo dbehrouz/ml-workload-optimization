@@ -14,7 +14,8 @@ import warnings
 
 # plotting libraries
 from datetime import datetime
-
+import matplotlib
+matplotlib.use('ps')
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
 import numpy as np

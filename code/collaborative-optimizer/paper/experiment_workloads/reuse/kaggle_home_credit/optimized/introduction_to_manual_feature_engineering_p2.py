@@ -9,7 +9,9 @@
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
+import matplotlib
 
+matplotlib.use('ps')
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
 import pandas as pd

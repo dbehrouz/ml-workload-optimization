@@ -8,9 +8,11 @@
 """
 import os
 import warnings
-
 # matplotlib and seaborn for plotting
 from datetime import datetime
+import matplotlib
+
+matplotlib.use('ps')
 
 import matplotlib.pyplot as plt
 import numpy as np

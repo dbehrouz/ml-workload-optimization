@@ -38,7 +38,7 @@ DATABASE_PATH = ROOT + '/experiment_graphs/{}/environment_same_workload'.format(
 MODE = parser.get('mode', 'local')
 RESULT_FOLDER = ROOT + '/experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
 OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
-REP = int(parser.get('rep', 3))
+REP = int(parser.get('rep', 2))
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]

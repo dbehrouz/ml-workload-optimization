@@ -8,10 +8,14 @@
 # pandas and numpy for data manipulation
 from datetime import datetime
 import lightgbm as lgb
+
 import pandas as pd
 import numpy as np
 
+
 # matplotlib and seaborn for plotting
+import matplotlib
+matplotlib.use('ps')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import roc_auc_score
@@ -22,7 +26,7 @@ from sklearn.preprocessing import LabelEncoder
 
 warnings.filterwarnings('ignore')
 
-plt.style.use('fivethirtyeight')
+
 
 
 def run(root_data):

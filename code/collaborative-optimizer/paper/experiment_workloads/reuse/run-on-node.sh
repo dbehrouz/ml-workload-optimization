@@ -5,8 +5,10 @@ pip2 install -U pandas --user
 pip2 install -U scikit-learn --user
 pip2 install -U networkx --user
 pip2 install -U kaggle --user
-pip2 install -U  matplotlib --user
+pip2 install -U matplotlib --user
 pip2 install -U seaborn --user
+pip2 install -U pympler --user
+pip2.7 install -U lightgbm --user
 # copy scripts
 rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
 
@@ -32,3 +34,6 @@ python collaborative-optimization/code/collaborative-optimizer/paper/experiment_
 
 python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/runner-same-workload.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization' \
 'experiment=kaggle_home_credit' 'workload=start_here_a_gentle_introduction' 'mode=remote' 'rep=3'
+
+
+scp -r behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/experiment_results/ /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/experiment_results
