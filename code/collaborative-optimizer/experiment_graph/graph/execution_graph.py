@@ -148,25 +148,37 @@ class BaseGraph(object):
         for line in leg.get_lines():
             line.set_linewidth(4.0)
 
-    def get_total_size(self, for_types=None, exclude_types=None):
+    def get_artifact_sizes(self, for_types=None, exclude_types=None, mat_only=False):
         t_size = 0
         # both cannot have some values
         assert for_types is None or exclude_types is None
-
+        mat_condition = not mat_only
         if exclude_types is None:
             if for_types is None:
-                for node in self.graph.nodes(data='size'):
-                    t_size += node[1]
+                for node in self.graph.nodes(data=True):
+                    if mat_condition or node[1].get('mat', False):
+                        t_size += node[1]['size']
             else:
                 for node in self.graph.nodes(data=True):
                     if node[1]['type'] in for_types:
-                        t_size += node[1]['size']
+                        if mat_condition or node[1].get('mat', False):
+                            t_size += node[1]['size']
         else:
             for node in self.graph.nodes(data=True):
                 if node[1]['type'] not in exclude_types:
-                    t_size += node[1]['size']
+                    if mat_condition or node[1].get('mat', False):
+                        t_size += node[1]['size']
 
         return t_size
+
+    def get_total_materialized_size(self):
+        # excluding groupby is not needed since we are setting its size to zero
+        # but this is just to confirm that groupby is never supposed ot be materialized
+        # TODO remove groupby from exclusion when it is really removed from the graph
+        return self.get_artifact_sizes(exclude_types='GroupBy', mat_only=True)
+
+    def get_total_size(self):
+        return self.get_artifact_sizes(exclude_types='GroupBy')
 
     def get_size_of(self, node_list):
         size = 0.0

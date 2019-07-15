@@ -61,7 +61,6 @@ class Materializer:
             else:
                 remaining.append(top)
 
-        print 'budget in the loop: {}'.format(current_budget)
         return to_mat, remaining
 
     def materialize(self, should_materialize):
@@ -78,20 +77,26 @@ class Materializer:
                 node_data = node[1]['data']
                 if node[0] in should_materialize:
                     to_keep = to_keep.union(set(node_data.c_hash))
+                    node[1]['mat'] = True
                 else:
                     node_data.clear_content()
-                    # node[1]['size'] = 0.0
+                    node[1]['mat'] = False
             elif node[1]['type'] == 'Feature':
                 node_data = node[1]['data']
                 if node[0] in should_materialize:
                     to_keep.add(node_data.c_hash)
+                    node[1]['mat'] = True
                 else:
                     node_data.clear_content()
-                    # node[1]['size'] = 0.0
+                    node[1]['mat'] = False
 
             elif node[0] not in should_materialize:
                 node[1]['data'].clear_content()
+                node[1]['mat'] = False
                 # node[1]['size'] = 0.0
+            else:
+                node[1]['mat'] = True
+
         to_delete = []
         for k in data_storage.DATA:
             if k not in to_keep and not k.endswith('_size'):
@@ -150,7 +155,7 @@ class HeuristicsMaterializer(Materializer):
             print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
                                                                                     len(should_materialize))
 
-        return should_materialize
+        return should_materialize, remaining
 
 
 class StorageAwareMaterializer(Materializer):

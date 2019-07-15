@@ -63,7 +63,8 @@ class ExecutionEnvironment(object):
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
     def get_real_history_graph_size(self):
-        return self.history_graph.get_total_size(exclude_types=['Dataset', 'Feature']) + self.data_storage.total_size()
+        return self.history_graph.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
+                                                     mat_only=True) + self.data_storage.total_size()
 
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
         if os.path.exists(environment_folder) and not overwrite:
@@ -142,9 +143,9 @@ class ExecutionEnvironment(object):
 
     def get_artifacts_size(self, graph_type='workload'):
         if graph_type == 'workload':
-            return self.workload_graph.get_total_size()
+            return self.workload_graph.get_artifact_sizes()
         else:
-            return self.history_graph.get_total_size()
+            return self.history_graph.get_artifact_sizes()
 
     def load(self, loc, dtype=None, nrows=None):
         extra_params = dict()
