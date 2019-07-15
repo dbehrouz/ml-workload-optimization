@@ -39,6 +39,8 @@ MODE = parser.get('mode', 'local')
 RESULT_FOLDER = ROOT + '/experiment_results/{}/reuse/same-workload/{}'.format(MODE, EXPERIMENT)
 OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
 REP = int(parser.get('rep', 2))
+# what percentage of the total artifact size to materialize
+MAT_RATE = float(parser.get('mat', 1.0))
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
