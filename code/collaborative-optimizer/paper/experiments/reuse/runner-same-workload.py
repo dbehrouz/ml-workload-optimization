@@ -43,6 +43,7 @@ OUTPUT_CSV = RESULT_FOLDER + '/experiment_results.csv'
 # what percentage of the total artifact size to materialize
 mat_rate = float(parser.get('mat_rate', 0.0))
 run_baseline = parser.get('run_baseline', 'no')
+rep = int(parser.get('rep', 1))
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
@@ -75,8 +76,9 @@ if run_baseline == 'no':
     with open(OUTPUT_CSV, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},optimized,{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%Y-%m-%d %H:%M:%S"), e_id, EXPERIMENT,
-                                                   WORKLOAD, mat_rate, elapsed))
+            '{},{},{},{},{},optimized,{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%Y-%m-%d %H:%M:%S"), e_id,
+                                                      EXPERIMENT,
+                                                      WORKLOAD, rep, mat_rate, elapsed))
 
     with open(RESULT_FOLDER + '/details/{}.csv'.format(e_id), 'a') as result:
         result.write(ee.get_benchmark_results() + "\n")
@@ -95,5 +97,6 @@ else:
 
     with open(OUTPUT_CSV, 'a') as the_file:
         the_file.write(
-            '{},{},{},{},baseline,{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%Y-%m-%d %H:%M:%S"), e_id, EXPERIMENT,
-                                                WORKLOAD, elapsed))
+            '{},{},{},{},{},baseline,{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%Y-%m-%d %H:%M:%S"), e_id,
+                                                     EXPERIMENT,
+                                                     WORKLOAD, rep, 0.0, elapsed))
