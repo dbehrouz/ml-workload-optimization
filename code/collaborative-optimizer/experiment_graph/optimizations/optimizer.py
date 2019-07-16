@@ -302,7 +302,4 @@ class HashBasedOptimizer(Optimizer):
         self.history_reads += total_history_graph_reads
         for m in materialized_vertices:
             self.copy_from_history(history.graph.nodes[m], workload.graph.nodes[m])
-        print 'terminal: {}, materialized: {}, execution: {}, reads: {}'.format(vertex, materialized_vertices,
-                                                                                execution_vertices,
-                                                                                total_history_graph_reads)
         return workload.graph.subgraph(execution_vertices)
