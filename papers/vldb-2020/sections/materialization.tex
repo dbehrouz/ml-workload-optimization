@@ -48,12 +48,20 @@ M(G, v) \coloneqq  \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)
 \]
 is either $v$ itself, when $v$ is a terminal model, or the set of all terminal models to which $v$ is connected.
 \[
-p(G, v) \coloneqq  \max\limits_{m \in M(v)} ( \alpha ^ {\mid path(v,m) \mid} \times quality(m) )
+p(G, v) \coloneqq  
+		\begin{cases}
+		quality(v) , & \text{if } v \in M(G)  \\
+		\max\limits_{m \in M(v)} \Big( \dfrac{quality(m)}{cost(v,m)} \Big) , & \text{otherwise}
+		\end{cases}
 \]
-is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task and $\alpha \in [0,1]$ is the damping factor.
+is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task.
+We define $cost(v,m)$ as the total time of executing all the operations starting from vertex $v$ until model $m$,
+\[
+cost(v,m) \coloneqq \sum\limits_{e \in path(v, m)} e.t
+\]
 If $v$ itself is a model, then $p(G, v) = quality(v)$.
-When $v$ is not a model, the further $v$ is from a model artifact the smaller the damping factor multiplier becomes, which reduces the quality gained by materializing the artifact $v$.
-Intuitively, a high potential artifact is an artifact which results in a high-quality terminal model with only a few operations.
+When $v$ is not a model, we first compute the ratio of quality over cost for all of $v$'s connected models and the potential of $v$ to the ratio with the largest value.
+Intuitively, a high potential artifact is an artifact which results in a high-quality terminal model with low cost.
 
 Now, we define the estimated quality function as:
 \[
@@ -118,7 +126,7 @@ Then, we start materializing all the vertices, sorted by their utility, until th
 The utility function ($\mathcal{U}(G,v) $) computes the goodness of an artifact with respect to its recreation cost, how often it is reused, and the estimated quality gained from the artifact.
 To define the utility function, we first define the recreation cost function as the following:  
 \[
-rc(G,v) \coloneqq \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(G, v_{0}, v)} e.t
+rc(G,v) \coloneqq \sum\limits_{e \in \bigcup\limits_{v_{0}\in roots} path(v_{0}, v)} e.t
 \]
 which is the total execution time of all the operations from the root vertices to $v$.
 We also define $trf(v)$ as the amount of time required to transfer vertex $v$ from the experiment graph to the machine running the workload.
