@@ -20,4 +20,4 @@ python ~/collaborative-optimization/code/collaborative-optimizer/paper/experimen
 
 
 
-scp -r behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/experiment_results/ /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/experiment_results
+scp -r behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/experiment_results/remote /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/experiment_results
