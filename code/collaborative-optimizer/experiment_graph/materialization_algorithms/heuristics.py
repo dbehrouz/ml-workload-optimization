@@ -28,43 +28,39 @@ def compute_recreation_cost(graph, modify_graph=True):
     return recreation_cost
 
 
-def compute_vertex_potential(graph, modify_graph=True, alpha=0.9):
+def compute_vertex_potential(graph, modify_graph=True):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
     TODO we should make sure non-predictive models are treated properly
     TODO we should think on how to capture the potential of testing nodes
-    :type alpha: float damping factor, default=0.9
     :type graph: nx.DiGraph
     :type modify_graph: bool
 
     """
     potentials = {}
-    connected_models = {}
     ml_models = []
+    # A dictionary of the form 'vertex_id' = (best_model_quality, cost_to_best_model)
+    cost_to_best_model = {}
+    # Preprocessing step: for every node in the graph if it is a predictive model assign its score as its potential
     for node in graph.nodes(data=True):
         if node[1]['type'] == 'SK_Model':
             potentials[node[0]] = node[1]['score']
             if node[1]['score'] > 0.0:
-                connected_models[node[0]] = {node[0]}
                 ml_models.append(node[0])
-            else:
-                connected_models[node[0]] = set()
+                cost_to_best_model[node[0]] = (node[1]['score'], 0.0)
         elif graph.out_degree(node[0]) == 0:
             potentials[node[0]] = -1.0
-            connected_models[node[0]] = set()
         else:
             potentials[node[0]] = 0.0
-            connected_models[node[0]] = set()
 
     # TODO so far the only edges going out of a model are the feature importance operation and score operation which has
     # two levels
     for m in ml_models:
         for _, out in graph.out_edges(m):
-            connected_models[out] = {m}
             potentials[out] = potentials[m]
             for _, outout in graph.out_edges(out):
-                connected_models[outout] = {m}
                 potentials[outout] = potentials[m]
+                cost_to_best_model[out] = (graph.nodes[m]['score'], 0.0)
 
     total_score = 0.0  # for keeping track of the sum of score to compute the score for out of reach nodes
     for n in reversed(list(nx.topological_sort(graph))):
@@ -73,41 +69,41 @@ def compute_vertex_potential(graph, modify_graph=True, alpha=0.9):
             # The node is a ml model
             total_score += current_score
         else:
-            best_score_among_neighbors = -1
-            selected_node = -1
+            best_potential_among_neighbors = -1
+            neighbor_with_largest_potential = -1
             terminal = True
-            models = set()
             for _, destination in graph.out_edges(n):
-                if destination in ml_models:
-                    models.add(destination)
-                else:
-                    for e in connected_models[destination]:
-                        models.add(e)
                 terminal = False
-                score = potentials[destination]
-                if score >= best_score_among_neighbors:
-                    selected_node = destination
-                    best_score_among_neighbors = score
-            if selected_node == -1 and not terminal:
+                neighbor_potential = potentials[destination]
+                if neighbor_potential >= best_potential_among_neighbors:
+                    neighbor_with_largest_potential = destination
+                    best_potential_among_neighbors = neighbor_potential
+            if neighbor_with_largest_potential == -1 and not terminal:
                 raise Exception('something went wrong, the node {} has no neighbors and is not a terminal node')
-            if best_score_among_neighbors == -1:
+            if best_potential_among_neighbors == -1:
                 potentials[n] = -1
                 continue
-            s = alpha * best_score_among_neighbors
-            potentials[n] = s
-            total_score += s
-            connected_models[n] = models
+            model_score, cost_to_model = cost_to_best_model[neighbor_with_largest_potential]
+
+            my_cost = (cost_to_model + cost(graph, n, neighbor_with_largest_potential))
+            if my_cost == 0.0:
+                my_potential = model_score
+            else:
+                my_potential = model_score / my_cost
+            cost_to_best_model[n] = (model_score, my_cost)
+            potentials[n] = my_potential
+            total_score += my_potential
 
     default = total_score / len(graph.nodes)
     for k, v in potentials.iteritems():
         if v == -1:
             potentials[k] = default
-    num_pipelines = {}
     if modify_graph:
         for n in graph.nodes(data=True):
             n[1]['potential'] = potentials[n[0]]
-            length = len(connected_models[n[0]])
-            n[1]['num_pipelines'] = length
-            num_pipelines[n[0]] = length
 
-    return potentials, num_pipelines
+    return potentials
+
+
+def cost(graph, source, destination):
+    return graph.edges[source, destination]['execution_time']

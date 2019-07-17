@@ -33,8 +33,9 @@ class Materializer:
                     print 'nothing to materialize for node {}'.format(node[0])
                     rho = -1
                 else:
-                    rho_object = RHO(node[0], node[1]['recreation_cost'], node[1]['potential'],
-                                     node[1]['num_pipelines'],
+                    rho_object = RHO(node[0], node[1]['recreation_cost'],
+                                     node[1]['potential'],
+                                     node[1]['meta_freq'],
                                      node[1]['size'], self.use_rc, self.use_pt)
                     rhos.append(rho_object)
                     rho = rho_object.rho
