@@ -169,12 +169,12 @@ The result of the global optimization process is another subgraph, which we refe
 %Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
 Then, an execution planner receives the global execution DAG and generates the execution schedule by sorting the edges based on their topological order, which is then executed by the execution engine (Step 4).
 If the experiment graph is empty, then the execution planner users local execution DAG to generate the execution schedule.
-After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG.
-Furthermore, the updater component also decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 5).
+After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG (Step 5).
+Lastly, a materializer component decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 6).
 
 \begin{figure}
 \centering
-\includegraphics[width=\columnwidth]{../images/system-workflow}
+\includegraphics[width=0.7\columnwidth]{../images/system-workflow}
 \caption{System overview of the collaborative workload optimizer}
 \label{system-workflow}
 \end{figure}
