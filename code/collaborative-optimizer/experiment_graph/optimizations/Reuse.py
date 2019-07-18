@@ -1,3 +1,4 @@
+import copy
 from abc import abstractmethod
 from collections import deque
 
@@ -68,6 +69,39 @@ class Reuse:
             # the node exists but it is not materialized
             return 1
 
+    def check_for_warmstarting(self, history, workload, model_candidates):
+        warmstarting_candidates = set()
+        for m in model_candidates:
+            training_datasets = list(workload.predecessors(m))
+            assert len(training_datasets) == 1
+            training_dataset = training_datasets[0]
+            if self.in_history_and_mat(history, training_dataset):
+                workload_training_edge = workload.edges[training_dataset, m]
+                if not workload_training_edge['warm_startable']:
+                    continue
+                if not workload_training_edge['should_warmstart']:
+                    continue
+                results = set()
+                for _, hm, history_training_edge in history.out_edges(training_dataset, data=True):
+                    history_node = history.nodes[hm]
+                    if history_node['type'] == 'SK_Model':
+                        if not history_training_edge['warm_startable']:
+                            continue
+                        elif history_training_edge['no_random_state_model'] == \
+                                workload_training_edge['no_random_state_model']:
+                            results.add((history_training_edge['args']['model'], history_node['score']))
+                if results:
+                    best_model = -1
+                    best_score = -1
+                    for model, score in results:
+                        if score > best_score:
+                            best_score = score
+                            best_model = model
+                    model_to_warmstart = copy.deepcopy(best_model)
+                    model_to_warmstart.random_state = workload_training_edge['random_state']
+                    warmstarting_candidates.add((training_dataset, m, model_to_warmstart))
+        return warmstarting_candidates
+
 
 class BottomUpReuse(Reuse):
     NAME = 'BOTTOMUP'
@@ -90,12 +124,15 @@ class BottomUpReuse(Reuse):
         """
 
         materialized_set = set()
+        model_candidates = set()
+        warmstarting_candidates = set()
         execution_set = {terminal}
-
         if workload_subgraph.nodes[terminal]['data'].computed:
-            return materialized_set, execution_set, self.history_reads
+            return materialized_set, execution_set, warmstarting_candidates, self.history_reads
         if self.is_mat(history, terminal):
-            return {terminal}, execution_set, self.history_reads
+            return {terminal}, execution_set, warmstarting_candidates, self.history_reads
+        if workload_subgraph.nodes[terminal]['type'] == 'SK_Model':
+            model_candidates.add(terminal)
 
         prevs = workload_subgraph.predecessors
 
@@ -103,21 +140,27 @@ class BottomUpReuse(Reuse):
         while queue:
             current, prev_nodes_list = queue[0]
             try:
+
                 prev_node = next(prev_nodes_list)
                 if prev_node not in execution_set:
                     # The next node should always be added to the execution set even if it is materialized in the
                     # history which results as the first node in the execution path
                     execution_set.add(prev_node)
-                    if workload_subgraph.nodes[prev_node]['data'].computed:
+                    workload_node = workload_subgraph.nodes[prev_node]
+
+                    if workload_node['data'].computed:
                         pass
                     elif self.is_mat(history, prev_node):
                         materialized_set.add(prev_node)
                     else:
+                        if workload_node['type'] == 'SK_Model':
+                            model_candidates.add(prev_node)
                         queue.append((prev_node, prevs(prev_node)))
 
             except StopIteration:
                 queue.popleft()
-        return materialized_set, execution_set, self.history_reads
+        warmstarting_candidates = self.check_for_warmstarting(history, workload_subgraph, model_candidates)
+        return materialized_set, execution_set, warmstarting_candidates, self.history_reads
 
 
 class FastBottomUpReuse(Reuse):
@@ -314,4 +357,3 @@ class HybridReuse(Reuse):
 
             except StopIteration:
                 queue.popleft()
-

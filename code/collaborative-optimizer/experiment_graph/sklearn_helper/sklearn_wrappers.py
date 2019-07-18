@@ -27,12 +27,14 @@ class SimpleModel:
 
 
 class PredictiveModel:
-    def __init__(self, underlying_sk_model):
+    def __init__(self, should_warmstart, underlying_sk_model):
         self.underlying_sk_model = underlying_sk_model
+        self.should_warmstart = should_warmstart
         self.trained_node = None
 
     def fit(self, train, labels, custom_args=None):
-        self.trained_node = train.fit_sk_model_with_labels(self.underlying_sk_model, labels, custom_args)
+        self.trained_node = train.fit_sk_model_with_labels(self.underlying_sk_model, labels, custom_args,
+                                                           should_warmstart=self.should_warmstart)
 
     def predict_proba(self, test, custom_args=None):
         return self.trained_node.predict_proba(test, custom_args)
@@ -45,7 +47,9 @@ class PredictiveModel:
 
 
 class LGBMClassifier(PredictiveModel):
-    def __init__(self, **args):
+    def __init__(self, should_warmstart=False, **args):
+        if should_warmstart:
+            raise Exception('{} does not support warmstarting'.format(self.__class__.__name__))
         PredictiveModel.__init__(self, lgb.LGBMClassifier(**args))
 
     def best_iteration(self):

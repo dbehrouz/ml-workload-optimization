@@ -19,7 +19,7 @@ from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimiz
 from graph.execution_graph import ExecutionGraph, HistoryGraph, COMBINE_OPERATION_IDENTIFIER
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 
-RANDOM_STATE = 15071989
+DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
 
 
@@ -338,19 +338,29 @@ class Node(object):
                                                                    ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_sklearn_node(self, oper, args=None, v_id=None):
+    def generate_sklearn_node(self, oper, args=None, v_id=None, should_warmstart=False):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
-        # nextid = self.generate_uuid()
+        edge_arguments = dict()
+
+        edge_arguments['should_warmstart'] = should_warmstart
+        edge_arguments['warm_startable'] = hasattr(args['model'], 'warm_start')
+        if edge_arguments['warm_startable']:
+            if hasattr(args['model'], 'random_state'):
+                edge_arguments['random_state'] = args['model'].random_state
+                no_random_state_model = copy.deepcopy(args['model'])
+                no_random_state_model.random_state = DEFAULT_RANDOM_STATE
+                edge_arguments['no_random_state_model'] = str(no_random_state_model)
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = SK_Model(nextid, self.execution_environment)
+        edge_arguments['name'] = type(args['model']).__name__
+        edge_arguments['oper'] = 'p_' + oper
+        edge_arguments['args'] = args
+        edge_arguments['execution_time'] = -1
+        edge_arguments['hash'] = edge_hash
         exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': type(args['model']).__name__,
-                                                                    'oper': 'p_' + oper,
-                                                                    'args': args,
-                                                                    'execution_time': -1,
-                                                                    'hash': edge_hash},
+                                                                   edge_arguments,
                                                                    ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
@@ -509,12 +519,15 @@ class SuperNode(Node):
         self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
         return new_columns, new_hashes
 
-    def p_fit_sk_model_with_labels(self, model, custom_args):
+    def p_fit_sk_model_with_labels(self, model, custom_args, warm_start=False):
         start = datetime.now()
+        if warm_start:
+            print 'training a model with warmstarting'
+            model.warm_start = True
         if custom_args is None:
-            model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data(), )
+            model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data())
         else:
-            model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data(), )
+            model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data())
         # update the model training time in the graph
         self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
                                                (datetime.now() - start).total_seconds())
@@ -1083,8 +1096,10 @@ class Feature(Node):
     def fit_sk_model(self, model):
         return self.generate_sklearn_node('fit_sk_model', {'model': model})
 
-    def p_fit_sk_model(self, model):
+    def p_fit_sk_model(self, model, warm_start=False):
         start = datetime.now()
+        if warm_start:
+            model.warm_start = True
         model.fit(self.get_materialized_data())
         self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
                                                (datetime.now() - start).total_seconds())
@@ -1430,13 +1445,15 @@ class Dataset(Node):
     def fit_sk_model(self, model):
         return self.generate_sklearn_node('fit_sk_model', {'model': model})
 
-    def fit_sk_model_with_labels(self, model, labels, custom_args=None):
+    def fit_sk_model_with_labels(self, model, labels, custom_args=None, should_warmstart=False):
         supernode = self.generate_super_node([self, labels], {'c_oper': 'fit_sk_model_with_labels'})
         return self.generate_sklearn_node('fit_sk_model_with_labels', {'model': model, 'custom_args': custom_args},
-                                          v_id=supernode.id)
+                                          v_id=supernode.id, should_warmstart=should_warmstart)
 
-    def p_fit_sk_model(self, model):
+    def p_fit_sk_model(self, model, warm_start=False):
         start = datetime.now()
+        if warm_start:
+            model.warm_start = True
         model.fit(self.get_materialized_data())
         self.execution_environment.update_time(BenchmarkMetrics.MODEL_TRAINING,
                                                (datetime.now() - start).total_seconds())
@@ -1618,7 +1635,8 @@ class Agg(Node):
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
+    def __init__(self, node_id, execution_environment, data_obj=None,
+                 size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
         self.data_obj = data_obj
         self.model_score = 0.0

@@ -295,11 +295,19 @@ class HashBasedOptimizer(Optimizer):
     # TODO measure number of reads in history graph
     # TODO measure time of these
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
-        materialized_vertices, execution_vertices, total_history_graph_reads = self.reuse().run(vertex=vertex,
-                                                                                                workload=workload,
-                                                                                                history=history,
-                                                                                                verbose=verbose)
+
+        materialized_vertices, execution_vertices, warmstarting_candidates, total_history_graph_reads = \
+            self.reuse().run(
+                vertex=vertex,
+                workload=workload,
+                history=history,
+                verbose=verbose)
         self.history_reads += total_history_graph_reads
         for m in materialized_vertices:
             self.copy_from_history(history.graph.nodes[m], workload.graph.nodes[m])
+
+        for source, destination, model in warmstarting_candidates:
+            workload.graph.edges[source, destination]['args']['model'] = model
+            workload.graph.edges[source, destination]['args']['warm_start'] = True
+
         return workload.graph.subgraph(execution_vertices)
