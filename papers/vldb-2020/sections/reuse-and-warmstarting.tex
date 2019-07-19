@@ -175,3 +175,29 @@ Therefore, if the utility of parents of a vertex is larger than the utility of i
 \end{algorithm}
 The advantage of the Hybrid reuse is that it requires at most $log(|V_L|)$ calls to the experiment graph since in every iteration we are pruning half of the graph.
 This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|V_L|$ calls to the experiment graph.
+
+\subsection{Warmstarting}
+Many machine learning model training operations contain random processes.
+For example, in random forests, to decide when to split a node, features are randomly permuted.
+Therefore, the resulting model, even on the same training data, may vary between runs.
+The random behavior is controlled by a random seed parameter.
+When the user does not explicitly set the random seed parameter, the result of different runs of a training operation may result in different models.
+Therefore, the Reuse algorithm is not able to find the previously trained model, even if all the other hyperparameters (except for random seed) are the same.
+
+Many machine learning training algorithms first initialize the model parameters before the training begins. 
+Warmstarting is a technique, in which the model parameters are set to a previously trained model which decreases the total training time \cite{baylor2017tfx}.
+In the presence of different random seed parameters, we rely on warmstarting to decrease the execution time of a training operation.
+The process of warmstarting in the experiment graph is as follows.
+During the graph construction, for machine learning model training operations, apart from the hash value which takes into account all the hyperparameters, we also compute another hash which does not consider the random seed parameter, we refer to this hash value as the warmstarting hash.
+When the Reuse algorithm encounters a machine learning model node, one of the three followings occurs.
+In the first case, the machine learning model node also exists in the experiment graph. 
+This indicates apart from all the hyperparameters the random seed parameters of the training operation in the experiment graph and the workload graph were the same.
+In this case, we can safely reuse the model.
+In the second case, the machine learning model node does not exist in the experiment graph, but the parent vertex (the training data node) and an edge with the same warmstarting hash exist in the experiment graph.
+In this case, the model vertex from the experiment graph is selected as a warmstarting candidate.
+If there are more than one warmstarting candidates, the model vertex with the highest score is used for warmstarting.
+In the third case, neither the model vertex nor its parent node is in the experiment graph.
+In this case, no reuse or warmstarting is possible.
+
+
+

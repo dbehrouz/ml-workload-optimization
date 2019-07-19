@@ -2,6 +2,8 @@ import copy
 from abc import abstractmethod
 from collections import deque
 
+import networkx as nx
+
 
 class Reuse:
     NAME = 'BASE_REUSE'
@@ -111,7 +113,11 @@ class BottomUpReuse(Reuse):
 
     def run(self, vertex, workload, history, verbose):
         e_subgraph = workload.compute_execution_subgraph(vertex)
-        return self.reverse_bfs(terminal=vertex, workload_subgraph=e_subgraph, history=history.graph)
+        materialized_vertices, execution_vertices, model_candidates = self.reverse_bfs(terminal=vertex,
+                                                                                       workload_subgraph=e_subgraph,
+                                                                                       history=history.graph)
+        warmstarting_candidates = self.check_for_warmstarting(history, e_subgraph, model_candidates)
+        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def reverse_bfs(self, terminal, workload_subgraph, history):
         """
@@ -159,8 +165,7 @@ class BottomUpReuse(Reuse):
 
             except StopIteration:
                 queue.popleft()
-        warmstarting_candidates = self.check_for_warmstarting(history, workload_subgraph, model_candidates)
-        return materialized_set, execution_set, warmstarting_candidates, self.history_reads
+        return materialized_set, execution_set, model_candidates
 
 
 class FastBottomUpReuse(Reuse):
@@ -174,8 +179,11 @@ class FastBottomUpReuse(Reuse):
         Reuse.__init__(self)
 
     def run(self, vertex, workload, history, verbose):
-        return self.inplace_reverse_bfs(terminal=vertex, workload_subgraph=workload.graph,
-                                        history=history.graph)
+        materialized_vertices, execution_vertices, model_candidates = self.inplace_reverse_bfs(terminal=vertex,
+                                                                                               workload_subgraph=workload.graph,
+                                                                                               history=history.graph)
+        warmstarting_candidates = self.check_for_warmstarting(history, workload.graph, model_candidates)
+        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def inplace_reverse_bfs(self, terminal, workload_subgraph, history):
         """
@@ -188,11 +196,14 @@ class FastBottomUpReuse(Reuse):
         """
 
         materialized_set = set()
+        model_candidates = set()
         execution_set = {terminal}
         if workload_subgraph.nodes[terminal]['data'].computed:
             return materialized_set, execution_set, self.history_reads
         if self.is_mat(history, terminal):
             return {terminal}, execution_set, self.history_reads
+        if workload_subgraph.nodes[terminal]['type'] == 'SK_Model':
+            model_candidates.add(terminal)
 
         prevs = workload_subgraph.predecessors
 
@@ -210,11 +221,13 @@ class FastBottomUpReuse(Reuse):
                     elif self.is_mat(history, prev_node):
                         materialized_set.add(prev_node)
                     else:
+                        if workload_subgraph.nodes[prev_node]['type'] == 'SK_Model':
+                            model_candidates.add(prev_node)
                         queue.append((prev_node, prevs(prev_node)))
 
             except StopIteration:
                 queue.popleft()
-        return materialized_set, execution_set, self.history_reads
+        return materialized_set, execution_set, model_candidates
 
 
 class TopDownReuse(Reuse):
@@ -225,7 +238,11 @@ class TopDownReuse(Reuse):
 
     def run(self, vertex, workload, history, verbose):
         e_subgraph = workload.compute_execution_subgraph(vertex)
-        return self.forward_bfs(terminal=vertex, workload_subgraph=e_subgraph, history=history.graph)
+        materialized_vertices, execution_vertices, model_candidates = self.forward_bfs(terminal=vertex,
+                                                                                       workload_subgraph=e_subgraph,
+                                                                                       history=history.graph)
+        warmstarting_candidates = self.check_for_warmstarting(history, e_subgraph, model_candidates)
+        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def forward_bfs(self, terminal, workload_subgraph, history):
         """
@@ -239,20 +256,25 @@ class TopDownReuse(Reuse):
         """
         roots = [n for n, d in workload_subgraph.in_degree() if d == 0]
 
-        def forward_bfs(source, materialized_candidates):
+        def forward_bfs(source, candidates_so_far, models_so_far):
             """
             simple forward bfs starting from a source (root node)
+            :param candidates_so_far:
             :param source:
             :return:
             """
 
+            materialized_in_this_path = set()
+            model_in_this_path = set()
             status = self.in_history_and_mat(history, source)
+            if workload_subgraph.nodes[source]['type'] == 'SK_Model':
+                model_in_this_path.add(source)
             if status == 2:
-                materialized_candidates.add(source)
+                materialized_in_this_path.add(source)
             elif status == 1:
                 pass
             elif status == 0:
-                return materialized_candidates
+                return materialized_in_this_path, model_in_this_path
             else:
                 raise Exception('invalid status from history read')
 
@@ -263,15 +285,18 @@ class TopDownReuse(Reuse):
                 current, next_nodes_list = queue[0]
                 try:
                     next_node = next(next_nodes_list)
+                    if next_node not in model_in_this_path:
+                        if workload_subgraph.nodes[next_node]['type'] == 'SK_Model':
+                            model_candidates.add(next_node)
                     if next_node not in visited:
-                        # if next_node is in materialized_candidates, this indicates that we have traversed down
-                        # this path when performing bfs for another root and we can stop here to save time
-                        if next_node not in materialized_candidates:
+                        if next_node not in candidates_so_far:
+                            # if next_node is in materialized_candidates, this indicates that we have traversed down
+                            # this path when performing bfs for another root and we can stop here to save time
                             status = self.in_history_and_mat(history, next_node)
                             if status == 2:
                                 # The nodes is materialized
                                 # therefore, first add the node to the list and continue the search
-                                materialized_candidates.add(next_node)
+                                materialized_in_this_path.add(next_node)
                                 queue.append((next_node, successor(next_node)))
                             elif status == 1:
                                 # The node is in history but it is not materialized
@@ -285,12 +310,15 @@ class TopDownReuse(Reuse):
                 except StopIteration:
                     queue.popleft()
 
-            return materialized_candidates
+            return materialized_in_this_path
 
+        model_candidates = set()
         materialized_candidates = set()
         # for every root node traverse the graph and find the set of candidates
         for r in roots:
-            materialized_candidates.union(forward_bfs(r, materialized_candidates))
+            materialized_vertices, model_vertices = forward_bfs(r, materialized_candidates, model_candidates)
+            materialized_candidates.union(materialized_vertices)
+            model_candidates.union(model_vertices)
 
         if not materialized_candidates:
             # no materialized candidates could be found

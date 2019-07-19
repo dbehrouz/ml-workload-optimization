@@ -50,7 +50,7 @@ class LGBMClassifier(PredictiveModel):
     def __init__(self, should_warmstart=False, **args):
         if should_warmstart:
             raise Exception('{} does not support warmstarting'.format(self.__class__.__name__))
-        PredictiveModel.__init__(self, lgb.LGBMClassifier(**args))
+        PredictiveModel.__init__(self, should_warmstart, lgb.LGBMClassifier(**args))
 
     def best_iteration(self):
         return self.trained_node.data().best_iteration_
