@@ -49,7 +49,7 @@ For any other vertex which is not materialized, we recursively examine its paren
 
 \begin{algorithm}[h]
 \KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
-\KwResult {set of materialized vertices $\mathcal{M}$ }
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse}
 \If {$is\_mat(G_E, v_t)$}{
 	return $\{v_t\}$\;
 }
@@ -61,7 +61,7 @@ $\mathcal{M} \coloneqq \emptyset$\;
 		\eIf {$is\_mat(G_E, v)$}{
 			$\mathcal{M}.append(v)$\;
 		}{
-			$q.add(v)$\;
+			$Q.add(v)$\;
 		}
 	}
 }
@@ -77,14 +77,14 @@ Contrary to the BottomUp reuse, in TopDown, we start traversing the local execut
 
 \begin{algorithm}[h]
 \KwData{ $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph }
-\KwResult {set of materialized vertices $\mathcal{M}$ }
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse}
 $R=roots(G_L)$\;
 $\mathcal{M} \coloneqq \emptyset$\;
 \For {$r \in R$}{
-	\If {$r \notin G_E$}{
-		continue\; %\Comment{skip this iteration}
+	\If{$r \notin G_E$}{
+		continue\tcp*{skip this root}
 	}
-	 $Q \coloneqq  Queue(r)$ \;
+	 $Q \coloneqq  Queue(r)$\;
 	\If {$is\_mat(G_E, r)$}{
 		$\mathcal{M}.append(r)$\;
 	}
@@ -95,7 +95,7 @@ $\mathcal{M} \coloneqq \emptyset$\;
 					$\mathcal{M}.append(v)$ \;
 					}
 				\If {$v \in G_E$} {
-					$q.add(v)$\;
+					$Q.add(v)$\;
 				}
 			}
 		}
@@ -142,7 +142,7 @@ Therefore, if the utility of parents of a vertex is larger than the utility of i
 
 \begin{algorithm}[h]
 \KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
-\KwResult {set of materialized vertices $\mathcal{M}$} 
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse} 
 $N \coloneqq |V_L|$\;
 $step \coloneqq 2$\;
 $\mathcal{M} \coloneqq \emptyset$\;

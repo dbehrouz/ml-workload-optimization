@@ -89,10 +89,10 @@ Each task also has a storage budget and runs a separate instance of the material
 For example, in Figure \ref{improved-use-case}, there are three separate experiment graphs for the competitions A, B, and C, each having a dedicated storage budget and running a separate materializer component.
 
 \begin{algorithm}[h]
-\KwData  {$G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task}
+\KwData  {$G_E$: experiment graph, $\mathcal{B}$: storage budget}
 \KwResult {experiment graph with materialized vertices}
-$S \coloneqq 0$ \; %\Comment {current size of the materialized artifacts}
-\For  {$ v \leftarrow $ roots(G)}{ %\Comment{materialize all the root nodes}
+$S \coloneqq 0$\tcp*{size of the materialized artifacts}
+\For {$ v \leftarrow $ roots($G_E$)} {
 	\If{ $v.mat= 0$ }{
 		 $ v.mat \coloneqq 1 $\;
 		 $ S \coloneqq S + v.s $\;
@@ -101,12 +101,12 @@ $S \coloneqq 0$ \; %\Comment {current size of the materialized artifacts}
 $PQ \coloneqq $ empty priority queue\;
 \For {$v \leftarrow V$}{
 	\If{$v.mat = 0$}{
-		 $utility\_value \coloneqq \mathcal{U}(G, v)$\;
-		 insert $v$ into $PQ$ sorted by the utility\_value\;
+		 $utility \coloneqq \mathcal{U}(G_E, v)$\;
+		 $PQ.insert(v)$\tcp*{sorted by $utility$}
 	}
 }
 \While{$PQ.not\_empty()$}{
-$v \coloneqq PQ.pop()$\; % \Comment get vertex with max utility
+$v \coloneqq PQ.pop()$\tcp*{vertex with max $utility$}
 \If {$S+v.s \leq \mathcal{B}$}{
 	$v.mat \coloneqq 1$\;
 	$S \coloneqq S + v.s$\;		
@@ -175,17 +175,17 @@ Therefore, we update the size of $v_2$ to indicate the amount of storage it requ
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
 
 \begin{algorithm}[h]
-\KwData {$G(V,E)$: experiment graph, $\mathcal{B}$: storage budget of task}
+\KwData {$G_E$: experiment graph, $\mathcal{B}$: storage budget}
 \KwResult {experiment graph with materialized vertices}
 $R \coloneqq  \mathcal{B}$ \;
 \While {$R > 0$}{
-	 $prev\_mats \coloneqq  materialized\_nodes(G)$\;
-	 $G \coloneqq $ \textit{Artifact-Materialization}($G, R$)\;
-	\If {$prev\_mats = materialized\_nodes(G)$}{
-			return $G$\;
+	 $prev\_mats \coloneqq  materialized\_nodes(G_E)$\;
+	 $G_E \coloneqq $ \textit{Artifact-Materialization}($G_E, R$)\;
+	\If {$prev\_mats = materialized\_nodes(G_E)$}{
+			return $G_E$\;
 	}
-	$compressed\_size \coloneqq  deduplicate(G)$\;
-	$update\_required\_size(G)$\;
+	$compressed\_size \coloneqq  deduplicate(G_E)$\;
+	$update\_required\_size(G_E)$\;
 	$R \coloneqq  \mathcal{B} -  compressed\_size$\;
 }
 \caption{Storage-aware Materialization}\label{algorithm-compression-aware-materialization}
