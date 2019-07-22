@@ -48,27 +48,25 @@ Therefore, in Line 1, if $v_t$ is materialized, we return it as the result and i
 For any other vertex which is not materialized, we recursively examine its parents until there are no more vertices left (i.e., we reach the root vertices).
 
 \begin{algorithm}[h]
+\KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {set of materialized vertices $\mathcal{M}$ }
+\If {$is\_mat(G_E, v_t)$}{
+	return $\{v_t\}$\;
+}
+$Q \coloneqq  Queue(v_t)$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+\While {$Q.not\_empty()$}{
+	$cur  \coloneqq  Q.pop()$\;
+	\For {$v \in parents (G_L, cur)$}{
+		\eIf {$is\_mat(G_E, v)$}{
+			$\mathcal{M}.append(v)$\;
+		}{
+			$q.add(v)$\;
+		}
+	}
+}
+return $\mathcal{M}$\;
 \caption{BottomUp Reuse}\label{algorithm-bottomup}
-\begin{algorithmic}[1]
-\Require $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph
-\Ensure set of materialized vertices $\mathcal{M}$ 
-\If {$is\_mat(G_E, v_t)$}
-	\State return $\{v_t\}$
-\EndIf
-\State $Q \coloneqq  Queue(v_t)$  
-\State $\mathcal{M} \coloneqq \emptyset$
-\While {$Q.not\_empty()$}
-	\State $cur  \coloneqq  Q.pop()$
-	\For {$v \in parents (G_L, cur)$}
-		\If {$is\_mat(G_E, v)$}
-			\State	$\mathcal{M}.append(v)$
-		\Else
-			\State $q.add(v)$
-		\EndIf
-	\EndFor
-\EndWhile
-\State return $\mathcal{M}$
-\end{algorithmic}
 \end{algorithm}
 BottomUp reuse performs well when the terminal vertex or vertices close to the terminal are materialized in the experiment graph.
 However, in extreme cases, where none of the vertices of the local execution DAG are in the experiment graph, BottomUp reuse still has to examine all the vertices.
@@ -78,34 +76,32 @@ Therefore, BottomUp reuse has a complexity of $\mathcal{O}(|V_L|)$, where $|V_L|
 Contrary to the BottomUp reuse, in TopDown, we start traversing the local execution DAG, from its root vertices.
 
 \begin{algorithm}[h]
+\KwData{ $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph }
+\KwResult {set of materialized vertices $\mathcal{M}$ }
+$R=roots(G_L)$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+\For {$r \in R$}{
+	\If {$r \notin G_E$}{
+		continue\; %\Comment{skip this iteration}
+	}
+	 $Q \coloneqq  Queue(r)$ \;
+	\If {$is\_mat(G_E, r)$}{
+		$\mathcal{M}.append(r)$\;
+	}
+		\While {$Q.not\_empty()$}{
+			$cur \coloneqq  Q.pop()$\;
+			\For {$v \in children (G_L, cur)$}{
+				\If {$is\_mat(G_E, v)$}{
+					$\mathcal{M}.append(v)$ \;
+					}
+				\If {$v \in G_E$} {
+					$q.add(v)$\;
+				}
+			}
+		}
+}
+return $\mathcal{M}$\;
 \caption{TopDown Reuse}\label{algorithm-topdown}
-\begin{algorithmic}[1]
-\Require $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph 
-\Ensure set of materialized vertices $\mathcal{M}$ 
-\State $R=roots(G_L)$
-\State $\mathcal{M} \coloneqq \emptyset$
-\For {$r \in R$}
-	\If {$r \notin G_E$}
-		\State continue \Comment{skip this iteration}
-	\EndIf
-	\State $Q \coloneqq  Queue(r)$  
-	\If {$is\_mat(G_E, r)$}
-		 \State	 $\mathcal{M}.append(r)$
-	\EndIf
-		\While {$Q.not\_empty()$}
-			\State $cur \coloneqq  Q.pop()$
-			\For {$v \in children (G_L, cur)$}
-				\If {$is\_mat(G_E, v)$}
-					\State	$\mathcal{M}.append(v)$
-				\EndIf
-				\If {$v \in G_E$} 
-					\State $q.add(v)$
-				\EndIf
-			\EndFor
-		\EndWhile
-\EndFor
-\State return $\mathcal{M}$
-\end{algorithmic}
 \end{algorithm}
 Algorithm \ref{algorithm-topdown} shows the details of the TopDown reuse algorithm.
 The TopDown reuse operates on the following early-stopping principle.
@@ -145,33 +141,33 @@ The materialization algorithm always materializes vertices based on their utilit
 Therefore, if the utility of parents of a vertex is larger than the utility of its children, then there is a higher likelihood that more vertices in the top half of the graph are materialized.
 
 \begin{algorithm}[h]
+\KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {set of materialized vertices $\mathcal{M}$} 
+$N \coloneqq |V_L|$\;
+$step \coloneqq 2$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+$v \coloneqq R\_BFS(v_t, G_L, N/step)$\;
+\While {$step \leq log(N) $}{
+		$step = step \times 2$\;
+		\uIf {$v \notin G_E$}{
+				$v \coloneqq R\_BFS(v, G_L, N/step)$;
+		}				
+		\uElseIf{$v \in G_E  \land \neg is\_mat(G_E,v)$}{
+				$prev \coloneqq avg (\mathcal{U}(parents(G_E v))$\;
+				$next \coloneqq avg (\mathcal{U}(children(G_E, v))$\;
+				\eIf{$prev \geq next $}{
+						 $v \coloneqq R\_BFS(v, G_L, N/step)$\;
+				}{
+					$v \coloneqq F\_BFS(v, G_L, N/step)$\;
+				}
+		}	
+		\ElseIf{$is\_math(G_E, v)$}{
+				$\mathcal{M}.append(v)$\;
+				$v \coloneqq F\_BFS(v, G_L, N/step)$\;
+		}
+}
+return $\mathcal{M}$\;
 \caption{Hybrid Reuse}\label{algorithm-hybrid}
-\begin{algorithmic}[1]
-\Require $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph
-\Ensure set of materialized vertices $\mathcal{M}$ 
-\State $N \coloneqq |V_L|$
-\State $step \coloneqq 2$
-\State $\mathcal{M} \coloneqq \emptyset$
-\State $v \coloneqq R\_BFS(v_t, G_L, N/step)$
-\While {$step \leq log(N) $}
-		\State $step = step \times 2$
-		\If {$v \notin G_E$}
-				\State $v \coloneqq R\_BFS(v, G_L, N/step)$
-		\ElsIf {$v \in G_E  \land \neg is\_mat(G_E,v)$}
-				\State $prev \coloneqq avg (\mathcal{U}(parents(G_E v))$
-				\State $next \coloneqq avg (\mathcal{U}(children(G_E, v))$
-				\If{$prev \geq next $}
-						 \State $v \coloneqq R\_BFS(v, G_L, N/step)$
-				\Else
-					\State $v \coloneqq F\_BFS(v, G_L, N/step)$
-				\EndIf
-		\ElsIf {$is\_math(G_E, v)$}
-				\State $\mathcal{M}.append(v)$
-				\State $v \coloneqq F\_BFS(v, G_L, N/step)$
-		\EndIf
-\EndWhile
-\State return $\mathcal{M}$
-\end{algorithmic}
 \end{algorithm}
 The advantage of the Hybrid reuse is that it requires at most $log(|V_L|)$ calls to the experiment graph since in every iteration we are pruning half of the graph.
 This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|V_L|$ calls to the experiment graph.

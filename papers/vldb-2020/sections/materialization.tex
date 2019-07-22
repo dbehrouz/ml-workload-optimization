@@ -89,32 +89,31 @@ Each task also has a storage budget and runs a separate instance of the material
 For example, in Figure \ref{improved-use-case}, there are three separate experiment graphs for the competitions A, B, and C, each having a dedicated storage budget and running a separate materializer component.
 
 \begin{algorithm}[h]
+\KwData  {$G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task}
+\KwResult {experiment graph with materialized vertices}
+$S \coloneqq 0$ \; %\Comment {current size of the materialized artifacts}
+\For  {$ v \leftarrow $ roots(G)}{ %\Comment{materialize all the root nodes}
+	\If{ $v.mat= 0$ }{
+		 $ v.mat \coloneqq 1 $\;
+		 $ S \coloneqq S + v.s $\;
+	}
+}
+$PQ \coloneqq $ empty priority queue\;
+\For {$v \leftarrow V$}{
+	\If{$v.mat = 0$}{
+		 $utility\_value \coloneqq \mathcal{U}(G, v)$\;
+		 insert $v$ into $PQ$ sorted by the utility\_value\;
+	}
+}
+\While{$PQ.not\_empty()$}{
+$v \coloneqq PQ.pop()$\; % \Comment get vertex with max utility
+\If {$S+v.s \leq \mathcal{B}$}{
+	$v.mat \coloneqq 1$\;
+	$S \coloneqq S + v.s$\;		
+	}
+}
+
 \caption{Artifacts-Materialization}\label{algorithm-materialization}
-\begin{algorithmic}[1]
-\Require  $G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task
-\Ensure experiment graph with materialized vertices
-\State $S \coloneqq 0$ \Comment {current size of the materialized artifacts}
-\For  {$v$ in roots(G)} \Comment{materialize all the root nodes}
-	\If{$v.mat= 0$}
-		\State $v.mat \coloneqq 1$
-		\State $S \coloneqq S + v.s$
-	\EndIf
-\EndFor
-\State $PQ \coloneqq $ empty priority queue
-\For {$v$ in $V$}
-	\If{$v.mat = 0$}
-		\State $utility\_value \coloneqq \mathcal{U}(G, v)$
-		\State insert $v$ into $PQ$ sorted by the utility\_value
-	\EndIf
-\EndFor
-\While{$PQ.not\_empty()$}
-\State $v \coloneqq PQ.pop()$  \Comment get vertex with max utility
-\If {$S+v.s \leq \mathcal{B}$}
-\State $v.mat \coloneqq 1$
-\State $S \coloneqq S + v.s$		
-\EndIf
-\EndWhile
-\end{algorithmic}
 \end{algorithm}
 
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
@@ -176,22 +175,20 @@ Therefore, we update the size of $v_2$ to indicate the amount of storage it requ
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
 
 \begin{algorithm}[h]
-\caption{Storage-Aware-Artifact-Materialization}\label{algorithm-compression-aware-materialization}
-\begin{algorithmic}[1]
-\Require  $G(V,E):$ experiment graph, $\mathcal{B}:$ storage budget of task
-\Ensure experiment graph with materialized vertices
-\State $R \coloneqq  \mathcal{B}$ 
-\While {$R > 0$}
-	\State $prev\_mats \coloneqq  materialized\_nodes(G)$
-	\State $G \coloneqq $ \textit{Artifact-Materialization}($G, R$)
-	\If  {$prev\_mats = materialized\_nodes(G)$}
-		\State return $G$
-	\EndIf
-	\State $compressed\_size \coloneqq  deduplicate(G)$
-	\State $update\_required\_size(G)$
-	\State  $R \coloneqq  \mathcal{B} -  compressed\_size$
-\EndWhile
-\end{algorithmic}
+\KwData {$G(V,E)$: experiment graph, $\mathcal{B}$: storage budget of task}
+\KwResult {experiment graph with materialized vertices}
+$R \coloneqq  \mathcal{B}$ \;
+\While {$R > 0$}{
+	 $prev\_mats \coloneqq  materialized\_nodes(G)$\;
+	 $G \coloneqq $ \textit{Artifact-Materialization}($G, R$)\;
+	\If {$prev\_mats = materialized\_nodes(G)$}{
+			return $G$\;
+	}
+	$compressed\_size \coloneqq  deduplicate(G)$\;
+	$update\_required\_size(G)$\;
+	$R \coloneqq  \mathcal{B} -  compressed\_size$\;
+}
+\caption{Storage-aware Materialization}\label{algorithm-compression-aware-materialization}
 \end{algorithm}
 
 %TODO if existing algorithms produce good results, this can be a good follow up work and we do not need 
