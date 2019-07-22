@@ -1,31 +1,25 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
-With the experiment graph constructed and materialized, we can look for optimization opportunities for feature engineering and model training operations.
-In this section, we propose two optimizations, namely, \textit{Reuse} and \textit{Warmstarting}.
-Both optimizations are part of the the global optimization step of our system and can greatly reduce the execution time of a workload.
-
+With the experiment graph constructed and materialized, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts in the experiment graph and warmstart model training operations.
 \begin{figure}
 \centering
 \includegraphics[width=\columnwidth]{../images/reuse-optimization}
 \caption{Reuse and Warmstarting Optimizations}
-\label{global-optimization}
+\label{reuse-warmstart-figure}
 \end{figure}
-Figure \ref{global-optimization} shows an example of the optimization process for reuse.
-In the workload DAG, the user invokes the $.get()$ command on vertex 7.
-To compute the local execution DAG, the local optimizer scans the workload DAG for any previously computed vertices.
-Besides from the root vertex (vertex 0), vertex 2 and 3 are also previously computed.
+Figure \ref{reuse-warmstart-figure} shows an example of the optimization process for reuse and warmstarting.
+In the workload DAG, the user invokes the $.get()$ command on vertex 7, which represents a machine learning model.
+To compute the local execution DAG, the local optimizer scans the workload DAG to find previously computed vertices. 
+This is an important step for interactive workloads.
+In this example, besides from the root vertex (vertex 0), vertex 2 and 3 are already computed (represented by black color).
 Therefore, the local optimizer prunes vertex 0 and edges $e_1$ and $e_2$.
-Then, the global optimizer looks reuse opportunities in the experiment graph.
+Then, the global optimizer looks for reuse and warmstarting opportunities in the experiment graph.
 In this example, vertex 5 was computed in a previous workload and its result was materialized in the experiment graph.
-During the global optimization step, the experiment graph transfers vertex 5 to the workload, which results in further pruning of vertex 3 and edge $e_4$.
-In the rest of this section, we present our reuse algorithm.
+Similarly, the model training operation $e_8$ was already executed in an existing workload.
+The global optimizer transfers vertex 5 to the workload, which results in further pruning of vertex 3 and edge $e_4$.
+The global optimizer also warmstarts $e_8$ which increases the convergence rate of the training operation.
+Both Reuse and Warmstarting can reduce the total execution time of the workload.
+In the rest of this section, we present the details of both Reuse and Warmstarting methods.
 
-\todo[inline]{Formulate Warmstarting and add a subsection.}
-%Furthermore, if the workload execution subgraph contains a model training operation, the remote optimizer looks for similar models in the experiment graph, and sets the initial weight parameters of the model in the workload execution subgraph to the model in experiment graph before executing the training operation.
-%This process, which is called model warmstarting, can greatly reduce the training time of machine learning models.
-
-%Furthermore, We also look for warmstarting opportunities for any model training operations.
-%The result of Step 3 is another execution subgraph with (possibly) more edges pruned.
-%Finaly, we compute the execution plan using the the optimized execution subgraph (Step 4, Figure \ref{system-workflow}).
 
 \subsection{Reuse}
 Since during the materialization process, we ensure the recomputation cost of a materialized vertex outweighs its transfer cost (i.e. $trf(v) \geq rc(G,v)$), we can safely transfer the materialized vertex to the machine executing the workload and guarantee the total execution time will improve.
@@ -173,24 +167,49 @@ The advantage of the Hybrid reuse is that it requires at most $log(|V_L|)$ calls
 This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|V_L|$ calls to the experiment graph.
 
 \subsection{Warmstarting}
-Many machine learning model training operations contain random processes.
-For example, in random forests, to decide when to split a node, features are randomly permuted.
-Therefore, the resulting model, even on the same training data, may vary between runs.
-The random behavior is controlled by a random seed parameter.
-When the user does not explicitly set the random seed parameter, the result of different runs of a training operation may result in different models.
-Therefore, the Reuse algorithm is not able to find the previously trained model, even if all the other hyperparameters (except for random seed) are the same.
+Many model training operations include random processes.
+For example, in random forests, to decide when to split a tree node, features are randomly permuted.
+A random seed parameter controls the random behavior.
+Two training operations on the same dataset with the same hyperparameters may result in completely different models if the random seeds are different.
+Therefore, the Reuse algorithm is not able to find the previously trained model, if the random seeds are different.
+Instead, we try to warmstart model training operations using the existing models in the experiment graph.
+In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
+Warmstarting has shown to decrease the total training time \cite{baylor2017tfx}.
 
-Many machine learning training algorithms first initialize the model parameters before the training begins. 
-Warmstarting is a technique, in which the model parameters are set to a previously trained model which decreases the total training time \cite{baylor2017tfx}.
-In the presence of different random seed parameters, we rely on warmstarting to decrease the execution time of a training operation.
-The process of warmstarting in the experiment graph is as follows.
-During the graph construction, for machine learning model training operations, apart from the hash value which takes into account all the hyperparameters, we also compute another hash which does not consider the random seed parameter, we refer to this hash value as the warmstarting hash.
-When the Reuse algorithm encounters a machine learning model node, one of the three followings occurs.
-In the first case, the machine learning model node also exists in the experiment graph. 
-This indicates apart from all the hyperparameters the random seed parameters of the training operation in the experiment graph and the workload graph were the same.
-In this case, we can safely reuse the model.
-In the second case, the machine learning model node does not exist in the experiment graph, but the parent vertex (the training data node) and an edge with the same warmstarting hash exist in the experiment graph.
-In this case, the model vertex from the experiment graph is selected as a warmstarting candidate.
-If there are more than one warmstarting candidates, the model vertex with the highest score is used for warmstarting.
-In the third case, neither the model vertex nor its parent node is in the experiment graph.
-In this case, no reuse or warmstarting is possible.
+During the graph construction, for every model training operation, we compute an extra hash value, which does not consider the random seed parameter.
+We refer to this hash value as the seedless hash.
+The seedless hash allows us to find similar training operations that only differ in the random seed.
+When the Reuse algorithm encounters a machine learning model vertex, two scenarios can occur.
+In the first scenario, a similar model vertex with the same id also exists in the experiment graph. 
+In this scenario, we can safely reuse the model vertex since the only way for both model vertices to have the same id is that both models are trained on the same data using the same training operations with the equal hyperparameters and random seeds.
+In the second scenario, the machine learning model vertex does not exist in the experiment graph.
+In this scenario, we utilize Algorithm \ref{algorithm-warmstarting} to detect whether warmstarting is possible.
+The warmstarting algorithm receives the model vertex $v_m$, the local execution DAG, and the experiment graph as inputs and tries to warmstart the training operation for $v_m$ with a model from the experiment graph.
+The algorithm first finds the parent of the model vertex, represented by $v_{dataset}$ on Line 1 and the training operation, represented by $e_{train}$ on Line 2.
+$v_{dataset}$ is the dataset used in the operation $e_{train}$.
+To warmstart $e_{train}$, the algorithm first ensures $v_{dataset}$ is in the experiment graph (Line 4).
+Then, for every outgoing edge of the $v_{dataset}$, the algorithm compares the seedless hash of the edge with the seedless hash of $e_{train}$.
+In the algorithm, the function $sl\_hash$ computes the seedless hash of an edge.
+Equal seedless hashes indicate that the training operation from the experiment graph only differs in the random seed when compared to $e_{train}$.
+Therefore, the result of the training operation in the experiment graph is a candidate for warmstarting $e_{train}$ (Lines 6-8).
+In case there are more than one wamrstarting candidates, we select the candidate model with the maximum quality to warmstart the training operation (Lines 9-11).
+\begin{algorithm}[h]
+\KwData {$v_m$: model vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {modified $G_L$ with warmstarted training} 
+$v_{dataset} \coloneqq parent(G_L, v_m)$\;
+$e_{train} \coloneqq edge(G_L, v_{dataset}, v_m)$\;
+$\mathcal{C}\coloneqq \emptyset$\tcp*{set of candidate models}
+\If{$v_{dataset} \in G_E$}{
+	\For{$e \in out\_edges(G_E, v_{dataset})$}{
+		\If {$sl\_hash(e) = sl\_hash(e_{train})$}{
+			$m \coloneqq e.dest$\;
+			$\mathcal{C}.add(m)$\;		
+		}	
+	}
+}
+\If{$\mathcal{C}.not\_empty()$}{
+	$m \coloneqq \argmax\limits_{m \in \mathcal{C}} quality(m)$\;
+	$warmstart(e_{train}, m)$\;
+}
+\caption{Warmstarting}\label{algorithm-warmstarting}
+\end{algorithm}
