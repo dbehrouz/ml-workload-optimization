@@ -3,13 +3,13 @@ Collaborative data science platforms, such as Kaggle and OpenML, bring a new par
 Users write and execute their machine learning workloads and publish them on the platforms.
 The platforms store the workloads either in a relational database using a predefined schema (e.g., OpenML) or as scripts which contain the actual analysis and training code (e.g., Kaggle).
 This results in many redundant data processing and model training operations, as users tend to utilize published workloads to improve their solutions.
-However, current collaborative platforms lack the capabilities to detect such redundancies in the workloads as they execute them in isolation.
+However, current collaborative platforms lack the capabilities to detect and exploit such redundancies in the workloads as they execute them in isolation.
 
 In this paper, we present a system to optimize the execution of ML workloads in collaborative data science platforms.
 We utilize a graph to store the artifacts, i.e., raw and intermediate data or machine learning models, and operations of machine learning workloads as vertices and edges, which we refer to as the experiment graph.
 As more workloads are executed, the combined size of the artifacts grows rapidly, which renders their storage infeasible. 
 To alleviate this problem, we propose two algorithms for materializing the artifacts with high likelihoods of future reuse.
 The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning models to decide what artifacts to materialize.
-Second, using the experiment graph, we propose a novel approach for quickly finding artifacts to reuse or to warmstart model training operations in future workloads.
+Second, using the experiment graph, we propose a novel approach to reuse artifacts and warmstart model training operations in future workloads.
 %TODO one sentence the impact
 \end{abstract}
