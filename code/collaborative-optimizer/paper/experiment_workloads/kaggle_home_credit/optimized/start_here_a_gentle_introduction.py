@@ -658,11 +658,10 @@ if __name__ == "__main__":
 
     ee = ExecutionEnvironment('dedup')
     execution_start = datetime.now()
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                             '-optimizer '
-    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/environment_dedup'
-    ee.load_history_from_disk(DATABASE_PATH)
+    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/'
+    root_data = ROOT + '/data'
+    #DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/environment_dedup'
+    # ee.load_history_from_disk(DATABASE_PATH)
     ee.new_workload()
     run(ee, root_data, verbose=1)
     # ee.save_history(DATABASE_PATH)
