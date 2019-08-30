@@ -1,0 +1,215 @@
+\section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
+With the experiment graph constructed and materialized, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts in the experiment graph and warmstart model training operations.
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{../images/reuse-optimization}
+\caption{Reuse and Warmstarting Optimizations}
+\label{reuse-warmstart-figure}
+\end{figure}
+Figure \ref{reuse-warmstart-figure} shows an example of the optimization process for reuse and warmstarting.
+In the workload DAG, the user invokes the $.get()$ command on vertex 7, which represents a machine learning model.
+To compute the local execution DAG, the local optimizer scans the workload DAG to find previously computed vertices. 
+This is an important step for interactive workloads.
+In this example, besides from the root vertex (vertex 0), vertex 2 and 3 are already computed (represented by black color).
+Therefore, the local optimizer prunes vertex 0 and edges $e_1$ and $e_2$.
+Then, the global optimizer looks for reuse and warmstarting opportunities in the experiment graph.
+In this example, vertex 5 was computed in a previous workload and its result was materialized in the experiment graph.
+Similarly, the model training operation $e_8$ was already executed in an existing workload.
+The global optimizer transfers vertex 5 to the workload, which results in further pruning of vertex 3 and edge $e_4$.
+The global optimizer also warmstarts $e_8$ which increases the convergence rate of the training operation.
+Both Reuse and Warmstarting can reduce the total execution time of the workload.
+In the rest of this section, we present the details of both Reuse and Warmstarting methods.
+
+
+\subsection{Reuse}
+Since during the materialization process, we ensure the recomputation cost of a materialized vertex outweighs its transfer cost (i.e. $trf(v) \geq rc(G,v)$), we can safely transfer the materialized vertex to the machine executing the workload and guarantee the total execution time will improve.
+
+The global optimizer component compares the local execution DAG with the experiment graph to find any vertices that are materialized in the experiment graph and returns them instead of computing them.
+The vertex hashing procedure in Section \ref{sec-ml-workloads} indicates that two vertices from two different graphs are the same if they have the same id (hash value).
+%Since id of a vertex captures the exact list of proceeding operations (edges) from the root vertices, if two vertices have the same hash, they also have the same list of proceeding operations.
+Therefore, to find matching vertices in the local execution DAG, global optimizer queries their ids in the experiment graph.
+
+However, in cases where querying the experiment graph incurs a penalty, such as when the experiment graph is stored on a remote computing machine or there are many concurrent workloads being executed in the collaborative platform, we must minimize the number of queries to the experiment graph.
+In this section, we present three approaches for searching the experiment graph for materialized vertices, namely, BottomUp reuse, TopDown reuse, and Hybrid reuse.
+
+\textbf{BottomUp reuse.}
+The process of BottomUp reuse is similar to how we construct the local execution DAG.
+Algorithm \ref{algorithm-bottomup} shows the details of the BottomUp reuse.
+The algorithm receives the local execution DAG ($G_L(V_L, E_L)$), the terminal vertex $v_t$ whose data is requested, and the experiment graph ($G_E(V_E, E_E)$).
+The BottomUp reuse utilizes the following early-stopping principle. 
+If a vertex from in $G_L$ exist in $G_E$ and is materialized ($is\_mat(G_E, v)$ function returns true if $v$ is materialized in $G_E$ ), then we skip traversing its parents and add the vertex to the set of materialized vertices.
+Therefore, in Line 1, if $v_t$ is materialized, we return it as the result and in Lines 8-11, we only continue the search if the vertex ($v$) is not materialized.
+For any other vertex which is not materialized, we recursively examine its parents until there are no more vertices left (i.e., we reach the root vertices).
+
+\begin{algorithm}[h]
+\KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse}
+\If {$is\_mat(G_E, v_t)$}{
+	return $\{v_t\}$\;
+}
+$Q \coloneqq  Queue(v_t)$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+\While {$Q.not\_empty()$}{
+	$cur  \coloneqq  Q.pop()$\;
+	\For {$v \in parents (G_L, cur)$}{
+		\eIf {$is\_mat(G_E, v)$}{
+			$\mathcal{M}.append(v)$\;
+		}{
+			$Q.add(v)$\;
+		}
+	}
+}
+return $\mathcal{M}$\;
+\caption{BottomUp Reuse}\label{algorithm-bottomup}
+\end{algorithm}
+BottomUp reuse performs well when the terminal vertex or vertices close to the terminal are materialized in the experiment graph.
+However, in extreme cases, where none of the vertices of the local execution DAG are in the experiment graph, BottomUp reuse still has to examine all the vertices.
+Therefore, BottomUp reuse has a complexity of $\mathcal{O}(|V_L|)$, where $|V_L|$ is the number of vertices in the local execution DAG, which means the global optimizer may make up to $|V_L|$ calls to the experiment graph.
+
+\textbf{TopDown reuse.}
+Contrary to the BottomUp reuse, in TopDown, we start traversing the local execution DAG, from its root vertices.
+
+\begin{algorithm}[h]
+\KwData{ $v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph }
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse}
+$R=roots(G_L)$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+\For {$r \in R$}{
+	\If{$r \notin G_E$}{
+		continue\tcp*{skip this root}
+	}
+	 $Q \coloneqq  Queue(r)$\;
+	\If {$is\_mat(G_E, r)$}{
+		$\mathcal{M}.append(r)$\;
+	}
+		\While {$Q.not\_empty()$}{
+			$cur \coloneqq  Q.pop()$\;
+			\For {$v \in children (G_L, cur)$}{
+				\If {$is\_mat(G_E, v)$}{
+					$\mathcal{M}.append(v)$ \;
+					}
+				\If {$v \in G_E$} {
+					$Q.add(v)$\;
+				}
+			}
+		}
+}
+return $\mathcal{M}$\;
+\caption{TopDown Reuse}\label{algorithm-topdown}
+\end{algorithm}
+Algorithm \ref{algorithm-topdown} shows the details of the TopDown reuse algorithm.
+The TopDown reuse operates on the following early-stopping principle.
+If a vertex from $G_L$ does not exist in the experiment graph ($G_E$), we skip the traversal of its children.
+This follows from the graph construction procedure, where each vertex is derived from its parents, as a result, it is impossible for a child vertex to exist in a graph where its parents do not.
+Therefore, in Lines 4 and 14, we stop the traversal if the vertex is not in $G_E$.
+Since a workload execution graph may have multiple root vertices, the TopDown reuse algorithm first finds all the root vertices (Line 1).
+Then, for every root vertex, TopDown examines all of its children and add them to the set of materialized vertices if they are in the experiment graph and are materialized ($is\_mat$ returns true).
+Unlike the BottomUp approach, when a node is materialized, we cannot stop the traversal, since a materialized vertex may also have materialized children.
+
+TopDown performs well in scenarios where the vertices close to the root are materialized.
+If the current workload operates on a completely new root (which never appeared in the experiment graph) or the workload contains early data exploration which never appeared in experiment graph, TopDown reuse will quickly stop the search process.
+However, in extreme cases, where the terminal vertex is materialized in the experiment graph (i.e., a workload is re-executed), then TopDown must traverse the entire local execution DAG.
+Therefore, TopDown reuse also has a complexity of $\mathcal{O}(|V_L|)$ and makes at most $|V_L|$ calls to the experiment graph.
+
+\todo[inline]{Hybrid reuse still needs a bit of work, I'm currently implementing it to see its impact and if it is even useful}
+\textbf{Hybrid reuse.}
+Both BottomUp and TopDown reuse perform well in specific scenarios. 
+However, neither of them can adapt to the different characteristics of a workload (e.g., how similar a new workload is to the previous workloads or how large the execution DAG is).
+We devise a dynamic reuse approach, called Hybrid reuse, which adapts to the current workload.
+Algorithm \ref{algorithm-hybrid} shows the process of Hybrid reuse.
+Hybrid reuse combines the two early-stopping principles utilized in TopDown and BottomUp reuse algorithms to prune as many vertices without querying the experiment graph.
+The two methods $R\_BFS(v, G, n)$ and $F\_BFS(v, G, n)$, perform a breadth-first-search traversal starting from vertex $v$ and return the vertex after $n$ visits.
+$R\_BFS$ traverses in the reverse direction of the edges (visiting the parents of the vertex) and $F\_BFS$ traverses in along the direction of the edges (visiting children of the vertex).
+It is important to emphasize that the two methods,  $R\_BFS$ and $F\_BFS$, do not make calls to the experiment graph and only return a vertex in the local execution DAG after the specified visits.
+
+First, Hyrbid reuse traverses $G_L$ starting from the terminal node in reverse ($R\_BFS$, Line 4) until it visits half of the vertices ($|V_L|/2$).
+Hybrid reuse then iteratively prunes half of the remaining vertices and adds any materialized vertex from the experiment graph to the set of materialized vertices.
+In Line 7, if the vertex is not in the experiment graph, using the TopDown early-stopping principle, the algorithm prunes the bottom half of the graph and search in the top half (i.e., $R\_BFS$ on Line 8).
+If the vertex is materialized (Line 16), the algorithm first adds it to the list of materialized vertices, then uses the BottomUp early-stopping principle to prune the top half the graph (i.e., $F\_BFS$ on Line 18).
+When the vertex is in the experiment graph but it is not materialized (Line 9), the algorithm cannot safely prune the graph, as materialized vertices can still appear in either top half or bottom half, or both.
+Hybrid reuse utilizes the following heuristic to decide which half of the graph to prune.
+First, it computes the average value of the utility function for the parents and children of the vertex (Lines 10 and 11).
+If the average utility of the parents is larger, then it prunes the bottom half, otherwise, it prunes the top half.
+The intuition behind this heuristic is the following.
+The materialization algorithm always materializes vertices based on their utility value.
+Therefore, if the utility of parents of a vertex is larger than the utility of its children, then there is a higher likelihood that more vertices in the top half of the graph are materialized.
+
+\begin{algorithm}[h]
+\KwData {$v_t$: terminal vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {set of materialized vertices $\mathcal{M}$ for reuse} 
+$N \coloneqq |V_L|$\;
+$step \coloneqq 2$\;
+$\mathcal{M} \coloneqq \emptyset$\;
+$v \coloneqq R\_BFS(v_t, G_L, N/step)$\;
+\While {$step \leq log(N) $}{
+		$step = step \times 2$\;
+		\uIf {$v \notin G_E$}{
+				$v \coloneqq R\_BFS(v, G_L, N/step)$;
+		}				
+		\uElseIf{$v \in G_E  \land \neg is\_mat(G_E,v)$}{
+				$prev \coloneqq avg (\mathcal{U}(parents(G_E v))$\;
+				$next \coloneqq avg (\mathcal{U}(children(G_E, v))$\;
+				\eIf{$prev \geq next $}{
+						 $v \coloneqq R\_BFS(v, G_L, N/step)$\;
+				}{
+					$v \coloneqq F\_BFS(v, G_L, N/step)$\;
+				}
+		}	
+		\ElseIf{$is\_math(G_E, v)$}{
+				$\mathcal{M}.append(v)$\;
+				$v \coloneqq F\_BFS(v, G_L, N/step)$\;
+		}
+}
+return $\mathcal{M}$\;
+\caption{Hybrid Reuse}\label{algorithm-hybrid}
+\end{algorithm}
+The advantage of the Hybrid reuse is that it requires at most $log(|V_L|)$ calls to the experiment graph since in every iteration we are pruning half of the graph.
+This is in contrast to the TopDown and BottomUp reuses, wherein certain scenarios they may require $|V_L|$ calls to the experiment graph.
+
+\subsection{Warmstarting}
+Many model training operations include random processes.
+For example, in random forests, to decide when to split a tree node, features are randomly permuted.
+A random seed parameter controls the random behavior.
+Two training operations on the same dataset with the same hyperparameters may result in completely different models if the random seeds are different.
+Therefore, the Reuse algorithm is not able to find the previously trained model, if the random seeds are different.
+Instead, we try to warmstart model training operations using the existing models in the experiment graph.
+In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
+Warmstarting has shown to decrease the total training time \cite{baylor2017tfx}.
+
+During the graph construction, for every model training operation, we compute an extra hash value, which does not consider the random seed parameter.
+We refer to this hash value as the seedless hash.
+The seedless hash allows us to find similar training operations that only differ in the random seed.
+When the Reuse algorithm encounters a machine learning model vertex, two scenarios can occur.
+In the first scenario, a similar model vertex with the same id also exists in the experiment graph. 
+In this scenario, we can safely reuse the model vertex since the only way for both model vertices to have the same id is that both models are trained on the same data using the same training operations with the equal hyperparameters and random seeds.
+In the second scenario, the machine learning model vertex does not exist in the experiment graph.
+In this scenario, we utilize Algorithm \ref{algorithm-warmstarting} to detect whether warmstarting is possible.
+The warmstarting algorithm receives the model vertex $v_m$, the local execution DAG, and the experiment graph as inputs and tries to warmstart the training operation for $v_m$ with a model from the experiment graph.
+The algorithm first finds the parent of the model vertex, represented by $v_{dataset}$ on Line 1 and the training operation, represented by $e_{train}$ on Line 2.
+$v_{dataset}$ is the dataset used in the operation $e_{train}$.
+To warmstart $e_{train}$, the algorithm first ensures $v_{dataset}$ is in the experiment graph (Line 4).
+Then, for every outgoing edge of the $v_{dataset}$, the algorithm compares the seedless hash of the edge with the seedless hash of $e_{train}$.
+In the algorithm, the function $sl\_hash$ computes the seedless hash of an edge.
+Equal seedless hashes indicate that the training operation from the experiment graph only differs in the random seed when compared to $e_{train}$.
+Therefore, the result of the training operation in the experiment graph is a candidate for warmstarting $e_{train}$ (Lines 6-8).
+In case there are more than one wamrstarting candidates, we select the candidate model with the maximum quality to warmstart the training operation (Lines 9-11).
+\begin{algorithm}[h]
+\KwData {$v_m$: model vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+\KwResult {modified $G_L$ with warmstarted training} 
+$v_{dataset} \coloneqq parent(G_L, v_m)$\;
+$e_{train} \coloneqq edge(G_L, v_{dataset}, v_m)$\;
+$\mathcal{C}\coloneqq \emptyset$\tcp*{set of candidate models}
+\If{$v_{dataset} \in G_E$}{
+	\For{$e \in out\_edges(G_E, v_{dataset})$}{
+		\If {$sl\_hash(e) = sl\_hash(e_{train})$}{
+			$m \coloneqq e.dest$\;
+			$\mathcal{C}.add(m)$\;		
+		}	
+	}
+}
+\If{$\mathcal{C}.not\_empty()$}{
+	$m \coloneqq \argmax\limits_{m \in \mathcal{C}} \text{ } quality(m)$\;
+	$warmstart(e_{train}, m)$\;
+}
+\caption{Warmstarting}\label{algorithm-warmstarting}
+\end{algorithm}

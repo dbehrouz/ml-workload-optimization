@@ -1,0 +1,62 @@
+\section{Introduction} \label{sec-introduction}
+% Opening
+Machine learning is the process of analyzing training datasets to extract features and build machine learning models to solve different tasks, such as labeling images based on image content and detecting fraudulent credit card and bank transactions.
+To solve machine learning tasks, a data scientist designs and executes a machine learning workload consisting of a set of exploratory data transformation steps and one or multiple model building steps.
+Many of these workloads are executed in an interactive approach in notebook environments, where users can examine the result of every operation.
+
+Recent collaborative data science platforms facilitate workload sharing.
+As a result, data scientists can study other workloads, learn from them, and improve them to train better machine learning models.
+There are two categories of collaborative data science platforms.
+The first category provides an intuitive way of sharing scripts and raw data and allows execution of the data science workloads on the platform either as long-running processes, such as Python and R scripts, or in an interactive fashion using Jupyter notebooks \cite{Kluyver:2016aa}.
+Kaggle \cite{kagglewebsite} and Google Colabratory \cite{googlecolab} are two popular examples of the first category.
+The second category of platforms enables data scientists to store the operations and artifacts of their machine learning workloads.
+The artifacts represent the raw datasets, intermediate datasets resulting from the operations, and machine learning models with their hyperparameters.
+OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and ProvDB \cite{miao2018provdb} are examples belonging to the second category which are typically referred to as experiment databases \cite{Vanschoren2012}.
+While some experiment databases support workload execution, the majority are purely for storage of ML workload artifacts.
+%Data scientists can query other users' operations and artifacts to search for more detailed information such as the types of operations, preprocessed datasets, models, hyperparameters, and evaluation metrics for specific machine learning tasks.
+
+% P
+By storing and exposing ML scripts and artifacts, both categories of collaborative data science platforms can lead to higher quality ML workloads.
+However, current platforms face two problems.
+First, since storing all the artifacts results in massive storage requirements, existing platforms only allow the storage of the operations and a limited number of artifacts, such as raw and intermediate datasets and final models with their hyperparameters.
+As a result, the platforms cannot exploit the stored artifacts to improve the execution of future workloads.
+For example, data cleaning and preprocessing operations, such as missing value imputation, standardization, and normalization, are common in ML workloads.
+If the platforms can store the resulting artifacts of these operations, future workloads can skip executing the operations and use the artifacts directly. 
+Second, existing collaborative data science platforms ignore the stored artifacts and operations when executing new workloads and as a result, miss optimization opportunities.
+Even if the platforms store all the artifacts, they do not automatically utilize them to skip executing redundant operations and require the users to manually find the artifacts (if they are available) and modify their workloads to use them.
+
+% S
+Our solution comprises of two parts.
+In the first part, we model all the executed workloads using a graph, where vertices represent the artifacts and edges represent the operations of the workloads.
+We refer to the graph of ML workloads as the \textit{Experiment Graph}.
+We propose two algorithms to decide whether the content of an artifact should be stored or not, a process which we refer to as the artifact materialization.
+The first algorithm utilizes two different types of metrics for materializing the artifacts, i.e., general and machine learning specific metrics.
+The general metrics include the size and access frequency of the artifacts and the run-time of the operations leading to the artifact.
+The machine learning specific metric considers of the quality score of the machine learning models resulting from the artifact.
+The second algorithm offers a storage-efficient solution, which takes artifact similarity and deduplication into account when deciding whether to materialize an artifact.
+
+In the second part, using the experiment graph, we automatically extract information to optimize the execution of future machine learning workloads.
+Specifically, we propose reuse and model warmstarting techniques.
+In reuse, we look for opportunities to reuse an existing materialized artifact to avoid data reprocessing.
+Reuse decreases the data processing time, especially during the initial exploratory data analysis phase where many data scientists perform similar data transformation, aggregation, and summarization operations on the data.
+In model warmstarting, we devise a method to detect if we can warmstart a model training operation with an existing materialized model artifact.
+Warmstarting speeds up the convergence rate, resulting in shorter training time. 
+
+Both reuse and warmstarting decrease the total execution time of the workloads, which benefits both the collaborative data science platforms and the users of the platforms.
+It benefits the platforms by reducing the operation cost.
+It benefits the user by creating a faster feedback loop, thus enabling the users to refine their workloads by trying out different data transformations, models, and model hyperparameters based on the previous results in interactive and long-running workloads.
+
+In summary, we make the following contributions:
+\begin{itemize}
+\item \hladd{We propose a system for optimizing the execution of machine learning workloads in collaborative environments.}
+\item We present a graph representation of artifacts and operations of machine learning workloads, which we refer to as the experiment graph.
+\item We propose two algorithms for materializing the artifacts in the experiment graph under limited storage capacity.
+\item We propose automatic reuse and model warmstarting strategies for new workloads using the experiment graph.
+\end{itemize}
+
+The rest of this document is organized as follows.
+In Section \ref{sec-background}, we provide some background information and show an example.
+We introduce our proposed collaborative workload optimizer system in Section \ref{sec-ml-workloads}.
+In Sections \ref{sec-materialization} and \ref{sec-reuse-and-warmstarting}, we introduce the artifacts materialization algorithms, reuse strategy, and the warmstarting technique. 
+In Section \ref{sec-evaluation}, we show the result of our evaluations.
+In Section \ref{sec-background}, we discuss the related work and finally, we conclude this work in Section \ref{sec-conclusion}.

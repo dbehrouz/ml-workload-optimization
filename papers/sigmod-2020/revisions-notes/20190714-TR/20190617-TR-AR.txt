@@ -1,0 +1,45 @@
+Agenda:
+Up for discussion:
+- I think your assumptions are not formulated clearly enough. 
+
+- The reuse optimization is not really an optimization to your system, because if you do not reuse the whole experiment graph materialization does not make sense. 
+
+- Also, I think it is hard for a user to determine what a good budget for materialization is. You should probably give some guidance there (e.g., try experimenting with different sizes or make a cost tradeoff calculation). 
+
+Answers to some of the comments:
+
+- Abstract: really literally exponentially? 
+The three real Kaggle scripts that I've used so far each create more than 500 nodes (I have to double check this, 1 or 2 of them have more than 1000) and they generate 9.1, 17, and 83 GB of artifacts (in compressed form each) I think the uncompressed (not deduplicated) versions are around 30 GB, 50 GB, and 130 GB (I will double check this as well, since I will put these numbers in the paper)
+
+
+- Figure 4: will definitely be redone, this was just a quick sketch
+
+- 3.4: Seems a bit specific to Kaggle.
+this is more or less a continuation of our motivating example from 2.1. What I can do is name other platforms which have similar workflow/components (such as Google Collaboratory, DataWorld, and, ...)
+
+- 3.4: Do we need this here? 
+I wrote it to put emphasis on the potential of the optimization, was planning a similar text for the  materialization, e.g., by materializing x % we can ensure this much reduction in repeated and % reduction in workload that uses part of other workloads
+
+- 4. who says there is a storage limit? 
+should I still mention by materializing a lot we're still wasting resources? essentially, there are two aspects to the materialization algorithm: limited storage (or to avoid wasting resourcing, this is sentence is similar to what HELIX says) and recomputing might be cheaper in some scenarios
+
+- 4.1: You do not introduce their methodology ...
+Should I replace the reference with the phrase 'recent or existing work'? What exactly do you mean by not discussing their methodology? should I restructure the text or is something important missing from the text? 
+
+
+- 4.1 Not sure, this was explained earlier.... under the assumption we are optimizing recreation cost:
+At the start of 4.1, we discussed how existing work is only trying to optimize the recreation cost, but we are looking at the problem as a multi-objective optimization problem where we also want to materialize nodes that can lead to high-quality models.
+- 4.1 How does quality play a role, if the user... 
+In Section 3.1, we defined the task, which describes the problem that all the users of the system are trying to solve. This includes the training and test datasets as well as the evaluation criteria for assigning a score to each machine learning model. Here we are using that to assess the potential of every node in the graph.
+
+- 4.2. I am a bit puzzled? 
+at the end of the section, we provided a run-time and complexity subsection where we discuss how this can be done online. Essentially, we run this algorithm after a current workload is executed, but we only compute the utility for the nodes that exist in the current workload. If the update utility values of the nodes in the current workload is higher than some nodes in the experiment graph, we discard those in the graph and add the ones from the current workload.
+
+- 4.3. To me, it seems that ...
+The algorithm works in a way that R (remaining budget) is never greater than B (storage budget of the task), since on Line 4: we pass R as the budget to Alg1.
+- 4.3 The other question I have ...
+I tried that at the beginning, but the problem there was, but there are cases in which this wouldn't work. For example: A is 10 GB with utility of 1, B is 2 GB with utility of 0.9, where 1 GB of B is subsumed by A. and C is 1 GB with utility of 0.8, where all of C is subsumed by B. If our budget is 11 GB, in the first call only A is materialized, then after applying the compression and calculating the remaining wait, B has 1 GB and C also has 1 GB. In the second call, B is materialized but C is not since now we have reached the storage limit. But after another compression and size recomputation, C has a size of 0 GB, therefore, only in the third call to Alg1, we can materialize C.
+I saw this happening quite often. I think for the larger scripts, it took 4-5 iterations for the algorithm to converge (i.e., condition on Line 5 returns true)
+
+- 5.3 would it be possible to use:
+This is actually what we're doing. We compute the id of vertices based on the hash function in Section 3.2 and here we just look for the id in the experiment graph. In reuse section, we are confident that finding a vertex based on its id is trivial, our goal is to reduce the number of lookups to the experiment graph, in case the experiment graph is on a remote node.
