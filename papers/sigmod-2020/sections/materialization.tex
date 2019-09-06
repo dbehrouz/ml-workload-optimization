@@ -1,19 +1,22 @@
 \section{Artifact Materialization}\label{sec-materialization}
-Depending on the number of the executed workloads, the generated artifacts may require large amount of storage space.
-For example, in the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk}, a popular script which analyzes a dataset of 160 MB, generates up to 17 GB of artifacts.
-Therefore, materializing every artifact under a limited storage budget is not feasible.
-In this section, we introduce two algorithms for materializing the artifacts of the experiment graph under limited storage.
-The first algorithm utilizes both general metrics, such as the size and access frequency of vertices and execution time of the edges, and a machine learning specific metric, i.e., the quality of the terminal models, to decide what artifacts to materialize.
-The second algorithm is an extension of the first algorithm which also considers how the artifacts are stored on the file system.
-Since many of the existing operations in the experiment graph are operating on one or a small group of columns inside a data frame, the resulting artifacts have many duplicated columns.
-We implement a compression strategy which avoids storing duplicated columns.
+Depending on the number of executed workloads, the generated artifacts may require a large amount of storage space.
+For example, the two workloads in the use case of Section \ref{sec-background} generate up to \hl{60 GB of artifacts}.
+Moreover, depending on the storage and retrieval cost of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact than storing it.
+In this section, we introduce two algorithms for materializing the artifacts of the Experiment Graph under limited storage while addressing the storage and recomputation trade-off.
+The first algorithm utilizes both general metrics, such as the size and the access frequency of the vertices, execution time of the edges, and storage and retrieval cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
+The second algorithm extends the first algorithm to consider how the dataset artifacts are stored on the file system.
+Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact.
+For example, projection or drop operations return a new dataset artifact with a subset of the original columns.
+Storing both dataset artifacts in their entirety will result in many duplicated columns.
+To address this issue, we implement a compression strategy to avoid storing duplicated columns.
 The second algorithm takes the duplication information into account when making the decision on what artifacts to materialize.
 Throughout the rest of the paper, we use the terms artifact and vertex interchangeably.
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
-Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
-The goal of their algorithm is to materialize the artifacts which result in the lowest recreation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-However, there are several reasons which render their solution inapplicable to the artifact materialization problem.
+%Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
+Existing work proposes different algorithms for efficient storage of dataset versions and their storage and recomputation trade-off \cite{bhattacherjee2015principles}.
+The goal of the existing algorithms is to materialize the artifacts that result in small recomputation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+However, there are several reasons that render the existing algorithms inapplicable to the artifact materialization problem.
 First, their approach only considers access frequency and reconstruction cost of an artifact.
 For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workloads, i.e., materialize artifacts which result in high-quality machine learning models.
 Second, their solution does not consider merge operations, e.g., join, concatenation, and model training, which are common in machine learning workloads.
@@ -39,7 +42,7 @@ Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no
 \textbf{Estimated Quality Function (EQ).} 
 In order to define the estimated quality function, we need to define the followings first.
 \[
-M(G) \coloneqq  \{v \in V \mid v \text{ is a terminal model}\}
+M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}
 \]
 is the set of all the terminal models in the experiment graph.
 For every vertex $v$ in the graph, 
@@ -77,7 +80,7 @@ Given the two functions, i.e., weighted recreation cost and estimated quality, w
 \end{split}
 \end{equation}
 
-Bhattacherjee et al. prove minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
+Existing work prove that minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
 While there are different approximate strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}, they are time-consuming, which renders them inappropriate to our setting, where new artifacts are constantly added to the graph.
 Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
 As a result, existing solutions to multi-objective optimization problems are not suitable for artifact materializations of the experiment graph.
@@ -86,7 +89,7 @@ As a result, existing solutions to multi-objective optimization problems are not
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost function and maximize the estimated quality function.
 Every task $T$ is associated with an experiment graph.
 Each task also has a storage budget and runs a separate instance of the materialization algorithm.
-For example, in Figure \ref{improved-use-case}, there are three separate experiment graphs for the competitions A, B, and C, each having a dedicated storage budget and running a separate materializer component.
+The task is defined in the collaborative data science platform, for example, the 'Home Credit Default Risk' competition in our use case of Section \ref{sec-background} is one ML task.
 
 \begin{algorithm}[h]
 \KwData  {$G_E$: experiment graph, $\mathcal{B}$: storage budget}
@@ -151,12 +154,17 @@ Therefore, in our implementation, we compute the utilities for all the new verti
 By precomputing the utilities we reduce the complexity of each run of the materialization algorithm to $\mathcal{O}(|W|)$, where $|W|$ is the number of vertices in the workload DAG.
 
 \subsection{Storage-Aware Materialization Algorithm}
-Since many feature engineering operations only operate on one or a few columns of a dataset, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.
-As a result, after materialization, there are many duplicated columns across different artifacts.
+Since many feature engineering operations only operate on one or a few columns of a dataset artifact, the resulting artifact of a feature engineering may contain many of the columns of the input artifact.
+As a result, after materialization, there are many duplicated columns across different dataset artifacts.
 To further reduce the storage cost, we implement a deduplication mechanism.
-We assign a unique hash to every columns of the artifacts.
-When executing an operation on an artifact, all the columns of the resulting artifact, except for the ones affected by the operation carry the same hash value.
-When storing an artifact, the storage manager unit examines the hash of every column, and only stores the columns that do not exist in the storage unit.
+We assign a unique id to every column of the dataset artifacts.
+After an operation is applied to an artifact, to compute the unique id of the columns, we first determine the columns which are affected by the operation.
+Then, we use a hash function which receives the operation hash and the input column unique id and outputs a new id.
+Our approach for computing the unique column id ensures the following.
+First, after the execution of an operation, all the columns which are not affected by the operation will carry the same unique id.
+Second, two columns belonging to two different dataset artifacts have the same unique id, if and only if, the same operations have been applied to both columns.
+
+When storing an artifact, the storage manager unit examines the id of every column, and only stores the columns that do not exist in the storage unit.
 The storage manager tracks the column hashes of all the artifacts in the experiment graph.
 When a specific artifact is requested, the storage manager combines all the columns which belong to the artifact into a data frame and returns the data frame.
 This results in a large decrease in the storage cost (e.g., for the same script of the Home Credit Default Risk Kaggle competition\footnote{https://www.kaggle.com/c/home-credit-default-risk} which generates 17 GB of artifacts, deduplication result in only 8 GB of storage).

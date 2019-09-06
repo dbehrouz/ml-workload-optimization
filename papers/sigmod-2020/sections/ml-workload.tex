@@ -1,8 +1,10 @@
 \section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
-In this section, we discuss the details of the Experiment Graph construction and workflow of our system and optimization process.
-Next, we show how a real collaborative data science platform can benefit from our system through an example.
+In this section, we provide an overview of our system.
+First, we describe how we transform each user workload into a Directed Acyclic Graph (DAG) and how do we combine and store all the DAGs inside the Experiment Graph.
+Then, we present the architecture and optimization workflow.
+Finally, we show our optimizations benefits the use case we introduced in Section \ref{sec-background}.
 
-\subsection{Experiment Graph Representation}\label{sub-graph-construction}
+\subsection{Experiment Graph Construction}\label{sub-graph-construction}
 \textbf{Workload DAG.}
 A machine learning workload can be represented using a directed acyclic graph (DAG).
 In the DAG, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
@@ -34,23 +36,16 @@ Since the experiment graph is rooted, we assign a hash value to every vertex whi
 \]
 where $in\_edge(v)$ returns the edges with destination $v$. 
 Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived recursively by combining the hashes of their parents and edges which connect them to their parents.
-%This hashing procedure results in two important properties.
-%
-%\textit{Property 1}.
-%The two vertices, $v_1$ and $v_2$ in graphs $G_1$ and $G_2$ are the same if and only if $h(v_1)$ in $G_1$ is the same as $h(v_2)$ in $G_2$.
-%
-%\textit{Property 2}.
-%If a vertex $v_1$ in graph $G_1$ does not exist in $G_2$ , then no successors of $v_1$ can exist in $G_2$.}
 
 After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
 If any of the artifacts already exist in the graph, their frequency is updated.
 
 \textbf{Workload DAG generation.}
-Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages which are frequently used for data analysis and machine learning workloads.
+Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are frequently used for data analysis and machine learning workloads.
 Listing \ref{listing-experiment-graph} shows an example of a workload script.
 With only a slight modification of the import commands, we are able to load our system's modules.
 A parser component reads the user code and instead of executing it line-by-line, it creates the edges and vertices of the workload DAG.
-The actual execution is invoked with \textit{.get()} command of a vertex (Line 18, Listing \ref{listing-experiment-graph}.
+The actual execution is invoked with \textit{.get()} command of a vertex, which we refer to as the \textit{terminal vertex} (Line 18, Listing \ref{listing-experiment-graph}).
 Figure \ref{fig-experiment-graph}a shows an example graph constructed from the code in Listing  Listing \ref{listing-experiment-graph}.
 \begin{figure}
 \begin{subfigure}[b]{0.4\linewidth}
@@ -98,12 +93,12 @@ top_features = selector.fit_transform(
 top_features # print the content of the data frame			     
 X = pd.concat([count_vectorized,top_features], axis = 1)
 model = svm.SVC().fit(X, train['y'])
-model.get()
+model.get() # terminal vertex
 \end{lstlisting}
 
 We start with an empty Experiment Graph.
 After the execution of the script and updating the Experiment Graph, all the artifacts (vertices) have a frequency of 1.
-In order to represent operations which process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
+To represent operations which process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
 First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
 The merge operator is a logical operator which does not incur a cost, i.e., it has a run-time of 0 seconds.
 The merged vertex is also a logical vertex with no actual attributes which only contains the vertex ids of the merged vertices.
@@ -115,20 +110,17 @@ When computing hash of $v_8$, we combine the parents in the same order, i.e., $h
 After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
 
 \subsection{System Architecture and Workflow}
-Figure \ref{system-workflow} shows the components of the collaborative workload optimizer system.
+Figure \ref{system-workflow} shows the components of our collaborative workload optimizer system.
 First, a parser component generates the workload DAG from the user scripts (Step 1).
-Upon the invocation of the $get()$ method of an artifact, a local optimization process beings.
+Upon the invocation of the $get()$ method of a vertex, i.e., the terminal vertex, a local optimization process beings.
 The local optimizer extracts the subgraph which must be executed in order to compute the terminal vertex.
 The local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
 It stops the traversal when it reaches a previously computed vertex.
 In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
 The subgraph of all the visited vertices and the edges connecting them is another DAG, which we refer to as the \textit{local execution DAG}, and is the result of the local optimizer (Step 2).
-%For example in Figure \ref{system-workflow}, the traversal begins at Vertex 7 and continues until it visits Vertices 2 and 3.
-%Since both Vertices are already computed (depicted with black color), the traversal stops and returns the subgraph starting at Vertices 2 and 3. 
 The global optimizer component receives the local execution DAG and looks for optimization opportunities, i.e., reusing materialized vertices or warmstarting model training, in the experiment graph.
+Using early stopping, search space pruning, and heuristics the global optimizer finds the relevant artifacts \hl{with negligible overhead}.
 The result of the global optimization process is another subgraph, which we refer to as the \textit{global execution DAG} (Step 3).
-%For example, in Figure \ref{system-workflow}, the experiment graph has previously materialized the underlying data (Dataset, Aggregate, or Model) of Vertex 5.
-%Therefore, during the global optimization, the underlying data of Vertex 5 is transferred to the workload which results in another subgraph with Vertex 3 and Edge $e_4$ pruned.
 Then, an execution planner receives the global execution DAG and generates the execution schedule by sorting the edges based on their topological order, which is then executed by the execution engine (Step 4).
 If the experiment graph is empty, then the execution planner users local execution DAG to generate the execution schedule.
 After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG (Step 5).
@@ -141,18 +133,14 @@ Lastly, a materializer component decides what vertices to materialize, i.e., sto
 \label{system-workflow}
 \end{figure}
 
-\subsection{Workload Optimizer for Kaggle Use Case}
-\hl{In this section, we describe how our system can be integrated into Kaggle's collaborative data science platform to improve the execution of the kernels.
-We select the competition \textit{Home Credit Default Risk}\footnote{https://www.kaggle.com/c/home-credit-default-risk/}.
-The task of the competition is to train a classification model which predicts whether a client is able to repay their loans.
-The task has 8 training datasets and 1 test datasets.
-\todo[inline]{explain ROC}
-The goal of the submitted solutions is to maximize the evaluation function, the area under the ROC curve between the predicted values and observed target values.
-After a kernel is submitted, it goes through every step of the workload optimizer system in Figure \ref{system-workflow}.
-For every competition, we maintain a separate experiment graph.
-At the time of the first kernel submission, the experiment graph is empty, therefore, the workload optimizer system skips Step 3 of Figure \ref{system-workflow} and generates the execution plan directly from the workload execution subgraph.
-If the experiment graph is not empty, the global optimizer tries to optimize the workload using the experiment graph.
-For example, the most popular kernel\footnote{https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction} in the competition has been copied by more than 5000 different users.
-This indicates the kernel has been executed at least 5000 times, although it is very likely that many of the users run the script more than once.
-Each execution of the kernel takes nearly 200 seconds.
-In our experiments, we show that we are able to reduce the execution time to less than 10 seconds when the same kernel is executed more than once.}
+\subsection{Improved Use Case}
+In this section, we show how our collaborative workload optimizer improves the workload execution process of the Kaggle use case we described in Section \ref{sec-background}.
+For the Home Credit Default Risk competition, we maintain an Experiment Graph.
+Before any workloads are executed, the Experiment Graph is empty.
+Given an empty Experiment Graph, when users submit workloads for execution, our collaborative workload optimizer skips Step 3 of Figure \ref{system-workflow} and generates the execution plan directly from the workload execution subgraph.
+We update the Experiment Graph with the DAG of incoming user workloads.
+The materializer component decides what artifacts of incoming the user workloads to keep and what are artifacts to discard.
+Since one criterion for selecting artifacts to materialize is execution frequency, the materializer selects the artifacts of the two popular workloads described in the use case for materialization.
+For all the future workloads, the global optimizer, Step 3 of Figure \ref{system-workflow}, looks for reuse and warmstarting opportunities. 
+As a result, our optimizer reduces the execution time of all the 6000 copied and edited versions of the two popular workloads. 
+This reduces the required resources and operation cost of Kaggle.
