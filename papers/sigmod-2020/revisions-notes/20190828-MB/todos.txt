@@ -1,0 +1,10 @@
+- incurring: most reviewers make up their mind in the abstract + introduction.
+- *** Should we switch to dataflow model ***
+- make sure randomness and random_state is taken into account
+- include an overview of the architecture, database attached to Experiment Graph, how is serialization/deserialization/ concurrency impact this. i.e., we have a key/value store behind experiment graph where all artifacts are stored.
+- ML Task. rephrase it so it would not lock down to specific system (Kaggle). 
+- MB hates papers that have so much math that is not needed and if we can show something with a simple english sentence.
+- source is better than root vertices.
+- how are we combining quality and time. In Kaggle people rarely tend to sacrifice quality for time.
+- the worst case could be everything is hashed into the same thing.
+

@@ -1,0 +1,86 @@
+Abstract
+MB: Using 'Artifact' to refer to data and model?
+BD: Do you believe it is wrong to do so or simply elaborating what we mean by artifact suffices? The problem was, we could not find a good term to describe data + model.
+
+MB: A more natural representation would be to make operators the nodes and edges the data dependencies, and thus intermediate data sets.
+BD: The graph we use here is a version graph rather than a data flow graph. Furthermore, our materialization algorithm is a modified version of the one from DATAHUB [1][2], where they also use a version graph. A version graph makes both the materialization algorithm and the reuse strategies (we use different graph traversal methods) simpler to represent.
+
+
+1. INTRODUCTION
+MB: How do you encode non-determinism of entire ML algorithms representing individual nodes?
+BD: The ML operator hash also includes the random seed variables. So 2 training algorithms on the same data with different seeds result in two different edges and vertices. 
+
+MB: This has been "proposed" many times - I would recommend to focus on the specifics of multi tenant environments.
+BD: I modified the intro to emphasize on solving the materialization issue and quickly finding artifacts to reuse in a collaborative environment (multi-tenant). However, since we are not dealing with consistency and concurrency issues in this paper (we're relying on existing databases to handle these issues), using the term 'multi-tenancy' may indicate that we are solving these issues instead.
+
+2. BACKGROUND
+MB: how does lineage help to do result validation?
+BD: Here, we mostly mean validating someone else's result (probably just saying reproducibility is enough).
+
+3. COLLABORATIVE ML WORKLOAD OPTIMIZATIONS
+3.1 Preliminaries and Definitions
+MB: ML Task. well yes, however, in practice this is often ill-defined and provides room to explore different datasets or combinations of them - so this problem definition might limit the applicability.
+BD: Can you please elaborate? 
+
+MB: ML Data and Operation. Why differentiate them - I did not see a particularly many uses of this and at the end of the day they just refer to intermediates of different sizes.
+BD: I will address this. We do rely on the differences between Dataset and Model in our materialization algorithm. I.e., Models are used to extract the score and Datasets are used to get deduplication information. I will make it clear in the text.
+
+3.2 Experiment Graph Representation
+MB: Experiment Graph definition. I didn't get much out of this paragraph (so maybe remove) as your just describing a DAG with attributes on nodes and edges.
+BD: Since Experiment Graph is integral to the rest of the paper, we should still have a short definition of it. I think the text is not clear enough as Experiment Graph is the union of all the executed DAGs since the beginning of time, which captures the information we need for materialization and reuse.
+
+MB: Experiment Graph definition. Also, after thinking about this DAG definition, I think it's corrupted as it cannot model binary operations - if edges are scripts/code how do you feed to inputs into this code? This would need a hyper-edge, right?
+BD: You are right, however, instead of a hyper-edge, we create a merged vertex from all the inputs of a binary (or n-ary) operator, then apply the operation to the vertex. I try to improve the description of the merged vertex and move it to a separate subsection.
+
+MB: Hashing. The simple sum is a poor hash aggregation method. 
+BD: In the prototype, we are using md5 hash generators, where we pass the current hash of the input artifact and the operator name and its parameters as input.
+
+MB: This is a bit strange, as we often call the output vertex the root.
+BD: Here, we use the definition of the rooted graph from [3], which specifies a rooted graph as a graph with one or multiple designated roots (no incoming edges). Essentially, raw datasets are roots.
+
+
+3.3 System Architecture and Workflow
+MB: How is conditional control flow handled before, especially before execution where we can't rely on lazy evaluation (which unrolls the control flow). 
+BD: Currently, this is a limitation of the system, which we'll include in the conclusion as the future work. Currently, if there are conditional control flows, we have to evaluate the node to find the branch to continue. 
+
+4. ARTIFACT MATERIALIZATION
+MB: Maybe see the following paper and quickly mention the key difference:
+ManasiVartaket al: MISTIQUE: A System to Store and Query Model Intermediates for Model Diagnosis. SIGMOD 2018
+BD: Our deduplication is not novel, we simply use the deduplication (We actually got the idea from the MISTIQUE paper) as a first step and then exploit the deduplication information in the materialization algorithm.
+
+4.1 Materialization Problem Formulation
+MB: Materialization: hmm, but DEX did at least unions and intersections:
+Amit Chavan, AmolDeshpande: DEX: Query Execution in a Delta‐based Storage System. SIGMOD 2017
+BD: Thanks, I will read this paper. Though, it should still be fine since the main novelty of our materialization is the multi-objectiveness and the exploiting deduplication.
+
+4.2 ML-Based Greedy Algorithm
+MB: Artifact Materialization algorithm. Why do you need to materialize them (root vertices) if they exist on disk anyway?
+BD: Here, we wanted to take the size of the root artifacts into account as well. For example, if we have a 10 GB storage unit and the root vertices are 3 GB, we only have 7 GB left for the rest of the artifacts.
+
+MB: Artifact Materialization algorithm. Isn't this biased to the vertexes at the end of the pipeline, which are less likely to be reused?
+BD: We designed the utility function based on the following observation. If someone creates high-quality models or cleaned datasets that lead to high-quality models, users would like to reuse those.
+Vertices at the beginning of the pipeline have higher frequencies, however, when there are high-quality models at the end of the pipelines, vertices close to these models will have higher potential (computed by the function p(G,v)) than the vertices at the beginning of the pipeline which leads to high utility score for vertices at the end of the pipeline as well.
+
+MB: I'm missing a discussion of concurrency - how does the algorithm work under updates from concurrent users - is it locked and users executed sequentially? If two users come with new but redundant execution, are they executed sequentially, as a batch and merged afterwards, or with some other strategy?
+BD: We will make this clear. Three points to consider. First, executions are done in containers (similar to how they are done in current collaborative data science platforms, e.g., Kaggle). Second, the materialization process is invoked after every update to the experiment graph. At the end of Section 4.2, we try to explain that the process is fast, therefore, can be done in an online fashion. Third, we assume the Experiment Graph takes care of concurrency issues (updating and reading the same artifact) or handling multiple reads during the reuse as the Experiment Graph is backed by a database (a key/value store) which allows us to perform lookups for the artifacts using the id. As you have pointed out, we should discuss these issues, especially the third point in the paper.
+
+5. REUSE AND WARMSTARTING
+5.1 Reuse
+MB: Yes, you can search from either side with the obvious tradeoff. However, how long are these pipelines on average. If we're talking about 10 coarse-grained operations then optimizing for traversal doesn't really matter. Instead focus on the harder parts like MQO and reuse under concurrency.
+BD: Here, we are assuming that all the vertices of the Experiment Graph are stored in a database which can be looked up using a key. Thus, not addressing the concurrency problem.
+
+MB: Well not really, in the worst case you iterate over all vertexes of the graph, and for comparing a single node, the equals call might have to iterate over the entire subgraph (so maybe all pairs (n+1)n/2 -> O(N^2))
+BD: Since every vertex has a unique id, we are only performing lookups in the Experiment Graph for every vertex in the local DAG. Therefore, in the worst-case scenario, there are going to be |V| lookups, where V is the set of vertices in the local DAG. 
+Maybe we should discuss this during the call. I believe this entire section must be improved as others have pointed out issues that lead me to believe the section lacks clarity. 
+
+MB: How are cached intermediates pinned? If you decide on reuse before execution, how do you ensure that these intermediates are not evicted before you reach their use?
+BD: I think this also relates to the previous questions about concurrency. We assume concurrency issues are handled by the database where the Experiment Graph is stored.
+
+5.2 Warmstarting
+MB: Why are only seed parameters considered - could we do the same thing for certain hyper parameters as well.
+BD: This was our original idea. However, we think in certain cases just warmstarting a model when the hyperparameters have changed may lead to models that are stuck local minima or other unexpected issues. For example, if we have the SGD model, M1, trained with a very small learning rate and then, try to warmstart a new model with a larger learning rate using M1, the new model may never converge. Another example is in warmstarting random forests with different maximum depth, which I'm not sure if it makes sense.
+
+
+[1] A. Bhardwaj, S. Bhattacherjee, A. Chavan, A. Deshpande, A. Elmore, S. Madden, and A. Parameswaran. Datahub: Collaborative data science & dataset version management at scale. In CIDR, 2015.
+[2] Souvik Bhattacherjee, Amit Chavan, Silu Huang, Amol Deshpande, and Aditya Parameswaran. 2015. Principles of dataset versioning: Exploring the recreation/storage tradeoff. Proceedings of the VLDB Endowment 8, 12 (2015), 1346–1357.
+[3] Zwillinger, Daniel. CRC standard mathematical tables and formulae. Chapman and Hall/CRC, 2002.
