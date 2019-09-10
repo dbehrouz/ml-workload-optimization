@@ -377,7 +377,7 @@ class Dataset(Node):
         # self.execution_environment.data_storage.store_dataset(self.c_hash, df)
         return DataFrame(column_names=columns,
                          column_hashes=self.underlying_data.column_hashes,
-                         pandas_df=self.underlying_data.pandas_df[columns])
+                         pandas_df=self.get_materialized_data()[columns])
 
     def project(self, columns):
         if type(columns) in [str, int]:
