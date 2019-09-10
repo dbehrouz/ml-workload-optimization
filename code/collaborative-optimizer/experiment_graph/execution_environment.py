@@ -10,11 +10,11 @@ from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.data_storage import DedupedStorageManager, NaiveStorageManager
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
-from experiment_graph.graph.node import Dataset
+from experiment_graph.graph.node import *
 from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimizer
 from experiment_graph.graph.execution_graph import ExecutionGraph, HistoryGraph
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-from experiment_graph.graph.node import Node
+#from experiment_graph.graph.node import Node
 
 
 # AS_KB = 1024.0

@@ -613,7 +613,7 @@ if __name__ == "__main__":
     ROOT_DATE = ROOT + '/data'
     import sys
 
-    sys.path.append(ROOT)
+    sys.path.append(ROOT_PACKAGE)
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 

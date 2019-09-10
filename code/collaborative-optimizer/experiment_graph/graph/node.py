@@ -9,6 +9,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from auxilary import DataFrame, DataSeries
+# from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
 
@@ -245,7 +246,7 @@ class Node(object):
         self.execution_environment.data_storage.store_column(column, series)
 
     def find_column_index(self, c):
-        return self.c_name.index(c)
+        return self.underlying_data.column_names.index(c)
 
     def get_c_hash(self, c):
         i = self.find_column_index(c)
@@ -265,14 +266,16 @@ class Node(object):
                          column_hashes=new_c_hash,
                          pandas_df=df[column_names])
 
-    def hash_and_store_series(self, func_name, series, c_name=None, c_hash=None):
+    def hash_and_return_dataseries(self, func_name, series, c_name=None, c_hash=None):
         if c_name is None:
-            c_name = self.c_name
+            c_name = self.underlying_data.column_name
         if c_hash is None:
-            c_hash = self.c_hash
+            c_hash = self.underlying_data.column_hash
         new_c_hash = self.md5(c_hash + func_name)
-        self.execution_environment.data_storage.store_column(new_c_hash, series)
-        return c_name, new_c_hash
+        # self.execution_environment.data_storage.store_column(new_c_hash, series)
+        return DataSeries(column_name=c_name,
+                          column_hash=new_c_hash,
+                          pandas_series=series)
 
 
 class Agg(Node):
@@ -350,6 +353,9 @@ class Dataset(Node):
 
     def get_materialized_data(self):
         return self.underlying_data.pandas_df
+
+    def get_column(self):
+        return self.underlying_data.column_names
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
@@ -743,16 +749,12 @@ class Feature(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, c_name='', c_hash='', size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
-        assert isinstance(c_name, str)
-        assert isinstance(c_hash, str)
-        self.c_name = c_name
-        self.c_hash = c_hash
+        self.underlying_data = underlying_data
 
     def clear_content(self):
-        self.c_name = ''
-        self.c_hash = ''
+        self.underlying_data = None
         self.computed = False
         self.size = 0.0
 
@@ -764,7 +766,7 @@ class Feature(Node):
                 self.id,
                 verbose)
             self.computed = True
-        return self.execution_environment.data_storage.get_dtype(self.c_hash)
+        return self.get_materialized_data().dtype
 
     def data(self, verbose=0):
         self.update_freq()
@@ -778,12 +780,15 @@ class Feature(Node):
         return self.get_materialized_data()
 
     def get_materialized_data(self):
-        return self.execution_environment.data_storage.get_column(self.c_name, self.c_hash)
+        return self.underlying_data.pandas_series
+
+    def get_column(self):
+        return self.underlying_data.column_name
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
-            self.size = self.execution_environment.data_storage.compute_size([self.c_hash])
+            self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
             return self.size
@@ -794,7 +799,9 @@ class Feature(Node):
         return self.generate_feature_node('setname', {'name': name})
 
     def p_setname(self, name):
-        return name, self.c_hash
+        return DataSeries(column_name=name,
+                          column_hash=self.underlying_data.column_hash,
+                          pandas_series=self.underlying_data.pandas_series)
 
     def math(self, oper, other):
         # If other is a Feature Column
@@ -810,86 +817,86 @@ class Feature(Node):
         return self.math('__mul__', other)
 
     def p___mul__(self, other):
-        return self.hash_and_store_series('__mul__{}'.format(other), self.get_materialized_data() * other)
+        return self.hash_and_return_dataseries('__mul__{}'.format(other), self.get_materialized_data() * other)
 
     def __rmul__(self, other):
         return self.math('__rmul__', other)
 
     def p___rmul__(self, other):
-        return self.hash_and_store_series('__rmul__{}'.format(other), other * self.get_materialized_data())
+        return self.hash_and_return_dataseries('__rmul__{}'.format(other), other * self.get_materialized_data())
 
     # TODO: When switching to python 3 this has to change to __floordiv__ and __truediv__
     def __div__(self, other):
         return self.math('__div__', other)
 
     def p___div__(self, other):
-        return self.hash_and_store_series('__div__{}'.format(other), self.get_materialized_data() / other)
+        return self.hash_and_return_dataseries('__div__{}'.format(other), self.get_materialized_data() / other)
 
     def __rdiv__(self, other):
         return self.math('__rdiv__', other)
 
     def p___rdiv__(self, other):
-        return self.hash_and_store_series('__rdiv__{}'.format(other), other / self.get_materialized_data())
+        return self.hash_and_return_dataseries('__rdiv__{}'.format(other), other / self.get_materialized_data())
 
     def __add__(self, other):
         return self.math('__add__', other)
 
     def p___add__(self, other):
-        return self.hash_and_store_series('__add__{}'.format(other), self.get_materialized_data() + other)
+        return self.hash_and_return_dataseries('__add__{}'.format(other), self.get_materialized_data() + other)
 
     def __radd__(self, other):
         return self.math('__radd__', other)
 
     def p___radd__(self, other):
-        return self.hash_and_store_series('__radd__{}'.format(other), other + self.get_materialized_data())
+        return self.hash_and_return_dataseries('__radd__{}'.format(other), other + self.get_materialized_data())
 
     def __sub__(self, other):
         return self.math('__sub__', other)
 
     def p___sub__(self, other):
-        return self.hash_and_store_series('__sub_{}'.format(other), self.get_materialized_data() - other)
+        return self.hash_and_return_dataseries('__sub_{}'.format(other), self.get_materialized_data() - other)
 
     def __rsub__(self, other):
         return self.math('__rsub__', other)
 
     def p___rsub__(self, other):
-        return self.hash_and_store_series('__rsub__{}'.format(other), other - self.get_materialized_data())
+        return self.hash_and_return_dataseries('__rsub__{}'.format(other), other - self.get_materialized_data())
 
     def __lt__(self, other):
         return self.math('__lt__', other)
 
     def p___lt__(self, other):
-        return self.hash_and_store_series('__lt__{}'.format(other), self.get_materialized_data() < other)
+        return self.hash_and_return_dataseries('__lt__{}'.format(other), self.get_materialized_data() < other)
 
     def __le__(self, other):
         return self.math('__le__', other)
 
     def p___le__(self, other):
-        return self.hash_and_store_series('__le__{}'.format(other), self.get_materialized_data() <= other)
+        return self.hash_and_return_dataseries('__le__{}'.format(other), self.get_materialized_data() <= other)
 
     def __eq__(self, other):
         return self.math('__eq__', other)
 
     def p___eq__(self, other):
-        return self.hash_and_store_series('__eq__{}'.format(other), self.get_materialized_data() == other)
+        return self.hash_and_return_dataseries('__eq__{}'.format(other), self.get_materialized_data() == other)
 
     def __ne__(self, other):
         return self.math('__ne__', other)
 
     def p___ne__(self, other):
-        return self.hash_and_store_series('__ne__{}'.format(other), self.get_materialized_data() != other)
+        return self.hash_and_return_dataseries('__ne__{}'.format(other), self.get_materialized_data() != other)
 
     def __gt__(self, other):
         return self.math('__qt__', other)
 
     def p___gt__(self, other):
-        return self.hash_and_store_series('__gt__{}'.format(other), self.get_materialized_data() > other)
+        return self.hash_and_return_dataseries('__gt__{}'.format(other), self.get_materialized_data() > other)
 
     def __ge__(self, other):
         return self.math('__qe__', other)
 
     def p___ge__(self, other):
-        return self.hash_and_store_series('__ge__{}'.format(other), self.get_materialized_data() >= other)
+        return self.hash_and_return_dataseries('__ge__{}'.format(other), self.get_materialized_data() >= other)
 
     # End of overridden methods
 
@@ -897,20 +904,20 @@ class Feature(Node):
         return self.generate_feature_node('head', {'size': size})
 
     def p_head(self, size=5):
-        return self.hash_and_store_series('head{}'.format(size), self.get_materialized_data().head(size))
+        return self.hash_and_return_dataseries('head{}'.format(size), self.get_materialized_data().head(size))
 
     def fillna(self, value):
         return self.generate_feature_node('fillna', {'value': value})
 
     def p_fillna(self, value):
-        return self.hash_and_store_series('fill{}'.format(value), self.get_materialized_data().fillna(value))
+        return self.hash_and_return_dataseries('fill{}'.format(value), self.get_materialized_data().fillna(value))
 
     def astype(self, target_type):
         return self.generate_feature_node('astype', {'target_type': target_type})
 
     def p_astype(self, target_type):
-        return self.hash_and_store_series('astype{}'.format(target_type),
-                                          self.get_materialized_data().astype(target_type))
+        return self.hash_and_return_dataseries('astype{}'.format(target_type),
+                                               self.get_materialized_data().astype(target_type))
 
     # combined node
     def concat(self, nodes):
@@ -920,6 +927,7 @@ class Feature(Node):
             supernode = self.generate_super_node([self] + [nodes], {'c_oper': 'concat'})
         return self.generate_dataset_node('concat', v_id=supernode.id)
 
+    # TODO what happened here?
     def isnull(self):
         self.execution_environment.workload_graph.add_edge(self.id,
                                                            {'oper': self.edge_hash('isnull'),
@@ -930,7 +938,7 @@ class Feature(Node):
         return self.generate_feature_node('notna')
 
     def p_notna(self):
-        return self.hash_and_store_series('notna', self.get_materialized_data().notna())
+        return self.hash_and_return_dataseries('notna', self.get_materialized_data().notna())
 
     def sum(self):
         return self.generate_agg_node('sum')
@@ -1002,35 +1010,35 @@ class Feature(Node):
         return self.generate_feature_node('abs')
 
     def p_abs(self):
-        return self.hash_and_store_series('abs', self.get_materialized_data().abs())
+        return self.hash_and_return_dataseries('abs', self.get_materialized_data().abs())
 
     def unique(self):
         return self.generate_feature_node('unique')
 
     def p_unique(self):
-        return self.hash_and_store_series('unique', self.get_materialized_data().unique())
+        return self.hash_and_return_dataseries('unique', self.get_materialized_data().unique())
 
     def dropna(self):
         return self.generate_feature_node('dropna')
 
     def p_dropna(self):
-        return self.hash_and_store_series('dropna', self.get_materialized_data().dropna())
+        return self.hash_and_return_dataseries('dropna', self.get_materialized_data().dropna())
 
     def binning(self, start_value, end_value, num):
         return self.generate_feature_node('binning',
                                           {'start_value': start_value, 'end_value': end_value, 'num': num})
 
     def p_binning(self, start_value, end_value, num):
-        return self.hash_and_store_series('binning{}{}{}'.format(start_value, end_value, num),
-                                          pd.cut(self.get_materialized_data(),
-                                                 bins=np.linspace(start_value, end_value, num=num)))
+        return self.hash_and_return_dataseries('binning{}{}{}'.format(start_value, end_value, num),
+                                               pd.cut(self.get_materialized_data(),
+                                                      bins=np.linspace(start_value, end_value, num=num)))
 
     def replace(self, to_replace):
         return self.generate_feature_node('replace', {'to_replace': to_replace})
 
     def p_replace(self, to_replace):
-        return self.hash_and_store_series('__replace__{}'.format(str(to_replace)),
-                                          self.get_materialized_data().replace(to_replace, inplace=False))
+        return self.hash_and_return_dataseries('__replace__{}'.format(str(to_replace)),
+                                               self.get_materialized_data().replace(to_replace, inplace=False))
 
     # def onehot_encode(self):
     #     self.execution_environment.graph.add_edge(self.id,
@@ -1128,8 +1136,10 @@ class GroupBy(Node):
         for i in range(len(c_group_names)):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'count'))
-        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df[new_columns])
 
     def agg(self, functions):
         return self.generate_dataset_node('agg', {'functions': functions})
@@ -1155,8 +1165,10 @@ class GroupBy(Node):
                         new_hashes.append(self.md5(c_group_hashes[i] + level2column))
 
         df.columns = new_columns
-        self.execution_environment.data_storage.store_dataset(new_hashes, df)
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df)
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df)
 
     def mean(self):
         return self.generate_dataset_node('mean')
@@ -1175,8 +1187,10 @@ class GroupBy(Node):
             new_columns.append(c_group_names[i])
             new_hashes.append(self.md5(c_group_hashes[i] + 'mean'))
 
-        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df[new_columns])
 
 
 class SK_Model(Node):
@@ -1286,8 +1300,10 @@ class SuperNode(Node):
         feature_data = self.nodes[1].get_materialized_data()
         feature_hash = self.nodes[1].c_hash
         new_hash = self.md5(feature_hash + str(model.get_params()))
-        self.execution_environment.data_storage.store_column(new_hash, pd.Series(model.transform(feature_data)))
-        return col_name, new_hash
+        # self.execution_environment.data_storage.store_column(new_hash, pd.Series(model.transform(feature_data)))
+        return DataSeries(column_name=col_name,
+                          column_hash=new_hash,
+                          pandas_series=pd.Series(model.transform(feature_data)))
 
     def p_transform(self):
         model = self.nodes[0].get_materialized_data()
@@ -1295,8 +1311,10 @@ class SuperNode(Node):
         df = pd.DataFrame(model.transform(dataset_data))
         new_columns = df.columns
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df[new_columns])
 
     def p_fit_sk_model_with_labels(self, model, custom_args, warm_start=False):
         start = datetime.now()
@@ -1324,9 +1342,11 @@ class SuperNode(Node):
         else:
             c_name = [i for i in range(df.shape[1])]
             c_hash = [self.md5(self.generate_uuid()) for c in c_name]
-        d = pd.DataFrame(df, columns=c_name)
-        self.execution_environment.data_storage.store_dataset(c_hash, d)
-        return c_name, c_hash
+
+        # self.execution_environment.data_storage.store_dataset(c_hash, d)
+        return DataFrame(column_names=c_name,
+                         column_hashes=c_hash,
+                         pandas_df=pd.DataFrame(df, columns=c_name))
 
     def p_score(self, score_type, custom_args):
         model = self.nodes[0].get_materialized_data()
@@ -1355,8 +1375,8 @@ class SuperNode(Node):
         return self.hash_and_return_dataframe('filter_with{}'.format(self.nodes[1].c_hash),
                                               self.nodes[0].get_materialized_data()[
                                                   self.nodes[1].get_materialized_data()],
-                                              self.nodes[0].c_name,
-                                              self.nodes[0].c_hash)
+                                              self.nodes[0].underlying_data.column_names,
+                                              self.nodes[0].underlying_data.column_hashes)
 
     def p_add_columns(self, col_names):
         # # already exists on the data storage
@@ -1376,8 +1396,10 @@ class SuperNode(Node):
         c_hash = copy.copy(self.nodes[0].c_hash)
         c_hash.append(copy.copy(self.nodes[1].c_hash))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
-        self.execution_environment.data_storage.store_dataset(c_hash, data)
-        return c_names, c_hash
+        # self.execution_environment.data_storage.store_dataset(c_hash, data)
+        return DataFrame(column_names=c_names,
+                         column_hashes=c_hash,
+                         pandas_df=data)
 
     def p_replace_columns(self, col_names):
         if isinstance(col_names, list):
@@ -1400,8 +1422,10 @@ class SuperNode(Node):
         d1 = self.nodes[0].get_materialized_data()
         d2 = self.nodes[1].get_materialized_data()
         d1[col_names] = d2
-        self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])
-        return c_names, c_hashes
+        # self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])
+        return DataFrame(column_names=c_names,
+                         column_hashes=c_hashes,
+                         pandas_df=d1[col_names])
 
     def p_corr_with(self):
         return self.nodes[0].get_materialized_data().corr(self.nodes[1].get_materialized_data())
@@ -1411,16 +1435,18 @@ class SuperNode(Node):
         c_hash = []
         for d in self.nodes:
             if isinstance(d, Feature):
-                c_name = c_name + [d.c_name]
-                c_hash = c_hash + [d.c_hash]
+                c_name = c_name + [d.underlying_data.column_name]
+                c_hash = c_hash + [d.underlying_data.column_hash]
             elif isinstance(d, Dataset):
-                c_name = c_name + d.c_name
-                c_hash = c_hash + d.c_hash
+                c_name = c_name + d.underlying_data.column_names
+                c_hash = c_hash + d.underlying_data.column_hashes
             else:
                 raise 'Cannot concatane object of type: {}'.format(type(d))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
-        self.execution_environment.data_storage.store_dataset(c_hash, data)
-        return c_name, c_hash
+        # self.execution_environment.data_storage.store_dataset(c_hash, data)
+        return DataFrame(column_names=c_name,
+                         column_hashes=c_hash,
+                         pandas_df=data)
 
     # TODO: This can be done better
     # Now the assumption is, if it is a left join, then use the same hash of the left tables to avoid deduplication
@@ -1468,99 +1494,112 @@ class SuperNode(Node):
         # generate new hashes and store everything on disk
         new_columns = list(df.columns)
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
-        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df[new_columns])
 
     def p_align(self):
         new_columns = []
         new_hashes = []
-        current_columns = self.nodes[0].c_name
-        current_hashes = self.nodes[0].c_hash
+        current_columns = self.nodes[0].underlying_data.column_names
+        current_hashes = self.nodes[0].underlying_data.column_hashes
         for i in range(len(current_columns)):
-            if current_columns[i] in self.nodes[1].c_name:
+            if current_columns[i] in self.nodes[1].underlying_data.column_names:
                 new_columns.append(current_columns[i])
                 new_hashes.append(current_hashes[i])
-
-        return new_columns, new_hashes
+        # We only support for align with inner join on columns
+        df = self.nodes[0].get_materialized_data().align(self.nodes[1].get_materialized_data(), join='inner', axis=1)
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df)
 
     # TODO: There may be a better way of hashing these so if the columns are copied and same operations are applied
     # we save storage space
     def p___div__(self):
         c_name = '__div__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__div__',
-                                          self.nodes[0].get_materialized_data() / self.nodes[1].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__div__',
+                                               self.nodes[0].get_materialized_data() / self.nodes[
+                                                   1].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___rdiv__(self):
         c_name = '__rdiv__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__rdiv__',
-                                          self.nodes[1].get_materialized_data() / self.nodes[0].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__rdiv__',
+                                               self.nodes[1].get_materialized_data() / self.nodes[
+                                                   0].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___add__(self):
         c_name = '__add__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__add__',
-                                          self.nodes[0].get_materialized_data() + self.nodes[1].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__add__',
+                                               self.nodes[0].get_materialized_data() + self.nodes[
+                                                   1].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___radd__(self):
         c_name = '__radd__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__radd__',
-                                          self.nodes[1].get_materialized_data() + self.nodes[0].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__radd__',
+                                               self.nodes[1].get_materialized_data() + self.nodes[
+                                                   0].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___sub__(self):
         c_name = '__sub__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__sub__',
-                                          self.nodes[0].get_materialized_data() - self.nodes[1].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__sub__',
+                                               self.nodes[0].get_materialized_data() - self.nodes[
+                                                   1].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___rsub__(self):
         c_name = '__rsub__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__rub__',
-                                          self.nodes[1].get_materialized_data() - self.nodes[0].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__rub__',
+                                               self.nodes[1].get_materialized_data() - self.nodes[
+                                                   0].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___lt__(self):
         c_name = '__lt__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__lt__',
-                                          self.nodes[0].get_materialized_data() < self.nodes[1].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__lt__',
+                                               self.nodes[0].get_materialized_data() < self.nodes[
+                                                   1].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___le__(self):
         c_name = '__le__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__le__', self.nodes[0].get_materialized_data() <= self.nodes[
+        return self.hash_and_return_dataseries('__le__', self.nodes[0].get_materialized_data() <= self.nodes[
             1].get_materialized_data(), c_name, c_hash)
 
     def p___eq__(self):
         c_name = '__eq__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__eq__', self.nodes[0].get_materialized_data() == self.nodes[
+        return self.hash_and_return_dataseries('__eq__', self.nodes[0].get_materialized_data() == self.nodes[
             1].get_materialized_data(), c_name, c_hash)
 
     def p___ne__(self):
         c_name = '__ne__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__ne__', self.nodes[0].get_materialized_data() != self.nodes[
+        return self.hash_and_return_dataseries('__ne__', self.nodes[0].get_materialized_data() != self.nodes[
             1].get_materialized_data(), c_name, c_hash)
 
     def p___qt__(self):
         c_name = '__qt__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__qt__',
-                                          self.nodes[0].get_materialized_data() > self.nodes[1].get_materialized_data(),
-                                          c_name, c_hash)
+        return self.hash_and_return_dataseries('__qt__',
+                                               self.nodes[0].get_materialized_data() > self.nodes[
+                                                   1].get_materialized_data(),
+                                               c_name, c_hash)
 
     def p___qe__(self):
         c_name = '__qe__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_store_series('__qe__', self.nodes[0].get_materialized_data() >= self.nodes[
+        return self.hash_and_return_dataseries('__qe__', self.nodes[0].get_materialized_data() >= self.nodes[
             1].get_materialized_data(), c_name, c_hash)

@@ -316,9 +316,8 @@ class ExecutionGraph(BaseGraph):
                     # TODO: Data Storage only stores the data for Dataset and Feature for now
                     # TODO: Later on maybe we want to consider storing models and aggregates on the data storage as well
                     if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
-                        # TODO: check if a shallow copy is enough
                         start_time = datetime.now()
-                        cur_node['data'].c_name, cur_node['data'].c_hash = self.compute_next(prev_node, edge)
+                        cur_node['data'].underlying_data = self.compute_next(prev_node, edge)
                         cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         cur_node['size'] = cur_node['data'].compute_size()
