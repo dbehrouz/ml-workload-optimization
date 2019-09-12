@@ -74,7 +74,7 @@ if run_baseline == 'no':
     print '{}-End of First Optimized Workload'.format(default_end)
 
     if 0.0 < mat_rate:
-        total_size = ee.history_graph.get_total_size()
+        total_size = ee.experiment_graph.get_total_size()
         budget = mat_rate * total_size
         print 'total graph size: {}, data storage size: {}, real size: {}'.format(
             total_size, ee.data_storage.total_size(),
@@ -84,7 +84,7 @@ if run_baseline == 'no':
                                                    verbose=False)
         sa_materializer.run_and_materialize()
         print 'after materialization graph size: {}, data storage size: {}, real size: {}'.format(
-            ee.history_graph.get_total_materialized_size(), ee.data_storage.total_size(),
+            ee.experiment_graph.get_total_materialized_size(), ee.data_storage.total_size(),
             ee.get_real_history_graph_size())
         real_start = datetime.now()
         run(ee)

@@ -42,7 +42,7 @@ for rate in MAT_RATES:
     print 'materialization for rate: {}'.format(rate)
     ee_storage_aware = copy.deepcopy(ee)
 
-    total_size = ee_storage_aware.history_graph.get_total_size()
+    total_size = ee_storage_aware.experiment_graph.get_total_size()
     budget = rate * total_size
     if 0.0 < rate:
         print 'total graph size: {}, data storage size: {}, real size: {}'.format(
@@ -54,7 +54,7 @@ for rate in MAT_RATES:
 
         sa_materializer.run_and_materialize()
         print 'after materialization graph size: {}, data storage size: {}, real size: {}'.format(
-            ee_storage_aware.history_graph.get_total_materialized_size(), ee_storage_aware.data_storage.total_size(),
+            ee_storage_aware.experiment_graph.get_total_materialized_size(), ee_storage_aware.data_storage.total_size(),
             ee_storage_aware.get_real_history_graph_size())
     if rate != 0.0:
         if not os.path.isdir(DATABASE_PATH):

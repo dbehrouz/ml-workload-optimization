@@ -1,23 +1,12 @@
 import cPickle as pickle
-import copy
 import os
-from datetime import datetime
 
-import pandas as pd
-
-from experiment_graph.graph.auxilary import DataFrame
-from experiment_graph.benchmark_helper import BenchmarkMetrics
-from experiment_graph.data_storage import DedupedStorageManager, NaiveStorageManager
+from experiment_graph.graph.execution_graph import ExecutionGraph, ExperimentGraph
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 from experiment_graph.graph.node import *
-from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimizer
-from experiment_graph.graph.execution_graph import ExecutionGraph, HistoryGraph
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-#from experiment_graph.graph.node import Node
-
-
-# AS_KB = 1024.0
+from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimizer
 
 
 class ExecutionEnvironment(object):
@@ -27,15 +16,9 @@ class ExecutionEnvironment(object):
         return loc[loc.rfind('/') + 1:] + str(extra_params)
 
     def __init__(self, storage_type='dedup', optimizer_type=HashBasedOptimizer.NAME, reuse_type=FastBottomUpReuse.NAME):
-        if storage_type == 'dedup':
-            self.data_storage = DedupedStorageManager()
-        elif storage_type == 'naive':
-            self.data_storage = NaiveStorageManager()
-        else:
-            raise Exception('Unknown storage type: {}'.format(storage_type))
         self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
         self.workload_graph = ExecutionGraph()
-        self.history_graph = HistoryGraph()
+        self.experiment_graph = ExperimentGraph(storage_type=storage_type)
         self.time_manager = dict()
 
     def get_benchmark_results(self, keys=None):
@@ -56,12 +39,12 @@ class ExecutionEnvironment(object):
 
     def update_history(self):
         start = datetime.now()
-        self.history_graph.extend(self.workload_graph)
+        self.experiment_graph.extend(self.workload_graph)
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
     def get_real_history_graph_size(self):
-        return self.history_graph.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
-                                                     mat_only=True) + self.data_storage.total_size()
+        return self.experiment_graph.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
+                                                        mat_only=True) + self.data_storage.total_size()
 
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
         if os.path.exists(environment_folder) and not overwrite:
@@ -73,10 +56,10 @@ class ExecutionEnvironment(object):
         start_save_graph = datetime.now()
 
         with open(environment_folder + '/graph', 'wb') as output:
-            pickle.dump(self.history_graph.graph, output, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.experiment_graph.graph, output, pickle.HIGHEST_PROTOCOL)
 
         with open(environment_folder + '/roots', 'wb') as output:
-            pickle.dump(self.history_graph.roots, output, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.experiment_graph.roots, output, pickle.HIGHEST_PROTOCOL)
 
         end_save_graph = datetime.now()
 
@@ -113,7 +96,7 @@ class ExecutionEnvironment(object):
         self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
 
     def load_history_from_memory(self, history):
-        self.history_graph = history
+        self.experiment_graph = history
 
     def load_history_from_disk(self, environment_folder):
         start_graph_load = datetime.now()
@@ -123,8 +106,8 @@ class ExecutionEnvironment(object):
         with open(environment_folder + '/roots', 'rb') as g_input:
             roots = pickle.load(g_input)
 
-        self.history_graph = HistoryGraph(graph, roots)
-        self.history_graph.set_environment(self)
+        self.experiment_graph = ExperimentGraph(graph, roots)
+        self.experiment_graph.set_environment(self)
 
         self.update_time(BenchmarkMetrics.LOAD_HISTORY, (datetime.now() - start_graph_load).total_seconds())
         start_data_manager_load = datetime.now()
@@ -136,13 +119,13 @@ class ExecutionEnvironment(object):
         if graph_type == 'workload':
             self.workload_graph.plot_graph(plt)
         else:
-            self.history_graph.plot_graph(plt)
+            self.experiment_graph.plot_graph(plt)
 
     def get_artifacts_size(self, graph_type='workload'):
         if graph_type == 'workload':
             return self.workload_graph.get_artifact_sizes()
         else:
-            return self.history_graph.get_artifact_sizes()
+            return self.experiment_graph.get_artifact_sizes()
 
     def load(self, loc, dtype=None, nrows=None):
         extra_params = dict()
@@ -155,9 +138,9 @@ class ExecutionEnvironment(object):
         if self.workload_graph.has_node(root_hash):
             print 'the root node is in already the workload graph'
             return self.workload_graph.get_node(root_hash)['data']
-        elif self.history_graph.has_node(root_hash):
+        elif self.experiment_graph.has_node(root_hash):
             print 'the root node is in already the history graph'
-            root = copy.deepcopy(self.history_graph.graph.nodes[root_hash])
+            root = copy.deepcopy(self.experiment_graph.graph.nodes[root_hash])
             self.workload_graph.roots.append(root_hash)
             self.workload_graph.add_node(root_hash, **root)
             return root['data']

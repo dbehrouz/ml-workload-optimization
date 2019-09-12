@@ -8,6 +8,7 @@ import numpy as np
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 # TODO: make file with all the global names
+from experiment_graph.data_storage import DedupedStorageManager, NaiveStorageManager
 
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 
@@ -404,9 +405,15 @@ class ExecutionGraph(BaseGraph):
         return schedule
 
 
-class HistoryGraph(BaseGraph):
-    def __init__(self, graph=None, roots=None):
-        super(HistoryGraph, self).__init__(graph, roots)
+class ExperimentGraph(BaseGraph):
+    def __init__(self, storage_type, graph=None, roots=None):
+        super(ExperimentGraph, self).__init__(graph, roots)
+        if storage_type == 'dedup':
+            self.data_storage = DedupedStorageManager()
+        elif storage_type == 'naive':
+            self.data_storage = NaiveStorageManager()
+        else:
+            raise Exception('Unknown storage type: {}'.format(storage_type))
 
     def extend(self, workload):
         # make sure the workload graph is post processed, i.e., the model scores are added to the graph
