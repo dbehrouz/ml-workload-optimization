@@ -15,6 +15,7 @@ import warnings
 # plotting libraries
 from datetime import datetime
 import matplotlib
+
 matplotlib.use('ps')
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
@@ -638,9 +639,9 @@ def run(root_data):
 if __name__ == "__main__":
     execution_start = datetime.now()
 
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
-    run(root_data)
+    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    ROOT_DATA = ROOT + '/data'
+    run(ROOT_DATA)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

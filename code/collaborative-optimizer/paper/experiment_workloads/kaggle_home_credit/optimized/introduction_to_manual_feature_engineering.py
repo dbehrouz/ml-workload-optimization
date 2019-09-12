@@ -358,6 +358,7 @@ def run(execution_environment, root_data, verbose=0):
 
     # Align the dataframes, this will remove the 'TARGET' column
     train = train.align(test)
+    test = test.align(train)
 
     train = train.add_columns('TARGET', train_labels)
 
@@ -611,7 +612,7 @@ def run(execution_environment, root_data, verbose=0):
 if __name__ == "__main__":
     ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
     ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-    ROOT_DATE = ROOT + '/data'
+    ROOT_DATA = ROOT + '/data'
     import sys
 
     sys.path.append(ROOT_PACKAGE)
@@ -621,10 +622,10 @@ if __name__ == "__main__":
     ee = ExecutionEnvironment('dedup', reuse_type=FastBottomUpReuse.NAME)
     execution_start = datetime.now()
 
-    DATABASE_PATH = ROOT_DATE + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
+    DATABASE_PATH = ROOT_DATA + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
 
     # ee.load_history_from_disk(DATABASE_PATH)
-    run(ee, ROOT_DATE, verbose=1)
+    run(ee, ROOT_DATA, verbose=1)
     ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()

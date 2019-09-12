@@ -686,6 +686,25 @@ class Dataset(Node):
 
     # removes the columns that do not exist in the other dataframe
     def align(self, other):
+        """
+        Align is similar to pandas.align, however it only returns one dataset
+        example Dataset.align:
+            ds1.get_column() # ['1','2','3']
+            ds2.get_column() # ['2','3','4']
+            ds_aligned = ds1.align(ds2)
+            ds_aligned.get_column() # ['2','3']
+        example Pandas.align:
+            df1.get_column() # ['1','2','3']
+            df2.get_column() # ['2','3','4']
+            df1_aligned,df2_aligned = ds1.align(ds2)
+            df1_aligned.get_column() # ['2','3']
+            df2_aligned.get_column() # ['2','3']
+
+        If the user needs to align both datasets, he/she should call the function twice.
+        Note: currently, we only support 'inner' join and column-oriented aligning
+        :param other: other Dataset to align with
+        :return: original Dataset with the columns that do not exist in the other dataset removed
+        """
         supernode = self.generate_super_node([self, other], {'c_oper': 'align'})
         return self.generate_dataset_node('align', v_id=supernode.id)
 
@@ -1285,8 +1304,10 @@ class SK_Model(Node):
         new_columns = ['feature', 'importance']
         new_hashes = [self.md5(self.generate_uuid()) for c in new_columns]
 
-        self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
-        return new_columns, new_hashes
+        # self.execution_environment.data_storage.store_dataset(new_hashes, df[new_columns])
+        return DataFrame(column_names=new_columns,
+                         column_hashes=new_hashes,
+                         pandas_df=df[new_columns])
 
     def predict_proba(self, test, custom_args=None):
         supernode = self.generate_super_node([self, test], {'c_oper': 'predict_proba'})
@@ -1421,6 +1442,7 @@ class SuperNode(Node):
         c_hash = copy.copy(self.nodes[0].get_column_hash())
         c_hash.append(copy.copy(self.nodes[1].get_column_hash()))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
+        data.columns = c_names
         # self.execution_environment.data_storage.store_dataset(c_hash, data)
         return DataFrame(column_names=c_names,
                          column_hashes=c_hash,
@@ -1534,10 +1556,11 @@ class SuperNode(Node):
                 new_columns.append(current_columns[i])
                 new_hashes.append(current_hashes[i])
         # We only support for align with inner join on columns
-        df = self.nodes[0].get_materialized_data().align(self.nodes[1].get_materialized_data(), join='inner', axis=1)
+        # df = self.nodes[0].get_materialized_data()[new_columns]
+        # df = self.nodes[0].get_materialized_data().align(self.nodes[1].get_materialized_data(), join='inner', axis=1)
         return DataFrame(column_names=new_columns,
                          column_hashes=new_hashes,
-                         pandas_df=df)
+                         pandas_df=self.nodes[0].get_materialized_data()[new_columns])
 
     # TODO: There may be a better way of hashing these so if the columns are copied and same operations are applied
     # we save storage space

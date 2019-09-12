@@ -654,13 +654,20 @@ def run(execution_environment, root_data, verbose=0):
 
 
 if __name__ == "__main__":
-    from experiment_graph.execution_environment import ExecutionEnvironment
+    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT_DATE = ROOT + '/data'
+    import sys
 
-    ee = ExecutionEnvironment('dedup')
+    sys.path.append(ROOT_PACKAGE)
+    from experiment_graph.execution_environment import ExecutionEnvironment
+    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
+
+    ee = ExecutionEnvironment('dedup', reuse_type=FastBottomUpReuse.NAME)
     execution_start = datetime.now()
     ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/'
     root_data = ROOT + '/data'
-    #DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/environment_dedup'
+    # DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/environment_dedup'
     # ee.load_history_from_disk(DATABASE_PATH)
     ee.new_workload()
     run(ee, root_data, verbose=1)

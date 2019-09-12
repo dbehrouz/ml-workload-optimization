@@ -430,20 +430,21 @@ def run(execution_environment, root_data, verbose=0):
 
 
 if __name__ == "__main__":
-    ROOT_PACKAGE_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT_DATA = ROOT + '/data'
     import sys
 
-    sys.path.append(ROOT_PACKAGE_DIRECTORY)
+    sys.path.append(ROOT_PACKAGE)
     from experiment_graph.execution_environment import ExecutionEnvironment
 
     ee = ExecutionEnvironment('dedup')
     execution_start = datetime.now()
 
-    root_data = ROOT_PACKAGE_DIRECTORY + '/data'
     # DATABASE_PATH = root_data + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
 
     # ee.load_history_from_disk(DATABASE_PATH)
-    run(ee, root_data, verbose=1)
+    run(ee, ROOT_DATA, verbose=1)
     # ee.save_history(DATABASE_PATH, overwrite=True)
 
     execution_end = datetime.now()
