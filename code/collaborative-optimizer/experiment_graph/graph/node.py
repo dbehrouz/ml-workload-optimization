@@ -246,20 +246,20 @@ class Node(object):
         self.execution_environment.data_storage.store_column(column, series)
 
     def find_column_index(self, c):
-        return self.underlying_data.column_names.index(c)
+        return self.get_column().index(c)
 
     def get_c_hash(self, c):
         i = self.find_column_index(c)
-        return self.underlying_data.column_hashes[i]
+        return self.get_column_hash()[i]
 
     def generate_hash(self, column_map, func_name):
         return {k: (self.md5(v + func_name)) for k, v in column_map.items()}
 
     def hash_and_return_dataframe(self, func_name, df, column_names=None, column_hashes=None):
         if column_names is None:
-            column_names = self.underlying_data.column_names
+            column_names = self.get_column()
         if column_hashes is None:
-            column_hashes = self.underlying_data.column_hashes
+            column_hashes = self.get_column_hash()
         new_c_hash = [(self.md5(v + func_name)) for v in column_hashes]
         # self.execution_environment.data_storage.store_dataset(new_c_hash, df[column_names])
         return DataFrame(column_names=column_names,
@@ -268,9 +268,9 @@ class Node(object):
 
     def hash_and_return_dataseries(self, func_name, series, c_name=None, c_hash=None):
         if c_name is None:
-            c_name = self.underlying_data.column_name
+            c_name = self.get_column()
         if c_hash is None:
-            c_hash = self.underlying_data.column_hash
+            c_hash = self.get_column_hash()
         new_c_hash = self.md5(c_hash + func_name)
         # self.execution_environment.data_storage.store_column(new_c_hash, series)
         return DataSeries(column_name=c_name,
@@ -329,6 +329,10 @@ class Dataset(Node):
     """
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+        """
+
+        :type underlying_data: DataFrame
+        """
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
         self.computed = False if underlying_data is None else True
@@ -357,6 +361,9 @@ class Dataset(Node):
     def get_column(self):
         return self.underlying_data.column_names
 
+    def get_column_hash(self):
+        return self.underlying_data.column_hashes
+
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
@@ -373,11 +380,22 @@ class Dataset(Node):
         return self.generate_dataset_node('set_columns', {'columns': columns})
 
     def p_set_columns(self, columns):
-        # df = self.get_materialized_data()
+        df = self.get_materialized_data()
         # self.execution_environment.data_storage.store_dataset(self.c_hash, df)
+        df.columns = columns
         return DataFrame(column_names=columns,
-                         column_hashes=self.underlying_data.column_hashes,
-                         pandas_df=self.get_materialized_data()[columns])
+                         column_hashes=self.get_column_hash(),
+                         pandas_df=df)
+
+    def rename(self, columns):
+        return self.generate_dataset_node('rename', {'columns': columns})
+
+    def p_rename(self, columns):
+        df = self.get_materialized_data().rename(columns=columns)
+        new_column_names = df.columns
+        return DataFrame(column_names=new_column_names,
+                         column_hashes=self.get_column_hash(),
+                         pandas_df=df)
 
     def project(self, columns):
         if type(columns) in [str, int]:
@@ -439,16 +457,16 @@ class Dataset(Node):
         # del df
         # del new_column_data
 
-        return DataFrame(column_names=[new_column] + self.underlying_data.column_names,
-                         column_hashes=[new_c_hash] + self.underlying_data.column_hashes,
+        return DataFrame(column_names=[new_column] + self.get_column(),
+                         column_hashes=[new_c_hash] + self.get_column_hash(),
                          pandas_df=df)
 
     def copy(self):
-        return self.generate_dataset_node('copy', c_name=self.c_name, c_hash=self.c_hash)
+        return self.generate_dataset_node('copy', c_name=self.get_column(), c_hash=self.get_column_hash())
 
     def p_copy(self):
-        return DataFrame(column_names=self.underlying_data.column_names,
-                         column_hashes=self.underlying_data.column_hashes,
+        return DataFrame(column_names=self.get_column(),
+                         column_hashes=self.get_column_hash(),
                          pandas_df=self.underlying_data.pandas_df)
 
     def head(self, size=5):
@@ -570,7 +588,7 @@ class Dataset(Node):
             columns = [columns]
         new_c = []
         new_hash = []
-        for c in self.underlying_data.column_names:
+        for c in self.get_column():
             if c not in columns:
                 new_c.append(c)
                 new_hash.append(self.get_c_hash(c))
@@ -612,7 +630,7 @@ class Dataset(Node):
         # create the md5 hash values for columns
         for c in df.columns:
             new_column.append(c)
-            if c in self.underlying_data.column_names:
+            if c in self.get_column():
                 new_hash.append(self.get_c_hash(c))
             else:
                 # generate a unique prefix to make sure onehot encoding of different datasets with the same
@@ -650,7 +668,7 @@ class Dataset(Node):
 
         new_group_columns = []
         new_group_hashes = []
-        for c in self.underlying_data.column_names:
+        for c in self.get_column():
             # if it is , it's been added as part of the group key
             if c not in col_names:
                 new_group_columns.append(c)
@@ -750,6 +768,10 @@ class Feature(Node):
     """
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+        """
+
+        :type underlying_data: DataSeries
+        """
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
 
@@ -785,6 +807,9 @@ class Feature(Node):
     def get_column(self):
         return self.underlying_data.column_name
 
+    def get_column_hash(self):
+        return self.underlying_data.column_hash
+
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
@@ -800,7 +825,7 @@ class Feature(Node):
 
     def p_setname(self, name):
         return DataSeries(column_name=name,
-                          column_hash=self.underlying_data.column_hash,
+                          column_hash=self.get_column_hash(),
                           pandas_series=self.underlying_data.pandas_series)
 
     def math(self, oper, other):
@@ -1298,7 +1323,7 @@ class SuperNode(Node):
     def p_transform_col(self, col_name):
         model = self.nodes[0].get_materialized_data()
         feature_data = self.nodes[1].get_materialized_data()
-        feature_hash = self.nodes[1].c_hash
+        feature_hash = self.nodes[1].get_column_hash()
         new_hash = self.md5(feature_hash + str(model.get_params()))
         # self.execution_environment.data_storage.store_column(new_hash, pd.Series(model.transform(feature_data)))
         return DataSeries(column_name=col_name,
@@ -1372,11 +1397,11 @@ class SuperNode(Node):
         return {score_type: score}
 
     def p_filter_with(self):
-        return self.hash_and_return_dataframe('filter_with{}'.format(self.nodes[1].c_hash),
+        return self.hash_and_return_dataframe('filter_with{}'.format(self.nodes[1].get_column_hash()),
                                               self.nodes[0].get_materialized_data()[
                                                   self.nodes[1].get_materialized_data()],
-                                              self.nodes[0].underlying_data.column_names,
-                                              self.nodes[0].underlying_data.column_hashes)
+                                              self.nodes[0].get_column(),
+                                              self.nodes[0].get_column_hash())
 
     def p_add_columns(self, col_names):
         # # already exists on the data storage
@@ -1391,10 +1416,10 @@ class SuperNode(Node):
 
         # Since both node 0 and 1 are already stored in the
         # TODO: This only works for adding one column at a time
-        c_names = copy.copy(self.nodes[0].c_name)
+        c_names = copy.copy(self.nodes[0].get_column())
         c_names.append(col_names)
-        c_hash = copy.copy(self.nodes[0].c_hash)
-        c_hash.append(copy.copy(self.nodes[1].c_hash))
+        c_hash = copy.copy(self.nodes[0].get_column_hash())
+        c_hash.append(copy.copy(self.nodes[1].get_column_hash()))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
         # self.execution_environment.data_storage.store_dataset(c_hash, data)
         return DataFrame(column_names=c_names,
@@ -1403,29 +1428,29 @@ class SuperNode(Node):
 
     def p_replace_columns(self, col_names):
         if isinstance(col_names, list):
-            assert len(col_names) == len(self.nodes[1].c_name)
-            c_names = copy.copy(self.nodes[0].c_name)
-            c_hashes = copy.copy(self.nodes[0].c_hash)
+            assert len(col_names) == len(self.nodes[1].get_column())
+            c_names = copy.copy(self.nodes[0].get_column())
+            c_hashes = copy.copy(self.nodes[0].get_column_hash())
             for i in range(len(col_names)):
                 if col_names[i] not in c_names:
                     raise Exception('column {} does not exist in the dataset'.format(col_names[i]))
                 index = self.nodes[0].find_column_index(col_names[i])
-                c_hashes[index] = self.nodes[1].c_hash[i]
+                c_hashes[index] = self.nodes[1].get_column_hash()[i]
         else:
             assert isinstance(self.nodes[1], Feature)
-            c_names = copy.copy(self.nodes[0].c_name)
-            c_hashes = copy.copy(self.nodes[0].c_hash)
+            c_names = copy.copy(self.nodes[0].get_column())
+            c_hashes = copy.copy(self.nodes[0].get_column_hash())
             if col_names not in c_names:
                 raise Exception('column {} does not exist in the dataset'.format(col_names))
             index = self.nodes[0].find_column_index(col_names)
-            c_hashes[index] = self.nodes[1].c_hash
+            c_hashes[index] = self.nodes[1].get_column_hash()
         d1 = self.nodes[0].get_materialized_data()
         d2 = self.nodes[1].get_materialized_data()
         d1[col_names] = d2
         # self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])
         return DataFrame(column_names=c_names,
                          column_hashes=c_hashes,
-                         pandas_df=d1[col_names])
+                         pandas_df=d1[c_names])
 
     def p_corr_with(self):
         return self.nodes[0].get_materialized_data().corr(self.nodes[1].get_materialized_data())
@@ -1435,11 +1460,11 @@ class SuperNode(Node):
         c_hash = []
         for d in self.nodes:
             if isinstance(d, Feature):
-                c_name = c_name + [d.underlying_data.column_name]
-                c_hash = c_hash + [d.underlying_data.column_hash]
+                c_name = c_name + [d.get_column()]
+                c_hash = c_hash + [d.get_column_hash()]
             elif isinstance(d, Dataset):
-                c_name = c_name + d.underlying_data.column_names
-                c_hash = c_hash + d.underlying_data.column_hashes
+                c_name = c_name + d.get_column()
+                c_hash = c_hash + d.get_column_hash()
             else:
                 raise 'Cannot concatane object of type: {}'.format(type(d))
         data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
@@ -1502,10 +1527,10 @@ class SuperNode(Node):
     def p_align(self):
         new_columns = []
         new_hashes = []
-        current_columns = self.nodes[0].underlying_data.column_names
-        current_hashes = self.nodes[0].underlying_data.column_hashes
+        current_columns = self.nodes[0].get_column()
+        current_hashes = self.nodes[0].get_column_hash()
         for i in range(len(current_columns)):
-            if current_columns[i] in self.nodes[1].underlying_data.column_names:
+            if current_columns[i] in self.nodes[1].get_column():
                 new_columns.append(current_columns[i])
                 new_hashes.append(current_hashes[i])
         # We only support for align with inner join on columns

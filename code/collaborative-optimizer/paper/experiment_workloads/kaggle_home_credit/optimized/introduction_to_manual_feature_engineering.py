@@ -29,8 +29,9 @@ def run(execution_environment, root_data, verbose=0):
     # Read in bureau
     bureau = execution_environment.load(root_data + '/kaggle_home_credit/bureau.csv')
     bureau.head().data(verbose=verbose)
-    previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count()
-    previous_loan_counts = previous_loan_counts.set_columns(columns=['SK_ID_CURR', 'previous_loan_counts'])
+    previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count().rename(
+        columns={'SK_ID_BUREAU': 'previous_loan_counts'})
+    # previous_loan_counts = previous_loan_counts.rename(columns=['SK_ID_CURR', 'previous_loan_counts'])
     previous_loan_counts.head().data(verbose=verbose)
 
     # Join to the training dataframe
