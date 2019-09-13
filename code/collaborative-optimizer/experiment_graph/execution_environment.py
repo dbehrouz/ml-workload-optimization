@@ -6,7 +6,8 @@ from experiment_graph.graph.execution_graph import ExecutionGraph, ExperimentGra
 # Do not use combine as an operation name
 from experiment_graph.graph.node import *
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-from experiment_graph.optimizations.optimizer import HashBasedOptimizer, Optimizer
+from experiment_graph.optimizations.collaborativescheduler import HashBasedCollaborativeScheduler, \
+    CollaborativeScheduler
 
 
 class ExecutionEnvironment(object):
@@ -15,8 +16,9 @@ class ExecutionEnvironment(object):
     def construct_readable_root_hash(loc, extra_params=None):
         return loc[loc.rfind('/') + 1:] + str(extra_params)
 
-    def __init__(self, storage_type='dedup', optimizer_type=HashBasedOptimizer.NAME, reuse_type=FastBottomUpReuse.NAME):
-        self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
+    def __init__(self, storage_type='dedup', scheduler_type=HashBasedCollaborativeScheduler.NAME,
+                 reuse_type=FastBottomUpReuse.NAME):
+        self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
         self.workload_graph = ExecutionGraph()
         self.experiment_graph = ExperimentGraph(storage_type=storage_type)
         self.time_manager = dict()
@@ -42,10 +44,6 @@ class ExecutionEnvironment(object):
         self.experiment_graph.extend(self.workload_graph)
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
-    def get_real_history_graph_size(self):
-        return self.experiment_graph.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
-                                                        mat_only=True) + self.data_storage.total_size()
-
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
@@ -65,7 +63,7 @@ class ExecutionEnvironment(object):
 
         self.update_time(BenchmarkMetrics.SAVE_HISTORY, (end_save_graph - start_save_graph).total_seconds())
         with open(environment_folder + '/storage', 'wb') as output:
-            pickle.dump(self.data_storage, output, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.experiment_graph.data_storage, output, pickle.HIGHEST_PROTOCOL)
 
         self.update_time(BenchmarkMetrics.SAVE_DATA_STORE, (datetime.now() - end_save_graph).total_seconds())
 
@@ -73,12 +71,12 @@ class ExecutionEnvironment(object):
         # optimizer.times has  the form {vertex_id:(execution time, optimization time)}
         total_execution_time = 0
         total_reuse_time = 0
-        for _, v in self.optimizer.times.iteritems():
+        for _, v in self.scheduler.times.iteritems():
             total_execution_time += v[0]
             total_reuse_time += v[1]
         self.update_time(BenchmarkMetrics.TOTAL_EXECUTION, total_execution_time)
         self.update_time(BenchmarkMetrics.TOTAL_REUSE, total_reuse_time)
-        self.update_time(BenchmarkMetrics.TOTAL_HISTORY_READ, self.optimizer.history_reads)
+        self.update_time(BenchmarkMetrics.TOTAL_HISTORY_READ, self.scheduler.history_reads)
 
     def new_workload(self):
         """
@@ -90,10 +88,10 @@ class ExecutionEnvironment(object):
         self.workload_graph = ExecutionGraph()
         del self.time_manager
         self.time_manager = dict()
-        optimizer_type = self.optimizer.NAME
-        reuse_type = self.optimizer.reuse_type
-        del self.optimizer
-        self.optimizer = Optimizer.get_optimizer(optimizer_type, reuse_type)
+        scheduler_type = self.scheduler.NAME
+        reuse_type = self.scheduler.reuse_type
+        del self.scheduler
+        self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
 
     def load_history_from_memory(self, history):
         self.experiment_graph = history
@@ -112,7 +110,7 @@ class ExecutionEnvironment(object):
         self.update_time(BenchmarkMetrics.LOAD_HISTORY, (datetime.now() - start_graph_load).total_seconds())
         start_data_manager_load = datetime.now()
         with open(environment_folder + '/storage', 'rb') as d_input:
-            self.data_storage = pickle.load(d_input)
+            self.experiment_graph.data_storage = pickle.load(d_input)
         self.update_time(BenchmarkMetrics.LOAD_DATA_STORE, (datetime.now() - start_data_manager_load).total_seconds())
 
     def plot_graph(self, plt, graph_type='workload'):
@@ -193,7 +191,7 @@ class ExecutionEnvironment(object):
             nextnode = Dataset(identifier, self, underlying_data=df)
             nextnode.computed = True
             node_size_start = datetime.now()
-            size = self.data_storage.compute_size(c_hash)
+            size = nextnode.compute_size()
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
             self.workload_graph.roots.append(identifier)

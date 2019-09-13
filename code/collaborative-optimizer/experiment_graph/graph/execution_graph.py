@@ -8,7 +8,8 @@ import numpy as np
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 # TODO: make file with all the global names
-from experiment_graph.data_storage import DedupedStorageManager, NaiveStorageManager
+from auxilary import DataFrame, DataSeries
+from experiment_graph.data_storage import DedupedStorageManager, SimpleStorageManager
 
 COMBINE_OPERATION_IDENTIFIER = 'combine'
 
@@ -410,33 +411,64 @@ class ExperimentGraph(BaseGraph):
         super(ExperimentGraph, self).__init__(graph, roots)
         if storage_type == 'dedup':
             self.data_storage = DedupedStorageManager()
-        elif storage_type == 'naive':
-            self.data_storage = NaiveStorageManager()
+        elif storage_type == 'simple':
+            self.data_storage = SimpleStorageManager()
         else:
             raise Exception('Unknown storage type: {}'.format(storage_type))
+
+    def retrieve_data(self, node_id):
+        node = self.graph.nodes[node_id]
+        if node['mat'] is not True:
+            raise Exception('The node ({}) is not materialized'.format(node_id))
+
+        if node['type'] == 'Dataset':
+            return DataFrame(column_names=node['data'].underlying_data.get_column(),
+                             column_hashes=node['data'].underlying_data.get_column_hash(),
+                             pandas_df=self.data_storage.get(node_id))
+        elif node['type'] == 'Feature':
+            return DataSeries(column_name=node['data'].underlying_data.get_column(),
+                              column_hash=node['data'].underlying_data.get_column_hash(),
+                              pandas_series=self.data_storage.get(node_id))
+        else:
+            return copy.deepcopy(self.graph.nodes[node_id]['data'].underlying_data)
+
+    def get_real_size(self):
+        return self.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
+                                       mat_only=True) + self.data_storage.total_size()
+
+    def persist_underlying_data(self, node_id, underlying_data):
+        if node_id not in self.graph:
+            raise Exception('Node not present in the Experiment Graph')
+        else:
+            node = self.graph.nodes[node_id]
+            if node['type'] == 'Dataset' or node['type'] == 'Feature':
+                if isinstance(underlying_data, DataFrame):
+                    node['data'].underlying_data = DataFrame(column_names=underlying_data.get_column(),
+                                                             column_hashes=underlying_data.get_column_hash(),
+                                                             pandas_df=None)
+                elif isinstance(underlying_data, DataSeries):
+                    node['data'].underlying_data = DataSeries(column_name=underlying_data.get_column(),
+                                                              column_hash=underlying_data.get_column_hash(),
+                                                              pandas_series=None)
+
+                self.data_storage.put(node_id, underlying_data)
+            else:
+                node['data'].underlying_data = underlying_data
+            node['mat'] = True
 
     def extend(self, workload):
         # make sure the workload graph is post processed, i.e., the model scores are added to the graph
         if not workload.post_processed:
-            workload.post_process()
+            raise Exception('Workload is not post processed')
 
-        if self.is_empty():
-            print 'history graph is empty, initializing a new one'
-            self.graph = copy.deepcopy(workload.graph)
-            self.roots = copy.deepcopy(workload.roots)
-            # initializing the meta frequencies to 1
-            metas = {node: 1 for node in self.graph.nodes()}
-            nx.set_node_attributes(self.graph, metas, 'meta_freq')
+        self.roots = list(set(self.roots + workload.roots))
 
-        else:
-            print 'history graph is not empty, extending the existing one'
-            self.graph = nx.compose(workload.graph, self.graph)
-            # update the roots (removing redundant nodes)
-            self.roots = list(set(self.roots + workload.roots))
-            metas = {}
-            for node in self.graph.nodes(data='meta_freq'):
-                if node[1] is None:
-                    metas[node[0]] = 1
-                else:
-                    metas[node[0]] = node[1] + 1
-            nx.set_node_attributes(self.graph, metas, 'meta_freq')
+        for node_id, node_attributes in workload.graph.nodes(data=True):
+            if node_id not in self.graph.nodes:
+                attr = node_attributes
+                attr['data'] = None
+                attr['meta_freq'] = 1
+                self.graph.add_node(node_id, **attr)
+            else:
+                self.graph.nodes[node_id]['meta_freq'] += 1
+        self.graph.add_edges_from(workload.graph.edges(data=True))

@@ -240,10 +240,10 @@ class Node(object):
             return self.execution_environment.workload_graph.graph.nodes[nextid]['data']
 
     def store_dataframe(self, columns, df):
-        self.execution_environment.data_storage.store_dataset(columns, df)
+        self.execution_environment.data_storage.store_dataframe(columns, df)
 
     def store_feature(self, column, series):
-        self.execution_environment.data_storage.store_column(column, series)
+        self.execution_environment.data_storage.store_dataseries(column, series)
 
     def find_column_index(self, c):
         return self.get_column().index(c)
@@ -293,8 +293,8 @@ class Agg(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
+            self.execution_environment.scheduler.schedule(
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_graph,
                 self.id,
                 verbose)
@@ -346,8 +346,8 @@ class Dataset(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
+            self.execution_environment.scheduler.schedule(
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_graph,
                 self.id,
                 verbose)
@@ -765,8 +765,8 @@ class Evaluation(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
+            self.execution_environment.scheduler.schedule(
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_graph,
                 self.id,
                 verbose)
@@ -801,8 +801,8 @@ class Feature(Node):
 
     def dtype(self, verbose=0):
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
+            self.execution_environment.scheduler.schedule(
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_graph,
                 self.id,
                 verbose)
@@ -812,8 +812,8 @@ class Feature(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
-                self.execution_environment.history_graph,
+            self.execution_environment.scheduler.schedule(
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_graph,
                 self.id,
                 verbose)
@@ -1123,7 +1123,7 @@ class GroupBy(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
+            self.execution_environment.scheduler.schedule(
                 self.execution_environment.history_graph,
                 self.execution_environment.workload_graph,
                 self.id,
@@ -1260,7 +1260,7 @@ class SK_Model(Node):
     def data(self, verbose=0):
         self.update_freq()
         if not self.computed:
-            self.execution_environment.optimizer.optimize(
+            self.execution_environment.scheduler.schedule(
                 self.execution_environment.history_graph,
                 self.execution_environment.workload_graph,
                 self.id,

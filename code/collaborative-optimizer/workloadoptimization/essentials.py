@@ -79,8 +79,6 @@ class ExperimentObject:
                     break
         self.components = reorderedComponents
 
-
-
     def asTrialDoc(self, space, index):
         from hyperopt.pyll.base import Apply
         PARAMS = self.extractParams()
@@ -280,4 +278,3 @@ class ExperimentParser:
             pipeline = pipelines[flowId]
             experimentObjects.append(self.from_openml_flow(runId, flowId, taskId, accuracy, setup, pipeline))
         return experimentObjects
-

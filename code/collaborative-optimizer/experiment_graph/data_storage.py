@@ -1,8 +1,9 @@
-import copy
-
-import pandas as pd
-import hashlib
 from abc import abstractmethod
+
+import pandas
+
+from experiment_graph.graph.auxilary import Pandas, DataFrame, DataSeries
+import pandas as pd
 
 AS_KB = 1024.0
 
@@ -17,66 +18,35 @@ class StorageManager(object):
         """
         initializes the data dictionary and the conversion to MB value
         """
-        self.DATA = {}
+        self.key_value = {}
+
+    def get(self, key):
+        return self.key_value[key]
 
     @abstractmethod
-    def get_column(self, c_name, c_hash):
+    def put(self, key, artifact):
         """
-        returns a feature column, given the hash and renames it to the provided name
-        :param c_name: desired name of feature
-        :param c_hash: hash of the stored feature
-        :return: actual feature column
+
+        :param key:
+        :type artifact: Pandas
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
     @abstractmethod
-    def get_dataset(self, names, hashes):
+    def delete(self, key):
         """
-        returns the dataset (dataframe), given the hash and renames the columns to the provided names
-        :param names: names of the columns
-        :param hashes: hash of the dataframe or the columns
-        :return: the dataset (dataframe)
+
+        :param key:
+        :type artifact: Pandas
         """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
     @abstractmethod
-    def compute_size(self, column_hashes):
-        """
-        return the size of the selected features or dataset
-        :param column_hashes: hash of the features or dataset
-        :return: size of the feature or dataset
-        """
-        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
-
-    @abstractmethod
-    def total_size(self, column_list):
+    def total_size(self):
         """
         computes and returns the total size of the data stored in the storage manager
-        :param column_list
         :return: total size of the data inside the storage manager
         """
-        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
-
-    @abstractmethod
-    def store_column(self, column_hash, panda_series):
-        """
-        store a column (pandas data series) given the hash
-        :param column_hash: input hash
-        :param panda_series: pandas data series to the be stored
-        """
-        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
-
-    @abstractmethod
-    def store_dataset(self, column_hashes, dataset):
-        """
-        store a dataset (pandas dataframe) in the storage given the hash
-        :param column_hashes: hash of the columns or the dataset
-        :param dataset: input dataset (pandas dataframe)
-        """
-        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
-
-    @abstractmethod
-    def get_dtype(self, column_hash):
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
     @staticmethod
@@ -96,60 +66,69 @@ class DedupedStorageManager(StorageManager):
         This ensures no column are stored more than once
     """
 
-    def get_dtype(self, column_hash):
-        return self.DATA[column_hash].dtype
-
     def __init__(self):
+        """
+        initialize the column store.
+        A key value store that stores every column using the unique key
+        """
         super(DedupedStorageManager, self).__init__()
+        self.column_store = {}
+        self.column_count = {}
 
-    def get_column(self, c_name, c_hash):
-        return pd.Series(self.DATA[c_hash], name=c_name)
+    def put(self, key, artifact):
+        if key not in self.key_value:
+            if isinstance(artifact, DataFrame):
+                column_hashes = artifact.get_column_hash()
+                data = artifact.get_data()
+                self.store_dataframe(column_hashes, data)
+                self.key_value[key] = column_hashes
+            elif isinstance(artifact, DataSeries):
+                column_hash = artifact.get_column_hash()
+                data = artifact.get_data()
+                self.store_dataseries(column_hash, data)
+                self.key_value[key] = column_hash
+        else:
+            print 'warning: key exists, abort put!!!'
 
-    def get_dataset(self, names, hashes):
-        # cache = []
-        assert len(names) == len(hashes)
-        # for i in range(len(names)):
-        #     cache.append(self.DATA[hashes[i]].rename(names[i]))
-        cache = [self.DATA[hashes[i]].rename(names[i], inplace=True) for i in range(len(names))]
+    def get(self, key):
+        column_hashes = self.key_value[key]
+        if isinstance(column_hashes, list):  # dataframe
+            cache = []
+            for i in range(len(column_hashes)):
+                cache.append(self.column_store[column_hashes[i]])
+            return pd.concat(cache, axis=1)
+        elif isinstance(column_hashes, str):  # dataseries
+            return pd.Series(self.column_store[column_hashes])
 
-        return pd.concat(cache, axis=1)
+    def delete(self, key):
+        column_hashes = self.key_value[key]
+        for ch in column_hashes:
+            if self.column_count[ch] == 1:
+                del self.column_count[ch]
+                del self.column_store[ch]
+            elif self.column_count[ch] > 1:
+                self.column_count[ch] -= 1
 
-    def compute_size(self, column_hashes):
-        s = 0
-        for k in column_hashes:
-            key = k + '_size'
-            if key not in self.DATA:
-                computed = self.compute_series_size(self.DATA[k])
-                self.DATA[k + '_size'] = computed
-                s += computed
-            else:
-                s += self.DATA[k + '_size']
-        return s
+    def store_dataseries(self, column_hash, data_series):
+        if column_hash in self.column_store.keys():
+            self.column_count[column_hash] += 1
+        else:
+            self.column_store[column_hash] = data_series
+            self.column_count[column_hash] = 1
+
+    def store_dataframe(self, column_hashes, dataframe):
+        for i in range(len(column_hashes)):
+            self.store_dataseries(column_hashes[i], dataframe.iloc[:, i])
 
     def total_size(self, column_list=None):
         s = 0
-        if column_list is None:
-            for k, v in self.DATA.iteritems():
-                if k.endswith('_size'):
-                    s += v
-        else:
-            for k in column_list:
-                s += self.DATA[k + '_size']
+        for k, v in self.column_store.iteritems():
+            s += self.compute_series_size(v)
+
         return s
 
-    def store_column(self, column_hash, pandas_series):
-        if column_hash in self.DATA.keys():
-            'column \'{}\' already exist'.format(column_hash)
-        else:
-            self.DATA[column_hash] = pandas_series
-            self.DATA[column_hash + '_size'] = self.compute_series_size(pandas_series)
 
-    def store_dataset(self, column_hashes, dataset):
-        for i in range(len(column_hashes)):
-            self.store_column(column_hashes[i], dataset.iloc[:, i])
-
-
-class NaiveStorageManager(StorageManager):
+class SimpleStorageManager(StorageManager):
     """
         Naively store every column or dataset under the given hash
         Since, the user is typically passing an array of hashes (one for every column)
@@ -157,87 +136,22 @@ class NaiveStorageManager(StorageManager):
     """
 
     def __init__(self):
-        super(NaiveStorageManager, self).__init__()
+        super(SimpleStorageManager, self).__init__()
 
-    def get_dtype(self, column_hash):
-        return self.DATA[column_hash].dtype
-
-    def get_column(self, c_name, c_hash):
-        return copy.deepcopy(pd.Series(self.DATA[c_hash], name=c_name))
-
-    def get_dataset(self, names, hashes):
-        if isinstance(hashes, list):
-            if len(hashes) > 1:
-                combined_hash = hashlib.md5(''.join(hashes)).hexdigest()
-            else:
-                # TODO: We should find a solution
-                # This will only happen in cases where the result of an operation is feature.
-                # e.g., select_dtypes always returns a dataset node. but if the actual operation
-                # returns only one column, the hashing the hash would mess up the computation
-                # we should find a propoer solution
-                # for example, for non-deterministic computations, such as select_dtype we can have the
-                # node type decided at execution time rather than build time.
-                combined_hash = hashes[0]
+    def put(self, key, artifact):
+        if key not in self.key_value:
+            self.key_value[key] = artifact
         else:
-            combined_hash = hashes
+            print 'warning: key exists, abort put!!!'
 
-        df = self.DATA[combined_hash].copy()
-        df.columns = names
-        return df
+    def delete(self, key):
+        del self.key_value[key]
 
-    def compute_size(self, column_hashes):
-        if isinstance(column_hashes, list):
-            if len(column_hashes) > 1:
-                combined_hash = hashlib.md5(''.join(column_hashes)).hexdigest()
-                if combined_hash not in self.DATA:
-                    self.DATA[combined_hash + '_size'] = self.compute_frame_size(self.DATA[combined_hash])
-            else:
-                combined_hash = column_hashes[0]
-                if combined_hash not in self.DATA:
-                    self.DATA[combined_hash + '_size'] = self.compute_series_size(self.DATA[combined_hash])
-        else:
-            combined_hash = column_hashes
-            if combined_hash not in self.DATA:
-                self.DATA[combined_hash + '_size'] = self.compute_series_size(self.DATA[combined_hash])
-
-        return self.DATA[combined_hash + '_size']
-
-    def total_size(self, column_list=None):
+    def total_size(self):
         s = 0
-        if column_list is None:
-            for k, v in self.DATA.iteritems():
-                if k.endswith('_size'):
-                    s += v
-        else:
-            for k in column_list:
-                s += self.DATA[k + '_size']
+        for k, v in self.key_value.iteritems():
+            if isinstance(v, pandas.DataFrame):
+                s += self.compute_frame_size(v)
+            elif isinstance(v, pandas.Series):
+                s += self.compute_series_size(v)
         return s
-
-    def store_column(self, column_hash, panda_series):
-        if column_hash in self.DATA.keys():
-            print 'column \'{}\' already exist'.format(column_hash)
-        else:
-            self.DATA[column_hash] = panda_series
-            self.DATA[column_hash + '_size'] = self.compute_frame_size(panda_series)
-
-    def store_dataset(self, column_hashes, dataset):
-        if isinstance(column_hashes, list):
-            if len(column_hashes) > 1:
-                combined_hash = hashlib.md5(''.join(column_hashes)).hexdigest()
-            else:
-                # TODO: We should find a solution
-                # This will only happen in cases where the result of an operation is feature.
-                # e.g., select_dtypes always returns a dataset node. but if the actual operation
-                # returns only one column, the hashing the hash would mess up the computation
-                # we should find a propoer solution
-                # for example, for non-deterministic computations, such as select_dtype we can have the
-                # node type decided at execution time rather than build time.
-                combined_hash = column_hashes[0]
-        else:
-            combined_hash = column_hashes
-
-        if combined_hash in self.DATA.keys():
-            print 'dataset \'{}\' already exist'.format(combined_hash)
-        else:
-            self.DATA[combined_hash] = dataset
-            self.DATA[combined_hash + '_size'] = self.compute_frame_size(dataset)

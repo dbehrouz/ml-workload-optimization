@@ -3,21 +3,21 @@ from heuristics import compute_recreation_cost, compute_vertex_potential
 
 
 class Materializer:
-    def __init__(self, execution_environment, storage_budget, use_r_cost=True, use_potential=True,
+    def __init__(self, experiment_graph, storage_budget, use_r_cost=True, use_potential=True,
                  use_n_pipelines=False, modify_graph=False, verbose=False):
-        self.ee = execution_environment
         self.use_rc = use_r_cost
         self.use_pt = use_potential
         self.use_n_pipelines = use_n_pipelines
         self.modify_graph = modify_graph
         self.storage_budget = storage_budget
         self.verbose = verbose
-        compute_recreation_cost(execution_environment.history_graph.graph, modify_graph=True)
-        compute_vertex_potential(execution_environment.history_graph.graph, modify_graph=True)
+        self.experiment_graph = experiment_graph
+        compute_recreation_cost(self.experiment_graph.graph, modify_graph=True)
+        compute_vertex_potential(self.experiment_graph.graph, modify_graph=True)
 
     def compute_rhos(self):
         rhos = []
-        for node in self.ee.history_graph.graph.nodes(data=True):
+        for node in self.experiment_graph.graph.nodes(data=True):
             if node[1]['root']:
                 rho = float('inf')
 
@@ -71,13 +71,13 @@ class Materializer:
         :param should_materialize: list of vertices to materialize (vertex ids)
         """
         to_keep = set()
-        graph = self.ee.history_graph.graph
-        data_storage = self.ee.data_storage
+        graph = self.experiment_graph.graph
+        data_storage = self.experiment_graph.data_storage
         for node in graph.nodes(data=True):
             if node[1]['type'] == 'Dataset':
                 node_data = node[1]['data']
                 if node[0] in should_materialize:
-                    to_keep = to_keep.union(set(node_data.c_hash))
+                    to_keep = to_keep.union(set(node_data.get_column_hash()))
                     node[1]['mat'] = True
                 else:
                     node_data.clear_content()
@@ -85,7 +85,7 @@ class Materializer:
             elif node[1]['type'] == 'Feature':
                 node_data = node[1]['data']
                 if node[0] in should_materialize:
-                    to_keep.add(node_data.c_hash)
+                    to_keep.add(node_data.get_column_hash())
                     node[1]['mat'] = True
                 else:
                     node_data.clear_content()
@@ -127,6 +127,9 @@ class Materializer:
         self.materialize(should_materialize)
 
 
+class AllMaterializer(Materializer):
+    
+
 class HeuristicsMaterializer(Materializer):
 
     def run(self):
@@ -138,7 +141,7 @@ class HeuristicsMaterializer(Materializer):
         """
         if self.use_n_pipelines:
             raise Exception('num pipeline is not supported yet')
-        graph = self.ee.history_graph.graph
+        graph = self.experiment_graph.graph
         rhos = self.compute_rhos()
         root_size = 0.0
         to_mat = []
@@ -148,7 +151,7 @@ class HeuristicsMaterializer(Materializer):
                 to_mat.append(n[0])
         should_materialize, remaining = self.select_nodes_to_materialize(rhos, self.storage_budget - root_size, to_mat)
 
-        total_node_size = self.ee.history_graph.get_size_of(should_materialize)
+        total_node_size = self.experiment_graph.get_size_of(should_materialize)
         remaining_budget = self.storage_budget - total_node_size
         if self.verbose:
             print 'state after heuristics based materialization'
@@ -169,7 +172,7 @@ class StorageAwareMaterializer(Materializer):
         root_size = 0.0
         to_materialize = []
 
-        for n in self.ee.history_graph.graph.nodes(data=True):
+        for n in self.experiment_graph.graph.nodes(data=True):
             if n[1]['root']:
                 root_size += n[1]['size']
                 to_materialize.append(n[0])
@@ -180,14 +183,14 @@ class StorageAwareMaterializer(Materializer):
             start_list = list(to_materialize)
 
             to_materialize, rhos = self.select_nodes_to_materialize(rhos, remaining_budget, to_materialize)
-            print 'current size: {}'.format(self.ee.history_graph.get_size_of(to_materialize))
+            print 'current size: {}'.format(self.experiment_graph.get_size_of(to_materialize))
             # if node new node is materialized, end the process
             if start_list == to_materialize:
                 break
             actual_size = self.mock_materialize(to_materialize, rhos)
             remaining_budget = self.storage_budget - actual_size
             if self.verbose:
-                total_node_size = self.ee.history_graph.get_size_of(to_materialize)
+                total_node_size = self.experiment_graph.get_size_of(to_materialize)
                 print 'state after iteration {}'.format(i)
                 print 'total size of materialized nodes: {}, actual on disk size: {}'.format(total_node_size,
                                                                                              actual_size)
@@ -201,7 +204,7 @@ class StorageAwareMaterializer(Materializer):
         to_keep = set()
         graph_size = 0
 
-        for node in self.ee.history_graph.graph.nodes(data=True):
+        for node in self.experiment_graph.graph.nodes(data=True):
             if node[1]['type'] == 'Dataset':
 
                 if node[0] in should_materialize:
@@ -217,7 +220,7 @@ class StorageAwareMaterializer(Materializer):
                     graph_size += node[1]['size']
 
         for rho in remaining_rhos:
-            node = self.ee.history_graph.graph.nodes[rho.node_id]
+            node = self.experiment_graph.graph.nodes[rho.node_id]
 
             if node['type'] == 'Feature':
                 if node['data'].c_hash in to_keep:
@@ -228,9 +231,9 @@ class StorageAwareMaterializer(Materializer):
                     if c not in to_keep:
                         cols.append(c)
 
-                rho.size = self.ee.data_storage.total_size(column_list=cols)
+                rho.size = self.experiment_graph.total_size(column_list=cols)
 
-        return self.ee.data_storage.total_size(column_list=to_keep) + graph_size
+        return self.experiment_graph.total_size(column_list=to_keep) + graph_size
 
 
 class RHO(object):

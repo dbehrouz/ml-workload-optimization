@@ -13,11 +13,35 @@ class Pandas(object):
         computes the size (if not computed already) and returns it
         :return:
         """
-        pass
+        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
+
+    @abstractmethod
+    def get_column(self):
+        """
+        return the list of the columns under the Pandas object
+        :return:
+        """
+        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
+
+    @abstractmethod
+    def get_column_hash(self):
+        """
+        return the list of the column hashes under the Pandas object
+        :return:
+        """
+        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
+
+    @abstractmethod
+    def get_data(self):
+        """
+        return the actual data
+        :return:
+        """
+        raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
 
 class DataFrame(Pandas):
-    def __init__(self, column_names, column_hashes, pandas_df):
+    def __init__(self, column_names, column_hashes, pandas_df=None):
         super(DataFrame, self).__init__()
         self.column_names = column_names
         self.column_hashes = column_hashes
@@ -29,6 +53,15 @@ class DataFrame(Pandas):
         if self.size is None:
             self.size = sum(self.pandas_df.memory_usage(index=True, deep=True)) / AS_KB
         return self.size
+
+    def get_column(self):
+        return self.column_names
+
+    def get_column_hash(self):
+        return self.column_hashes
+
+    def get_data(self):
+        return self.pandas_df
 
 
 class DataSeries(Pandas):
@@ -42,3 +75,12 @@ class DataSeries(Pandas):
         if self.size is None:
             self.size = self.pandas_series.memory_usage(index=True, deep=True) / AS_KB
         return self.size
+
+    def get_column(self):
+        return self.column_name
+
+    def get_column_hash(self):
+        return self.column_hash
+
+    def get_data(self):
+        return self.pandas_series
