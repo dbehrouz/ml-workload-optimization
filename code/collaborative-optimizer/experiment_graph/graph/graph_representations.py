@@ -195,9 +195,9 @@ class BaseGraph(object):
         return self.graph.nodes[node_id]
 
 
-class ExecutionGraph(BaseGraph):
+class WorkloadDag(BaseGraph):
     def __init__(self, graph=None, roots=None):
-        super(ExecutionGraph, self).__init__(graph, roots)
+        super(WorkloadDag, self).__init__(graph, roots)
         self.post_processed = False
 
     def post_process(self):

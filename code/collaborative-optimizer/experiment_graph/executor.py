@@ -36,8 +36,8 @@ class CollaborativeExecutor(Executor):
         """
         args['execution_environment'] = self.execution_environment
         workload.run(**args)
-        self.execution_environment.workload_graph.post_process()
-        self.execution_environment.experiment_graph.extend(self.execution_environment.workload_graph)
+        self.execution_environment.workload_dag.post_process()
+        self.execution_environment.experiment_graph.extend(self.execution_environment.workload_dag)
         # Materialize
         # Store the Dataset and Features in the Storage Manager
 

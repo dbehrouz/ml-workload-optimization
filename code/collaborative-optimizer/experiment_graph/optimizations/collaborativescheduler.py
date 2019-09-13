@@ -8,8 +8,8 @@ from abc import abstractmethod
 from datetime import datetime
 
 from Reuse import Reuse
-from experiment_graph.graph.execution_graph import ExecutionGraph
-from experiment_graph.graph.execution_graph import ExperimentGraph
+from experiment_graph.graph.graph_representations import WorkloadDag
+from experiment_graph.graph.graph_representations import ExperimentGraph
 
 
 class CollaborativeScheduler:
@@ -43,7 +43,7 @@ class CollaborativeScheduler:
     @staticmethod
     def retrieve_from_history(workload_dag, experiment_graph, node_id):
         """
-        :type workload_dag: ExecutionGraph
+        :type workload_dag: WorkloadDag
         :type experiment_graph: ExperimentGraph
         :type node_id: str
 

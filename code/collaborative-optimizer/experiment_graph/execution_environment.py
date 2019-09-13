@@ -1,7 +1,7 @@
 import cPickle as pickle
 import os
 
-from experiment_graph.graph.execution_graph import ExecutionGraph, ExperimentGraph
+from experiment_graph.graph.graph_representations import WorkloadDag, ExperimentGraph
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 from experiment_graph.graph.node import *
@@ -19,7 +19,7 @@ class ExecutionEnvironment(object):
     def __init__(self, storage_type='dedup', scheduler_type=HashBasedCollaborativeScheduler.NAME,
                  reuse_type=FastBottomUpReuse.NAME):
         self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
-        self.workload_graph = ExecutionGraph()
+        self.workload_dag = WorkloadDag()
         self.experiment_graph = ExperimentGraph(storage_type=storage_type)
         self.time_manager = dict()
 
@@ -41,7 +41,7 @@ class ExecutionEnvironment(object):
 
     def update_history(self):
         start = datetime.now()
-        self.experiment_graph.extend(self.workload_graph)
+        self.experiment_graph.extend(self.workload_dag)
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
@@ -84,8 +84,8 @@ class ExecutionEnvironment(object):
         environment
         :return:
         """
-        del self.workload_graph
-        self.workload_graph = ExecutionGraph()
+        del self.workload_dag
+        self.workload_dag = WorkloadDag()
         del self.time_manager
         self.time_manager = dict()
         scheduler_type = self.scheduler.NAME
@@ -115,13 +115,13 @@ class ExecutionEnvironment(object):
 
     def plot_graph(self, plt, graph_type='workload'):
         if graph_type == 'workload':
-            self.workload_graph.plot_graph(plt)
+            self.workload_dag.plot_graph(plt)
         else:
             self.experiment_graph.plot_graph(plt)
 
     def get_artifacts_size(self, graph_type='workload'):
         if graph_type == 'workload':
-            return self.workload_graph.get_artifact_sizes()
+            return self.workload_dag.get_artifact_sizes()
         else:
             return self.experiment_graph.get_artifact_sizes()
 
@@ -133,14 +133,14 @@ class ExecutionEnvironment(object):
             extra_params['nrows'] = nrows
 
         root_hash = self.construct_readable_root_hash(loc, extra_params)
-        if self.workload_graph.has_node(root_hash):
+        if self.workload_dag.has_node(root_hash):
             print 'the root node is in already the workload graph'
-            return self.workload_graph.get_node(root_hash)['data']
+            return self.workload_dag.get_node(root_hash)['data']
         elif self.experiment_graph.has_node(root_hash):
             print 'the root node is in already the history graph'
             root = copy.deepcopy(self.experiment_graph.graph.nodes[root_hash])
-            self.workload_graph.roots.append(root_hash)
-            self.workload_graph.add_node(root_hash, **root)
+            self.workload_dag.roots.append(root_hash)
+            self.workload_dag.add_node(root_hash, **root)
             return root['data']
         else:
             print 'creating a new root node'
@@ -165,16 +165,16 @@ class ExecutionEnvironment(object):
             size = nextnode.compute_size()
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
-            self.workload_graph.roots.append(root_hash)
-            self.workload_graph.add_node(root_hash, **{'root': True, 'type': 'Dataset', 'data': nextnode,
+            self.workload_dag.roots.append(root_hash)
+            self.workload_dag.add_node(root_hash, **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                                        'loc': loc,
                                                        'extra_params': extra_params,
                                                        'size': size})
             return nextnode
 
     def load_from_pandas(self, df, identifier):
-        if self.workload_graph.has_node(identifier):
-            return self.workload_graph.get_node(identifier)['data']
+        if self.workload_dag.has_node(identifier):
+            return self.workload_dag.get_node(identifier)['data']
         else:
             c_name = []
             c_hash = []
@@ -194,9 +194,9 @@ class ExecutionEnvironment(object):
             size = nextnode.compute_size()
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
-            self.workload_graph.roots.append(identifier)
-            self.workload_graph.add_node(identifier,
-                                         **{'root': True, 'type': 'Dataset', 'data': nextnode,
+            self.workload_dag.roots.append(identifier)
+            self.workload_dag.add_node(identifier,
+                                       **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                             'loc': identifier,
                                             'extra_params': 'load_from_memory',
                                             'size': size})

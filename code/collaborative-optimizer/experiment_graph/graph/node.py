@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score
 from auxilary import DataFrame, DataSeries
 # from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.benchmark_helper import BenchmarkMetrics
-from experiment_graph.graph.execution_graph import COMBINE_OPERATION_IDENTIFIER
+from experiment_graph.graph.graph_representations import COMBINE_OPERATION_IDENTIFIER
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -109,7 +109,7 @@ class Node(object):
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Agg(nextid, self.execution_environment)
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
@@ -124,7 +124,7 @@ class Node(object):
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = GroupBy(nextid, self.execution_environment)
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'oper': 'p_' + oper,
                                                                     'args': args,
@@ -153,12 +153,12 @@ class Node(object):
         edge_arguments['args'] = args
         edge_arguments['execution_time'] = -1
         edge_arguments['hash'] = edge_hash
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                    edge_arguments,
                                                                    ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_dataset_node(self, oper, args=None, v_id=None, c_name=None, c_hash=None):
+    def generate_dataset_node(self, oper, args=None, v_id=None):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         # c_name = [] if c_name is None else c_name
@@ -167,13 +167,13 @@ class Node(object):
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Dataset(nextid, self.execution_environment, underlying_data=None)
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': oper,
-                                                                    'oper': 'p_' + oper,
-                                                                    'execution_time': -1,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=Dataset.__name__)
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
+                                                                 {'name': oper,
+                                                                  'oper': 'p_' + oper,
+                                                                  'execution_time': -1,
+                                                                  'args': args,
+                                                                  'hash': edge_hash},
+                                                                 ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_feature_node(self, oper, args=None, v_id=None, c_name='', c_hash=''):
@@ -183,7 +183,7 @@ class Node(object):
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Feature(nextid, self.execution_environment, c_name, c_hash)
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'execution_time': -1,
                                                                     'oper': 'p_' + oper,
@@ -198,7 +198,7 @@ class Node(object):
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Evaluation(nextid, self.execution_environment)
-        exist = self.execution_environment.workload_graph.add_edge(v_id, nextid, nextnode,
+        exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                    {'name': oper,
                                                                     'execution_time': -1,
                                                                     'oper': 'p_' + oper,
@@ -215,9 +215,9 @@ class Node(object):
         # nextid = ''.join(involved_nodes)
         edge_hash = self.edge_hash(COMBINE_OPERATION_IDENTIFIER, args)
         nextid = self.vertex_hash(''.join(involved_nodes), edge_hash)
-        if not self.execution_environment.workload_graph.has_node(nextid):
+        if not self.execution_environment.workload_dag.has_node(nextid):
             nextnode = SuperNode(nextid, self.execution_environment, nodes)
-            self.execution_environment.workload_graph.add_node(nextid,
+            self.execution_environment.workload_dag.add_node(nextid,
                                                                **{'type': type(nextnode).__name__,
                                                                   'root': False,
                                                                   'data': nextnode,
@@ -227,7 +227,7 @@ class Node(object):
                 # this is to make sure each combined edge is a unique name
                 # This is also used by the optimizer to find the other node when combine
                 # edges are being examined
-                self.execution_environment.workload_graph.graph.add_edge(n.id, nextid,
+                self.execution_environment.workload_dag.graph.add_edge(n.id, nextid,
                                                                          # combine is a reserved word
                                                                          **{'name': COMBINE_OPERATION_IDENTIFIER,
                                                                             'oper': COMBINE_OPERATION_IDENTIFIER,
@@ -237,7 +237,7 @@ class Node(object):
             return nextnode
         else:
             # TODO: add the update rule (even though it has no effect)
-            return self.execution_environment.workload_graph.graph.nodes[nextid]['data']
+            return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
     def store_dataframe(self, columns, df):
         self.execution_environment.data_storage.store_dataframe(columns, df)
@@ -295,7 +295,7 @@ class Agg(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.experiment_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True
@@ -348,7 +348,7 @@ class Dataset(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.experiment_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
 
@@ -767,7 +767,7 @@ class Evaluation(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.experiment_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True
@@ -803,7 +803,7 @@ class Feature(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.experiment_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True
@@ -814,7 +814,7 @@ class Feature(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.experiment_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True
@@ -973,7 +973,7 @@ class Feature(Node):
 
     # TODO what happened here?
     def isnull(self):
-        self.execution_environment.workload_graph.add_edge(self.id,
+        self.execution_environment.workload_dag.add_edge(self.id,
                                                            {'oper': self.edge_hash('isnull'),
                                                             'hash': self.edge_hash('isnull')},
                                                            ntype=type(self).__name__)
@@ -1125,7 +1125,7 @@ class GroupBy(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.history_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True
@@ -1262,7 +1262,7 @@ class SK_Model(Node):
         if not self.computed:
             self.execution_environment.scheduler.schedule(
                 self.execution_environment.history_graph,
-                self.execution_environment.workload_graph,
+                self.execution_environment.workload_dag,
                 self.id,
                 verbose)
             self.computed = True

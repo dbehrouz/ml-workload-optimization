@@ -128,7 +128,10 @@ class Materializer:
 
 
 class AllMaterializer(Materializer):
-    
+
+    def run(self):
+        pass
+
 
 class HeuristicsMaterializer(Materializer):
 
