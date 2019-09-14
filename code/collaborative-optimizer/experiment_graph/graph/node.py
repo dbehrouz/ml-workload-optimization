@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score
 from auxilary import DataFrame, DataSeries
 # from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.benchmark_helper import BenchmarkMetrics
-from experiment_graph.graph.graph_representations import COMBINE_OPERATION_IDENTIFIER
+from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -110,11 +110,11 @@ class Node(object):
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Agg(nextid, self.execution_environment)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': oper,
-                                                                    'oper': 'p_' + oper,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=Agg.__name__)
+                                                                 {'name': oper,
+                                                                  'oper': 'p_' + oper,
+                                                                  'args': args,
+                                                                  'hash': edge_hash},
+                                                                 ntype=Agg.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_groupby_node(self, oper, args=None, v_id=None):
@@ -125,11 +125,11 @@ class Node(object):
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = GroupBy(nextid, self.execution_environment)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': oper,
-                                                                    'oper': 'p_' + oper,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=GroupBy.__name__)
+                                                                 {'name': oper,
+                                                                  'oper': 'p_' + oper,
+                                                                  'args': args,
+                                                                  'hash': edge_hash},
+                                                                 ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_sklearn_node(self, oper, args=None, v_id=None, should_warmstart=False):
@@ -154,8 +154,8 @@ class Node(object):
         edge_arguments['execution_time'] = -1
         edge_arguments['hash'] = edge_hash
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
-                                                                   edge_arguments,
-                                                                   ntype=SK_Model.__name__)
+                                                                 edge_arguments,
+                                                                 ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_dataset_node(self, oper, args=None, v_id=None):
@@ -166,7 +166,7 @@ class Node(object):
         # nextid = self.generate_uuid()
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = Dataset(nextid, self.execution_environment, underlying_data=None)
+        nextnode = Dataset(nextid, self.execution_environment)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
@@ -176,20 +176,20 @@ class Node(object):
                                                                  ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_feature_node(self, oper, args=None, v_id=None, c_name='', c_hash=''):
+    def generate_feature_node(self, oper, args=None, v_id=None):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         # nextid = self.generate_uuid()
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = Feature(nextid, self.execution_environment, c_name, c_hash)
+        nextnode = Feature(nextid, self.execution_environment)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': oper,
-                                                                    'execution_time': -1,
-                                                                    'oper': 'p_' + oper,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=type(nextnode).__name__)
+                                                                 {'name': oper,
+                                                                  'execution_time': -1,
+                                                                  'oper': 'p_' + oper,
+                                                                  'args': args,
+                                                                  'hash': edge_hash},
+                                                                 ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_evaluation_node(self, oper, args=None, v_id=None):
@@ -199,12 +199,12 @@ class Node(object):
         nextid = self.vertex_hash(v_id, edge_hash)
         nextnode = Evaluation(nextid, self.execution_environment)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
-                                                                   {'name': oper,
-                                                                    'execution_time': -1,
-                                                                    'oper': 'p_' + oper,
-                                                                    'args': args,
-                                                                    'hash': edge_hash},
-                                                                   ntype=type(nextnode).__name__)
+                                                                 {'name': oper,
+                                                                  'execution_time': -1,
+                                                                  'oper': 'p_' + oper,
+                                                                  'args': args,
+                                                                  'hash': edge_hash},
+                                                                 ntype=type(nextnode).__name__)
         return self.get_not_none(nextnode, exist)
 
     def generate_super_node(self, nodes, args=None):
@@ -218,22 +218,22 @@ class Node(object):
         if not self.execution_environment.workload_dag.has_node(nextid):
             nextnode = SuperNode(nextid, self.execution_environment, nodes)
             self.execution_environment.workload_dag.add_node(nextid,
-                                                               **{'type': type(nextnode).__name__,
-                                                                  'root': False,
-                                                                  'data': nextnode,
-                                                                  'size': 0,
-                                                                  'involved_nodes': involved_nodes})
+                                                             **{'type': type(nextnode).__name__,
+                                                                'root': False,
+                                                                'data': nextnode,
+                                                                'size': 0,
+                                                                'involved_nodes': involved_nodes})
             for n in nodes:
                 # this is to make sure each combined edge is a unique name
                 # This is also used by the optimizer to find the other node when combine
                 # edges are being examined
                 self.execution_environment.workload_dag.graph.add_edge(n.id, nextid,
-                                                                         # combine is a reserved word
-                                                                         **{'name': COMBINE_OPERATION_IDENTIFIER,
-                                                                            'oper': COMBINE_OPERATION_IDENTIFIER,
-                                                                            'execution_time': 0,
-                                                                            'args': args,
-                                                                            'hash': edge_hash})
+                                                                       # combine is a reserved word
+                                                                       **{'name': COMBINE_OPERATION_IDENTIFIER,
+                                                                          'oper': COMBINE_OPERATION_IDENTIFIER,
+                                                                          'execution_time': 0,
+                                                                          'args': args,
+                                                                          'hash': edge_hash})
             return nextnode
         else:
             # TODO: add the update rule (even though it has no effect)
@@ -280,13 +280,13 @@ class Node(object):
 
 class Agg(Node):
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
-        self.data_obj = data_obj
+        self.underlying_data = underlying_data
 
     def clear_content(self):
-        del self.data_obj
-        self.data_obj = None
+        del self.underlying_data
+        self.underlying_data = None
         self.computed = False
         self.size = 0.0
 
@@ -302,13 +302,13 @@ class Agg(Node):
         return self.get_materialized_data()
 
     def get_materialized_data(self):
-        return self.data_obj
+        return self.underlying_data
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
-            self.size = asizeof.asizeof(self.data_obj) / AS_KB
+            self.size = asizeof.asizeof(self.underlying_data) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size
@@ -367,8 +367,6 @@ class Dataset(Node):
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
-            # self.size = self.execution_environment.data_storage.compute_size(self.c_hash)
-            # self.size = sum(self.u_data.memory_usage(index=True, deep=True)) / AS_KB
             self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
@@ -743,22 +741,22 @@ class Dataset(Node):
 
 class Evaluation(Node):
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
-        self.data_obj = data_obj
+        self.underlying_data = underlying_data
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
-            self.size = asizeof.asizeof(self.data_obj) / AS_KB
+            self.size = asizeof.asizeof(self.underlying_data) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size
 
     def clear_content(self):
-        del self.data_obj
-        self.data_obj = None
+        del self.underlying_data
+        self.underlying_data = None
         self.computed = False
         self.size = 0.0
 
@@ -774,7 +772,7 @@ class Evaluation(Node):
         return self.get_materialized_data()
 
     def get_materialized_data(self):
-        return self.data_obj
+        return self.underlying_data
 
 
 class Feature(Node):
@@ -974,9 +972,9 @@ class Feature(Node):
     # TODO what happened here?
     def isnull(self):
         self.execution_environment.workload_dag.add_edge(self.id,
-                                                           {'oper': self.edge_hash('isnull'),
-                                                            'hash': self.edge_hash('isnull')},
-                                                           ntype=type(self).__name__)
+                                                         {'oper': self.edge_hash('isnull'),
+                                                          'hash': self.edge_hash('isnull')},
+                                                         ntype=type(self).__name__)
 
     def notna(self):
         return self.generate_feature_node('notna')
@@ -1110,13 +1108,13 @@ class Feature(Node):
 # TODO dataset/Feature as a result we are just storing the data in the graph for no reason
 class GroupBy(Node):
 
-    def __init__(self, node_id, execution_environment, data_obj=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
-        self.data_obj = data_obj
+        self.underlying_data = underlying_data
 
     def clear_content(self):
-        del self.data_obj
-        self.data_obj = None
+        del self.underlying_data
+        self.underlying_data = None
         self.computed = False
         self.size = 0.0
 
@@ -1132,7 +1130,7 @@ class GroupBy(Node):
         return self.get_materialized_data()
 
     def get_materialized_data(self):
-        return self.data_obj
+        return self.underlying_data
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
@@ -1238,15 +1236,15 @@ class GroupBy(Node):
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, execution_environment, data_obj=None,
+    def __init__(self, node_id, execution_environment, underlying_data=None,
                  size=0.0):
         Node.__init__(self, node_id, execution_environment, size)
-        self.data_obj = data_obj
+        self.underlying_data = underlying_data
         self.model_score = 0.0
 
     def clear_content(self):
-        del self.data_obj
-        self.data_obj = None
+        del self.underlying_data
+        self.underlying_data = None
         self.computed = False
         self.size = 0.0
         self.model_score = 0.0
@@ -1269,13 +1267,13 @@ class SK_Model(Node):
         return self.get_materialized_data()
 
     def get_materialized_data(self):
-        return self.data_obj
+        return self.underlying_data
 
     def compute_size(self):
         if self.computed and self.size == 0.0:
             start = datetime.now()
             from pympler import asizeof
-            self.size = asizeof.asizeof(self.data_obj) / AS_KB
+            self.size = asizeof.asizeof(self.underlying_data) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size

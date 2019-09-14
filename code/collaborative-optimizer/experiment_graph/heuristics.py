@@ -1,11 +1,10 @@
 import networkx as nx
 
 
-def compute_recreation_cost(graph, modify_graph=True):
+def compute_recreation_cost(graph):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
     recreation_cost(v) = v['meta_freq'] * sum[e['execution_time'] for e in  path(v_0, v)]
-    :type modify_graph: bool
     :type graph: nx.DiGraph
     """
     recreation_cost = {node: -1 for node in graph.nodes}
@@ -21,14 +20,13 @@ def compute_recreation_cost(graph, modify_graph=True):
                     cost += recreation_cost[source] + exec_time
             recreation_cost[n] = cost
 
-    if modify_graph:
-        for n in graph.nodes(data=True):
-            n[1]['recreation_cost'] = recreation_cost[n[0]]
+    for n in graph.nodes(data=True):
+        n[1]['recreation_cost'] = recreation_cost[n[0]]
 
     return recreation_cost
 
 
-def compute_vertex_potential(graph, modify_graph=True):
+def compute_vertex_potential(graph):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper
     TODO we should make sure non-predictive models are treated properly
@@ -66,7 +64,7 @@ def compute_vertex_potential(graph, modify_graph=True):
     for n in reversed(list(nx.topological_sort(graph))):
         current_score = potentials[n]
         if current_score > 0:
-            # The node is a ml model
+            # The node is a ml model, direct evaluation node or a direct test node
             total_score += current_score
         else:
             best_potential_among_neighbors = -1
@@ -98,9 +96,9 @@ def compute_vertex_potential(graph, modify_graph=True):
     for k, v in potentials.iteritems():
         if v == -1:
             potentials[k] = default
-    if modify_graph:
-        for n in graph.nodes(data=True):
-            n[1]['potential'] = potentials[n[0]]
+
+    for n in graph.nodes(data=True):
+        n[1]['potential'] = potentials[n[0]]
 
     return potentials
 

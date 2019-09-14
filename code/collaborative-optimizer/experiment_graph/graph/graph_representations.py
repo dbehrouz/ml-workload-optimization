@@ -10,8 +10,8 @@ import numpy as np
 # TODO: make file with all the global names
 from auxilary import DataFrame, DataSeries
 from experiment_graph.data_storage import DedupedStorageManager, SimpleStorageManager
-
-COMBINE_OPERATION_IDENTIFIER = 'combine'
+from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
+from node import Feature, Dataset
 
 
 class BaseGraph(object):
@@ -326,7 +326,7 @@ class WorkloadDag(BaseGraph):
                     # all the other node types they contain the data themselves
                     else:
                         start_time = datetime.now()
-                        cur_node['data'].data_obj = self.compute_next(prev_node, edge)
+                        cur_node['data'].underlying_data = self.compute_next(prev_node, edge)
                         cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
                         if cur_node['type'] == 'GroupBy':
@@ -430,31 +430,45 @@ class ExperimentGraph(BaseGraph):
                               column_hash=node['data'].underlying_data.get_column_hash(),
                               pandas_series=self.data_storage.get(node_id))
         else:
-            return copy.deepcopy(self.graph.nodes[node_id]['data'].underlying_data)
+            return copy.deepcopy(self.graph.nodes[node_id]['data'])
 
     def get_real_size(self):
         return self.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
                                        mat_only=True) + self.data_storage.total_size()
 
-    def persist_underlying_data(self, node_id, underlying_data):
+    def materialize(self, node_id, artifact):
+
+        if node_id not in self.graph:
+            raise Exception('Node not present in the Experiment Graph')
+        else:
+            node = self.graph.nodes[node_id]
+            if node['type'] == 'Dataset':
+                assert isinstance(artifact, Dataset)
+                # or node['type'] == 'Feature':
+                self.data_storage.put(node_id, artifact.underlying_data)
+                artifact.underlying_data.pandas_df = None
+                node['data'] = copy.copy(artifact)
+
+            elif node['type'] == 'Feature':
+                assert isinstance(artifact, Feature)
+                self.data_storage.put(node_id, artifact.underlying_data)
+                artifact.underlying_data.pandas_series = None
+                node['data'] = copy.copy(artifact)
+            else:
+                node['data'] = copy.copy(artifact)
+
+            node['mat'] = True
+
+    def unmaterialize(self, node_id):
         if node_id not in self.graph:
             raise Exception('Node not present in the Experiment Graph')
         else:
             node = self.graph.nodes[node_id]
             if node['type'] == 'Dataset' or node['type'] == 'Feature':
-                if isinstance(underlying_data, DataFrame):
-                    node['data'].underlying_data = DataFrame(column_names=underlying_data.get_column(),
-                                                             column_hashes=underlying_data.get_column_hash(),
-                                                             pandas_df=None)
-                elif isinstance(underlying_data, DataSeries):
-                    node['data'].underlying_data = DataSeries(column_name=underlying_data.get_column(),
-                                                              column_hash=underlying_data.get_column_hash(),
-                                                              pandas_series=None)
-
-                self.data_storage.put(node_id, underlying_data)
+                self.data_storage.delete(node_id)
             else:
-                node['data'].underlying_data = underlying_data
-            node['mat'] = True
+                node['data'].underlying_data = None
+            node['mat'] = False
 
     def extend(self, workload):
         # make sure the workload graph is post processed, i.e., the model scores are added to the graph
@@ -465,10 +479,14 @@ class ExperimentGraph(BaseGraph):
 
         for node_id, node_attributes in workload.graph.nodes(data=True):
             if node_id not in self.graph.nodes:
-                attr = node_attributes
-                attr['data'] = None
-                attr['meta_freq'] = 1
-                self.graph.add_node(node_id, **attr)
+                eg_attributes = {}
+                for k, v in node_attributes.iteritems():
+                    if k != 'data':
+                        eg_attributes[k] = copy.deepcopy(v)
+                eg_attributes['data'] = None
+                eg_attributes['meta_freq'] = 1
+                eg_attributes['mat'] = False
+                self.graph.add_node(node_id, **eg_attributes)
             else:
                 self.graph.nodes[node_id]['meta_freq'] += 1
         self.graph.add_edges_from(workload.graph.edges(data=True))

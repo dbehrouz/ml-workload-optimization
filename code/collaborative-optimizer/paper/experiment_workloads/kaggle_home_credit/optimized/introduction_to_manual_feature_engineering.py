@@ -12,7 +12,7 @@ from datetime import datetime
 
 import matplotlib
 
-from executor import CollaborativeExecutor
+from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -33,6 +33,7 @@ class introduction_to_manual_feature_engineering(Workload):
     def run(self, execution_environment, root_data, verbose=0):
         # Read in bureau
         bureau = execution_environment.load(root_data + '/kaggle_home_credit/bureau.csv')
+        bureau['SK_ID_BUREAU'].data()
         bureau.head().data(verbose=verbose)
         previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count().rename(
             columns={'SK_ID_BUREAU': 'previous_loan_counts'})
@@ -44,55 +45,55 @@ class introduction_to_manual_feature_engineering(Workload):
         train = train.merge(previous_loan_counts, on='SK_ID_CURR', how='left')
 
         train = train.replace_columns('previous_loan_counts', train['previous_loan_counts'].fillna(0))
-        train.head().data(verbose=verbose)
-
-        # Plots the distribution of a variable colored by value of the target
-        def kde_target(var_name, df):
-            # Calculate the correlation coefficient between the new variable and the target
-            corr = df['TARGET'].corr(df[var_name])
-
-            # Calculate medians for repaid vs not repaid
-            avg_repaid = df[df['TARGET'] == 0][var_name].median()
-            avg_not_repaid = df[df['TARGET'] == 1][var_name].median()
-
-            plt.figure(figsize=(12, 6))
-
-            # Plot the distribution for target == 0 and target == 1
-            sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(verbose=verbose), label='TARGET == 0')
-            sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(verbose=verbose), label='TARGET == 1')
-
-            # label the plot
-            plt.xlabel(var_name)
-            plt.ylabel('Density')
-            plt.title('%s Distribution' % var_name)
-            plt.legend()
-
-            # print out the correlation
-            print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
-            # Print out average values
-            print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
-            print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
-
-        kde_target('EXT_SOURCE_3', train)
-
-        kde_target('previous_loan_counts', train)
-
-        # Group by the client id, calculate aggregation statistics
-        bureau_agg = bureau.drop(columns=['SK_ID_BUREAU']).groupby('SK_ID_CURR').agg(
-            ['count', 'mean', 'max', 'min', 'sum'])
-        columns = []
-        bureau_agg_cols = bureau_agg.data(verbose=verbose).columns
-        for c in bureau_agg_cols:
-            if c != 'SK_ID_CURR':
-                columns.append('bureau_{}'.format(c))
-            else:
-                columns.append(c)
-        bureau_agg = bureau_agg.set_columns(columns)
-        bureau_agg.head().data(verbose=verbose)
-
-        # Merge with the training data
-        train = train.merge(bureau_agg, on='SK_ID_CURR', how='left')
-        train.head().data(verbose=verbose)
+        print train.head().data(verbose=verbose)
+        #
+        # # Plots the distribution of a variable colored by value of the target
+        # def kde_target(var_name, df):
+        #     # Calculate the correlation coefficient between the new variable and the target
+        #     corr = df['TARGET'].corr(df[var_name])
+        #
+        #     # Calculate medians for repaid vs not repaid
+        #     avg_repaid = df[df['TARGET'] == 0][var_name].median()
+        #     avg_not_repaid = df[df['TARGET'] == 1][var_name].median()
+        #
+        #     plt.figure(figsize=(12, 6))
+        #
+        #     # Plot the distribution for target == 0 and target == 1
+        #     sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(verbose=verbose), label='TARGET == 0')
+        #     sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(verbose=verbose), label='TARGET == 1')
+        #
+        #     # label the plot
+        #     plt.xlabel(var_name)
+        #     plt.ylabel('Density')
+        #     plt.title('%s Distribution' % var_name)
+        #     plt.legend()
+        #
+        #     # print out the correlation
+        #     print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
+        #     # Print out average values
+        #     print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
+        #     print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
+        #
+        # kde_target('EXT_SOURCE_3', train)
+        #
+        # kde_target('previous_loan_counts', train)
+        #
+        # # Group by the client id, calculate aggregation statistics
+        # bureau_agg = bureau.drop(columns=['SK_ID_BUREAU']).groupby('SK_ID_CURR').agg(
+        #     ['count', 'mean', 'max', 'min', 'sum'])
+        # columns = []
+        # bureau_agg_cols = bureau_agg.data(verbose=verbose).columns
+        # for c in bureau_agg_cols:
+        #     if c != 'SK_ID_CURR':
+        #         columns.append('bureau_{}'.format(c))
+        #     else:
+        #         columns.append(c)
+        # bureau_agg = bureau_agg.set_columns(columns)
+        # bureau_agg.head().data(verbose=verbose)
+        #
+        # # Merge with the training data
+        # train = train.merge(bureau_agg, on='SK_ID_CURR', how='left')
+        # train.head().data(verbose=verbose)
 
         # # List of new correlations
         # new_corrs = []
@@ -631,10 +632,10 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     DATABASE_PATH = ROOT_DATA + '/experiment_graphs/kaggle_home_credit/materialized-no-groupby'
-
-    # ee.load_history_from_disk(DATABASE_PATH)
+    print 'run 1'
     executor.run(workload=workload, root_data=ROOT_DATA, verbose=1)
-    # ee.save_history(DATABASE_PATH, overwrite=True)
+    print 'run 2'
+    executor.run(workload=workload, root_data=ROOT_DATA, verbose=1)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
