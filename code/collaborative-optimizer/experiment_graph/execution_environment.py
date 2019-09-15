@@ -163,14 +163,14 @@ class ExecutionEnvironment(object):
             df = DataFrame(column_names=c_name, column_hashes=c_hash, pandas_df=initial_data[c_name])
             nextnode = Dataset(root_hash, self, underlying_data=df)
             node_size_start = datetime.now()
-            size = nextnode.compute_size()
+            # size = nextnode.compute_size()
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
             self.workload_dag.roots.append(root_hash)
             self.workload_dag.add_node(root_hash, **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                                      'loc': loc,
                                                      'extra_params': extra_params,
-                                                     'size': size})
+                                                     'size': None})
             return nextnode
 
     def load_from_pandas(self, df, identifier):
@@ -192,7 +192,7 @@ class ExecutionEnvironment(object):
             nextnode = Dataset(identifier, self, underlying_data=df)
             nextnode.computed = True
             node_size_start = datetime.now()
-            size = nextnode.compute_size()
+            # size = nextnode.compute_size()
             self.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                              (datetime.now() - node_size_start).total_seconds())
             self.workload_dag.roots.append(identifier)
@@ -200,5 +200,5 @@ class ExecutionEnvironment(object):
                                        **{'root': True, 'type': 'Dataset', 'data': nextnode,
                                           'loc': identifier,
                                           'extra_params': 'load_from_memory',
-                                          'size': size})
+                                          'size': None})
             return nextnode

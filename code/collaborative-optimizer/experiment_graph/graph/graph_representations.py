@@ -207,11 +207,19 @@ class WorkloadDag(BaseGraph):
         """
         # for node in self.graph.nodes(data=True):
         #     node[1]['freq'] = node[1]['data'].get_freq()
-        for node in self.graph.nodes(data=True):
-            if node[1]['type'] == 'SK_Model':
-                node[1]['score'] = node[1]['data'].get_model_score()
-            if node[1]['type'] is not 'SuperNode':
-                node[1]['data'].compute_size()
+        prev_node = None
+        for n in list(nx.topological_sort(self.graph)):
+            node = self.graph.nodes[n]
+            if node['type'] == 'SK_Model':
+                node['score'] = node['data'].get_model_score()
+            if node['type'] == 'GroupBy':
+                node['size'] = prev_node['size']
+                # cur_node['data'].set_size(prev_node['size'])
+            elif node['type'] is not 'SuperNode':
+                node['size'] = node['data'].compute_size()
+            else:
+                node['size'] = None
+            prev_node = node
 
         self.post_processed = True
 
@@ -325,25 +333,18 @@ class WorkloadDag(BaseGraph):
                         cur_node['data'].underlying_data = self.compute_next(prev_node, edge)
                         cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
-                        cur_node['size'] = cur_node['data'].compute_size()
+                        # cur_node['size'] = cur_node['data'].compute_size()
                     # all the other node types they contain the data themselves
                     else:
                         start_time = datetime.now()
                         cur_node['data'].underlying_data = self.compute_next(prev_node, edge)
                         cur_node['data'].computed = True
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
-                        if cur_node['type'] == 'GroupBy':
-                            # TODO It's not easy to figure out a groupby objects size
-                            # but it seems it is very similar to the input dataframe that groupby
-                            # was applied to, so for now we the set the size to the previous one
-                            cur_node['size'] = prev_node['size']
-                            cur_node['data'].set_size(prev_node['size'])
-                        else:
-                            cur_node['size'] = cur_node['data'].compute_size()
+
                     edge['execution_time'] = total_time
             else:
                 edge['execution_time'] = 0.0
-                cur_node['size'] = 0.0
+                cur_node['size'] = None
         return schedule
 
     def compute_result(self, v_id, verbose=0):

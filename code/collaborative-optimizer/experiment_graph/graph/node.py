@@ -288,7 +288,7 @@ class Agg(Node):
         del self.underlying_data
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
 
     def data(self, verbose=0):
         self.update_freq()
@@ -305,7 +305,7 @@ class Agg(Node):
         return self.underlying_data
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.underlying_data) / AS_KB
@@ -341,7 +341,7 @@ class Dataset(Node):
         del self.underlying_data
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
 
     def data(self, verbose=0):
         self.update_freq()
@@ -365,7 +365,7 @@ class Dataset(Node):
         return self.underlying_data.column_hashes
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             start = datetime.now()
             self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -746,7 +746,7 @@ class Evaluation(Node):
         self.underlying_data = underlying_data
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.underlying_data) / AS_KB
@@ -758,7 +758,7 @@ class Evaluation(Node):
         del self.underlying_data
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
 
     def data(self, verbose=0):
         self.update_freq()
@@ -795,7 +795,7 @@ class Feature(Node):
     def clear_content(self):
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
 
     def dtype(self, verbose=0):
         if not self.computed:
@@ -828,7 +828,7 @@ class Feature(Node):
         return self.underlying_data.column_hash
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             start = datetime.now()
             self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -1116,7 +1116,7 @@ class GroupBy(Node):
         del self.underlying_data
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
 
     def data(self, verbose=0):
         self.update_freq()
@@ -1133,7 +1133,7 @@ class GroupBy(Node):
         return self.underlying_data
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             raise Exception('Groupby objects size should be set using the set_size command first')
 
     def set_size(self, size):
@@ -1246,7 +1246,7 @@ class SK_Model(Node):
         del self.underlying_data
         self.underlying_data = None
         self.computed = False
-        self.size = 0.0
+        self.size = None
         self.model_score = 0.0
 
     def set_model_score(self, model_score):
@@ -1270,7 +1270,7 @@ class SK_Model(Node):
         return self.underlying_data
 
     def compute_size(self):
-        if self.computed and self.size == 0.0:
+        if self.computed and self.size is None:
             start = datetime.now()
             from pympler import asizeof
             self.size = asizeof.asizeof(self.underlying_data) / AS_KB
