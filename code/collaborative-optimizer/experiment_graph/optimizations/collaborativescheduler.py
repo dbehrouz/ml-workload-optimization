@@ -51,7 +51,7 @@ class CollaborativeScheduler:
         underlying_data = experiment_graph.retrieve_data(node_id)
         workload_node = workload_dag.graph.nodes[node_id]
         workload_node['data'].computed = True
-        workload_node['size'] = experiment_graph.graph[node_id]['size']
+        workload_node['size'] = experiment_graph.graph.nodes[node_id]['size']
         workload_node['data'].underlying_data = underlying_data
 
     @staticmethod
@@ -102,10 +102,10 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
         materialized_vertices, execution_vertices, warmstarting_candidates, total_history_graph_reads = \
-            self.reuse().run(
+            self.reuse().end_to_end_run(
                 vertex=vertex,
-                workload=workload,
-                history=history,
+                workload_dag=workload,
+                experiment_graph=history,
                 verbose=verbose)
         self.history_reads += total_history_graph_reads
         for m in materialized_vertices:

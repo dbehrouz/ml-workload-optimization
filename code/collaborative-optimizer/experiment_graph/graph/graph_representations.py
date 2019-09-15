@@ -98,8 +98,8 @@ class BaseGraph(object):
             ax.scatter(None, None, color=color_map[label], label=label)
 
         # TODO there's a problem with nodelist=...., the node type and legends dont match
-        materialized_nodes = [n[0] for n in self.graph.node(data='data') if n[1].computed]
-        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if n[1]['data'].computed]
+        materialized_nodes = [n[0] for n in self.graph.node(data='data') if n[1] is not None]
+        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if n[1]['data'] is not None]
         nx.draw_networkx(
             self.graph,
             node_size=vertex_size,
@@ -113,8 +113,8 @@ class BaseGraph(object):
             with_labels=False,
             ax=ax)
 
-        non_materialized_nodes = [n[0] for n in self.graph.node(data='data') if not n[1].computed]
-        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if not n[1]['data'].computed]
+        non_materialized_nodes = [n[0] for n in self.graph.node(data='data') if n[1] is None]
+        all_colors = [color_map[n[1]['type']] for n in self.graph.nodes(data=True) if n[1]['data'] is None]
         nx.draw_networkx(
             self.graph,
             edgelist=[],
@@ -210,6 +210,9 @@ class WorkloadDag(BaseGraph):
         for node in self.graph.nodes(data=True):
             if node[1]['type'] == 'SK_Model':
                 node[1]['score'] = node[1]['data'].get_model_score()
+            if node[1]['type'] is not 'SuperNode':
+                node[1]['data'].compute_size()
+
         self.post_processed = True
 
     def brute_force_compute_paths(self, vertex):
@@ -437,10 +440,12 @@ class ExperimentGraph(BaseGraph):
                                        mat_only=True) + self.data_storage.total_size()
 
     def materialize(self, node_id, artifact):
-
         if node_id not in self.graph:
             raise Exception('Node not present in the Experiment Graph')
         else:
+            if not artifact.computed:
+                print 'warning: artifact {} is never computed in the workload dag'.format(node_id)
+                return
             node = self.graph.nodes[node_id]
             if node['type'] == 'Dataset':
                 assert isinstance(artifact, Dataset)
@@ -478,15 +483,34 @@ class ExperimentGraph(BaseGraph):
         self.roots = list(set(self.roots + workload.roots))
 
         for node_id, node_attributes in workload.graph.nodes(data=True):
-            if node_id not in self.graph.nodes:
-                eg_attributes = {}
-                for k, v in node_attributes.iteritems():
-                    if k != 'data':
-                        eg_attributes[k] = copy.deepcopy(v)
-                eg_attributes['data'] = None
-                eg_attributes['meta_freq'] = 1
-                eg_attributes['mat'] = False
-                self.graph.add_node(node_id, **eg_attributes)
-            else:
-                self.graph.nodes[node_id]['meta_freq'] += 1
-        self.graph.add_edges_from(workload.graph.edges(data=True))
+            # Only artifacts which are computed should be updated
+            if node_attributes['data'].computed:
+                self.add_node_to_experiment_graph(node_id, node_attributes)
+
+            # Supernodes by are never computed, we add them when all the incoming nodes should be computed
+            elif node_attributes['type'] == 'SuperNode':
+                involved_nodes = node_attributes['involved_nodes']
+                should_add = True
+                for n in involved_nodes:
+                    if not workload.graph.nodes[n]['data'].computed:
+                        should_add = False
+                if should_add:
+                    self.add_node_to_experiment_graph(node_id, node_attributes)
+
+        for s, d, data in workload.graph.edges(data=True):
+            if s in self.graph.nodes and d in self.graph.nodes:
+                self.graph.add_edge(s, d, **data)
+        # self.graph.add_edges_from(workload.graph.edges(data=True))
+
+    def add_node_to_experiment_graph(self, node_id, node_attributes):
+        if node_id not in self.graph.nodes:
+            eg_attributes = {}
+            for k, v in node_attributes.iteritems():
+                if k != 'data':
+                    eg_attributes[k] = copy.deepcopy(v)
+            eg_attributes['data'] = None
+            eg_attributes['meta_freq'] = 1
+            eg_attributes['mat'] = False
+            self.graph.add_node(node_id, **eg_attributes)
+        else:
+            self.graph.nodes[node_id]['meta_freq'] += 1

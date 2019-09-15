@@ -43,7 +43,7 @@ for i in range(len(WORKLOADS)):
     execution_start = datetime.now()
     print '{}-Start of the Optimized Workload'.format(execution_start)
     optimized_workload = import_module(EXPERIMENT + '.optimized.' + WORKLOADS[i])
-    model_training_time = optimized_workload.run(ee, ROOT_DATA_DIRECTORY)
+    model_training_time = optimized_workload.end_to_end_run(ee, ROOT_DATA_DIRECTORY)
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
 
@@ -65,7 +65,7 @@ for i in range(len(WORKLOADS)):
     execution_start = datetime.now()
     print '{}-Start of the Baseline Workload'.format(execution_start)
     baseline_workload = import_module(EXPERIMENT + '.baseline.' + WORKLOADS[i])
-    baseline_workload.run(ROOT_DATA_DIRECTORY)
+    baseline_workload.end_to_end_run(ROOT_DATA_DIRECTORY)
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
     print '{}-End of Baseline Workload in {} seconds'.format(execution_end, elapsed)

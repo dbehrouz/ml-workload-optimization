@@ -35,7 +35,7 @@ MAT_RATES = [float(m) for m in parser.get('mat_rates', '1.0').split(',')]
 ee = ExecutionEnvironment()
 ee.new_workload()
 optimized_workload = import_module('paper.experiment_workloads.' + EXPERIMENT + '.optimized.' + WORKLOAD)
-optimized_workload.run(ee, ROOT_DATA_DIRECTORY, verbose=verbose)
+optimized_workload.end_to_end_run(ee, ROOT_DATA_DIRECTORY, verbose=verbose)
 ee.update_history()
 
 for rate in MAT_RATES:

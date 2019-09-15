@@ -53,7 +53,7 @@ rep = int(parser.get('rep', 1))
 def run(experiment_env):
     experiment_env.new_workload()
     optimized_workload = import_module('paper.experiment_workloads.' + EXPERIMENT + '.optimized.' + WORKLOAD)
-    optimized_workload.run(experiment_env, ROOT_DATA_DIRECTORY, verbose=verbose)
+    optimized_workload.end_to_end_run(experiment_env, ROOT_DATA_DIRECTORY, verbose=verbose)
     experiment_env.update_history()
 
 
@@ -112,7 +112,7 @@ else:
     default_start = datetime.now()
     print '{}-Start of the Baseline Workload'.format(default_start)
     baseline_workload = import_module('paper.experiment_workloads.' + EXPERIMENT + '.baseline.' + WORKLOAD)
-    baseline_workload.run(ROOT_DATA_DIRECTORY)
+    baseline_workload.end_to_end_run(ROOT_DATA_DIRECTORY)
     default_end = datetime.now()
     elapsed = (default_end - default_start).total_seconds()
     print '{}-End of Baseline Workload in {} seconds'.format(default_end, elapsed)

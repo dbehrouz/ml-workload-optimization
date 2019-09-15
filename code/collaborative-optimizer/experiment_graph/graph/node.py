@@ -1122,7 +1122,7 @@ class GroupBy(Node):
         self.update_freq()
         if not self.computed:
             self.execution_environment.scheduler.schedule(
-                self.execution_environment.history_graph,
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_dag,
                 self.id,
                 verbose)
@@ -1259,7 +1259,7 @@ class SK_Model(Node):
         self.update_freq()
         if not self.computed:
             self.execution_environment.scheduler.schedule(
-                self.execution_environment.history_graph,
+                self.execution_environment.experiment_graph,
                 self.execution_environment.workload_dag,
                 self.id,
                 verbose)

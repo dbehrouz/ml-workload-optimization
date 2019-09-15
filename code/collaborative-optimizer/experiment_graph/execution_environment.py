@@ -139,6 +139,7 @@ class ExecutionEnvironment(object):
         elif self.experiment_graph.has_node(root_hash):
             print 'the root node is in already the history graph'
             root = copy.deepcopy(self.experiment_graph.graph.nodes[root_hash])
+            root['data'].execution_environment = self
             self.workload_dag.roots.append(root_hash)
             self.workload_dag.add_node(root_hash, **root)
             return root['data']
@@ -167,9 +168,9 @@ class ExecutionEnvironment(object):
                              (datetime.now() - node_size_start).total_seconds())
             self.workload_dag.roots.append(root_hash)
             self.workload_dag.add_node(root_hash, **{'root': True, 'type': 'Dataset', 'data': nextnode,
-                                                       'loc': loc,
-                                                       'extra_params': extra_params,
-                                                       'size': size})
+                                                     'loc': loc,
+                                                     'extra_params': extra_params,
+                                                     'size': size})
             return nextnode
 
     def load_from_pandas(self, df, identifier):
@@ -197,7 +198,7 @@ class ExecutionEnvironment(object):
             self.workload_dag.roots.append(identifier)
             self.workload_dag.add_node(identifier,
                                        **{'root': True, 'type': 'Dataset', 'data': nextnode,
-                                            'loc': identifier,
-                                            'extra_params': 'load_from_memory',
-                                            'size': size})
+                                          'loc': identifier,
+                                          'extra_params': 'load_from_memory',
+                                          'size': size})
             return nextnode

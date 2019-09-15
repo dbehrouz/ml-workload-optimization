@@ -178,11 +178,12 @@ class FastBottomUpReuse(Reuse):
     def __init__(self):
         Reuse.__init__(self)
 
-    def run(self, vertex, workload, history, verbose):
-        materialized_vertices, execution_vertices, model_candidates = self.inplace_reverse_bfs(terminal=vertex,
-                                                                                               workload_subgraph=workload.graph,
-                                                                                               history=history.graph)
-        warmstarting_candidates = self.check_for_warmstarting(history, workload.graph, model_candidates)
+    def run(self, vertex, workload_dag, experiment_graph, verbose):
+        materialized_vertices, execution_vertices, model_candidates = \
+            self.inplace_reverse_bfs(terminal=vertex,
+                                     workload_subgraph=workload_dag.graph,
+                                     history=experiment_graph.graph)
+        warmstarting_candidates = self.check_for_warmstarting(experiment_graph, workload_dag.graph, model_candidates)
         return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def inplace_reverse_bfs(self, terminal, workload_subgraph, history):
@@ -199,9 +200,9 @@ class FastBottomUpReuse(Reuse):
         model_candidates = set()
         execution_set = {terminal}
         if workload_subgraph.nodes[terminal]['data'].computed:
-            return materialized_set, execution_set, self.history_reads
+            return materialized_set, execution_set, model_candidates
         if self.is_mat(history, terminal):
-            return {terminal}, execution_set, self.history_reads
+            return {terminal}, execution_set, model_candidates
         if workload_subgraph.nodes[terminal]['type'] == 'SK_Model':
             model_candidates.add(terminal)
 
@@ -310,7 +311,7 @@ class TopDownReuse(Reuse):
                 except StopIteration:
                     queue.popleft()
 
-            return materialized_in_this_path
+            return materialized_in_this_path, model_in_this_path
 
         model_candidates = set()
         materialized_candidates = set()
@@ -349,7 +350,7 @@ class TopDownReuse(Reuse):
             except StopIteration:
                 queue.popleft()
 
-        return final_mat_candidates, final_execution_candidates, self.history_reads
+        return final_mat_candidates, final_execution_candidates, model_candidates
 
 
 class HybridReuse(Reuse):
