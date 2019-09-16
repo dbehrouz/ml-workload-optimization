@@ -280,7 +280,7 @@ class Node(object):
 
 class Agg(Node):
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
 
@@ -328,7 +328,7 @@ class Dataset(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         """
 
         :type underlying_data: DataFrame
@@ -366,6 +366,7 @@ class Dataset(Node):
 
     def compute_size(self):
         if self.computed and self.size is None:
+
             start = datetime.now()
             self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -741,7 +742,7 @@ class Dataset(Node):
 
 class Evaluation(Node):
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
 
@@ -784,7 +785,7 @@ class Feature(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         """
 
         :type underlying_data: DataSeries
@@ -1108,7 +1109,7 @@ class Feature(Node):
 # TODO dataset/Feature as a result we are just storing the data in the graph for no reason
 class GroupBy(Node):
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
 
@@ -1236,8 +1237,7 @@ class GroupBy(Node):
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, execution_environment, underlying_data=None,
-                 size=0.0):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         Node.__init__(self, node_id, execution_environment, size)
         self.underlying_data = underlying_data
         self.model_score = 0.0

@@ -140,10 +140,9 @@ class HeuristicsMaterializer(Materializer):
             print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
                                                                                     len(should_materialize))
 
-        return should_materialize, remaining
+        return should_materialize
 
 
-# TODO FIX THIS
 class StorageAwareMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose=0):

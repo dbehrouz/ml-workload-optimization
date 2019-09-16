@@ -88,10 +88,10 @@ class ExecutionEnvironment(object):
         self.workload_dag = WorkloadDag()
         del self.time_manager
         self.time_manager = dict()
-        scheduler_type = self.scheduler.NAME
-        reuse_type = self.scheduler.reuse_type
-        del self.scheduler
-        self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
+        # scheduler_type = self.scheduler.NAME
+        # reuse_type = self.scheduler.reuse_type
+        # del self.scheduler
+        # self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
 
     def load_history_from_memory(self, history):
         self.experiment_graph = history

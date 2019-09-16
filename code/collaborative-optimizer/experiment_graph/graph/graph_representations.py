@@ -151,25 +151,28 @@ class BaseGraph(object):
             line.set_linewidth(4.0)
 
     def get_artifact_sizes(self, for_types=None, exclude_types=None, mat_only=False):
+        def none_to_zero(value):
+            return 0 if value is None else value
+
         t_size = 0
         # both cannot have some values
         assert for_types is None or exclude_types is None
-        mat_condition = not mat_only
+
         if exclude_types is None:
             if for_types is None:
                 for node in self.graph.nodes(data=True):
-                    if mat_condition or node[1].get('mat', False):
-                        t_size += node[1]['size']
+                    if not mat_only or node[1]['mat']:
+                        t_size += none_to_zero(node[1]['size'])
             else:
                 for node in self.graph.nodes(data=True):
                     if node[1]['type'] in for_types:
-                        if mat_condition or node[1].get('mat', False):
-                            t_size += node[1]['size']
+                        if not mat_only or node[1]['mat']:
+                            t_size += none_to_zero(node[1]['size'])
         else:
             for node in self.graph.nodes(data=True):
                 if node[1]['type'] not in exclude_types:
-                    if mat_condition or node[1].get('mat', False):
-                        t_size += node[1]['size']
+                    if not mat_only or node[1]['mat']:
+                        t_size += none_to_zero(node[1]['size'])
 
         return t_size
 

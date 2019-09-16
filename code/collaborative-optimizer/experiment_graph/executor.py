@@ -10,7 +10,6 @@ class Executor:
     def __init__(self):
         pass
 
-    @abstractmethod
     def end_to_end_run(self, workload, **args):
         """
         end to end run with all the optimizations
@@ -58,6 +57,7 @@ class CollaborativeExecutor(Executor):
         Executor.__init__(self)
         self.execution_environment = execution_environment
         self.materializer = AllMaterializer(storage_budget=0) if materializer is None else materializer
+        self.time_manager = {}
 
     # def end_to_end_run(self, workload, **args):
     #     """
@@ -101,6 +101,12 @@ class CollaborativeExecutor(Executor):
         """
         clean up the workload from the executor
         """
+        # copy the time manager
+        for k, v in self.execution_environment.time_manager.iteritems():
+            if k in self.time_manager:
+                self.time_manager[k] += v
+            else:
+                self.time_manager[k] = v
         self.execution_environment.new_workload()
 
     def store_experiment_graph(self, database_path, overwrite=False):
