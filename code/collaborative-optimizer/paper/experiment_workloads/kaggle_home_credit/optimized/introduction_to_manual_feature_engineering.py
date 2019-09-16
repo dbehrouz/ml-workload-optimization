@@ -635,7 +635,7 @@ if __name__ == "__main__":
     executor = CollaborativeExecutor(ee)
     execution_start = datetime.now()
 
-    executor.run_workload(workload=workload, root_data=root_data, verbose=0)
+    executor.end_to_end_run(workload=workload, root_data=root_data, verbose=0)
 
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()

@@ -14,9 +14,17 @@ class Executor:
     def end_to_end_run(self, workload, **args):
         """
         end to end run with all the optimizations
+        calls these methods in order:
+        1. run_workload
+        2. local_process
+        3. global_process
+        4. cleanup
         :type workload: Workload
         """
-        pass
+        self.run_workload(workload, **args)
+        self.local_process()
+        self.global_process()
+        self.cleanup()
 
     @abstractmethod
     def run_workload(self, workload, **args):
@@ -26,6 +34,18 @@ class Executor:
         :param args:
         :return:
         """
+        pass
+
+    @abstractmethod
+    def local_process(self):
+        pass
+
+    @abstractmethod
+    def global_process(self):
+        pass
+
+    @abstractmethod
+    def cleanup(self):
         pass
 
 
@@ -39,31 +59,37 @@ class CollaborativeExecutor(Executor):
         self.execution_environment = execution_environment
         self.materializer = AllMaterializer(storage_budget=0) if materializer is None else materializer
 
-    def end_to_end_run(self, workload, **args):
-        """
-        Here is the function for the main workflow of the collaborative optimizer system:
-        1. Run the workload and return the result
-        2. Update the Experiment Graph with edges and nodes of the workload (do not store underlying data yet)
-        3. Run Materialization on the Graph and store the underlying either on the storage manager or graph itself
-        :type workload: Workload
-        """
-
-        self.run_workload(workload, **args)
-
-        self.update_and_materialize()
-
-        self.workload_cleanup()
+    # def end_to_end_run(self, workload, **args):
+    #     """
+    #     Here is the function for the main workflow of the collaborative optimizer system:
+    #     1. Run the workload and return the result
+    #     2. Update the Experiment Graph with edges and nodes of the workload (do not store underlying data yet)
+    #     3. Run Materialization on the Graph and store the underlying either on the storage manager or graph itself
+    #     :type workload: Workload
+    #     """
 
     def run_workload(self, workload, **args):
+        """
+        Run the workload and return the result
+        :param workload:
+        :param args:
+        :return:
+        """
         args['execution_environment'] = self.execution_environment
         # execute the workload and post process the workload dag
         workload.run(**args)
 
-    def update_and_materialize(self):
+    def local_process(self):
         """
-        update the experiment graph and run materialization algorithm
+        post process the workload dag by computing the sizes and adding model scores
+        :return:
         """
         self.execution_environment.workload_dag.post_process()
+
+    def global_process(self):
+        """
+        Run Materialization on the Graph and store the underlying either on the storage manager or graph itself
+        """
         self.execution_environment.experiment_graph.extend(self.execution_environment.workload_dag)
         # TODO: implementing this in a truly online manner, i.e., only computing nodes which are
         # affected is a bit of work. For now, we recompute for the entire graph
@@ -71,7 +97,7 @@ class CollaborativeExecutor(Executor):
         self.materializer.run_and_materialize(self.execution_environment.experiment_graph,
                                               self.execution_environment.workload_dag)
 
-    def workload_cleanup(self):
+    def cleanup(self):
         """
         clean up the workload from the executor
         """
@@ -90,12 +116,14 @@ class BaselineExecutor(Executor):
     def __init__(self):
         Executor.__init__(self)
 
-    def end_to_end_run(self, workload, **args):
-        """
-
-        :type workload: Workload
-        """
-        self.run_workload(workload, **args)
-
     def run_workload(self, workload, **args):
         workload.run(**args)
+
+    def local_process(self):
+        pass
+
+    def global_process(self):
+        pass
+
+    def cleanup(self):
+        pass
