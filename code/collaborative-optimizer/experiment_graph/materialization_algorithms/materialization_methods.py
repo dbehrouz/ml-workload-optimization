@@ -13,9 +13,9 @@ class Materializer:
         self.storage_budget = storage_budget
         self.modify_graph = modify_graph
 
-    def compute_rhos(self, graph):
+    def compute_rhos(self, e_graph, w_dag):
         rhos = []
-        for node in graph.nodes(data=True):
+        for node in e_graph.nodes(data=True):
             if node[1]['root']:
                 rho = float('inf')
 
@@ -24,19 +24,19 @@ class Materializer:
             elif node[1]['type'] == 'GroupBy':
                 # we are not materializing group by nodes at any cost
                 rho = 0
-                node[1]['data'].clear_content()
-                # node[1]['size'] = 0.0
+                # node[1]['data'].clear_content()
             else:
-                if node[1]['size'] == 0.0:
-                    print 'nothing to materialize for node {}'.format(node[0])
-                    rho = -1
-                else:
+                # only compute the utility for the vertices which are already
+                # materialized or are in the workload graph
+                if node[1]['mat'] or node[0] in w_dag.nodes():
                     rho_object = RHO(node[0], node[1]['recreation_cost'],
                                      node[1]['potential'],
                                      node[1]['meta_freq'],
                                      node[1]['size'], True, True)
                     rhos.append(rho_object)
                     rho = rho_object.rho
+                else:
+                    rho = 0
 
             if self.modify_graph:
                 node[1]['rho'] = rho
@@ -122,7 +122,7 @@ class HeuristicsMaterializer(Materializer):
         """
 
         graph = experiment_graph.graph
-        rhos = self.compute_rhos(experiment_graph.graph)
+        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
         root_size = 0.0
         to_mat = []
         for n in graph.nodes(data=True):
@@ -147,72 +147,89 @@ class StorageAwareMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose=0):
 
-        rhos = self.compute_rhos(experiment_graph.graph)
+        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
         root_size = 0.0
-        to_materialize = []
+        materialization_candidates = []
 
         for n in experiment_graph.graph.nodes(data=True):
             if n[1]['root']:
                 root_size += n[1]['size']
-                to_materialize.append(n[0])
+                materialization_candidates.append(n[0])
 
         remaining_budget = self.storage_budget - root_size
         i = 1
         while remaining_budget >= 0:
-            start_list = list(to_materialize)
+            start_list = list(materialization_candidates)
 
-            to_materialize, rhos = self.select_nodes_to_materialize(rhos, remaining_budget, to_materialize)
-            print 'current size: {}'.format(experiment_graph.get_size_of(to_materialize))
+            materialization_candidates, rhos = self.select_nodes_to_materialize(rhos, remaining_budget,
+                                                                                materialization_candidates)
+            print 'current size: {}'.format(experiment_graph.get_size_of(materialization_candidates))
             # if node new node is materialized, end the process
-            if start_list == to_materialize:
+            if start_list == materialization_candidates:
                 break
-            actual_size = self.mock_materialize(to_materialize, rhos)
-            remaining_budget = self.storage_budget - actual_size
+            current_size = self.recompute_sizes(experiment_graph, workload_dag, materialization_candidates, rhos)
+            remaining_budget = self.storage_budget - current_size
             if verbose:
-                total_node_size = experiment_graph.get_size_of(to_materialize)
+                total_node_size = experiment_graph.get_size_of(materialization_candidates)
                 print 'state after iteration {}'.format(i)
                 print 'total size of materialized nodes: {}, actual on disk size: {}'.format(total_node_size,
-                                                                                             actual_size)
+                                                                                             current_size)
                 print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
-                                                                                        len(to_materialize))
+                                                                                        len(materialization_candidates))
 
             i += 1
-        return to_materialize
+        return materialization_candidates
 
     @staticmethod
-    def mock_materialize(experiment_graph, workload_dag, should_materialize, remaining_rhos):
-        to_keep = set()
-        graph_size = 0
-
-        for node in experiment_graph.graph.nodes(data=True):
-            if node[1]['type'] == 'Dataset':
-                if node[0] in should_materialize:
-                    to_keep = to_keep.union(set(node[1]['data'].get_column_hash()))
-            elif node[1]['type'] == 'Feature':
-
-                if node[0] in should_materialize:
-                    if node[1]['data'].get_column_hash() == '':
-                        print 'problem at node {}'.format(node[0])
-                    to_keep.add(node[1]['data'].get_column_hash())
-            else:
-                if node[0] in should_materialize:
-                    graph_size += node[1]['size']
+    def recompute_sizes(experiment_graph, workload_dag, materialization_candidates, remaining_rhos):
+        """
+        First, this method checks all the columns in the artifacts in materialization_candidates.
+        Then, the total size of the experiment graph, considering the column redundancy is computed.
+        Finally, the sizes of the remaining vertices are recomputed based on how much more storage do they need to
+        materialize.
+        :param experiment_graph:
+        :param workload_dag:
+        :param materialization_candidates:
+        :param remaining_rhos:
+        :return:
+        """
+        current_size = 0.0
+        all_columns = set()
+        for node_id in materialization_candidates:
+            node = experiment_graph.graph.nodes[node_id]
+            if not node['mat']:
+                node = workload_dag.graph.nodes[node_id]
+                if node['type'] == 'Dataset':
+                    underlying_data = node['data'].underlying_data
+                    for column_hash in underlying_data.get_column_hash():
+                        if column_hash not in all_columns:
+                            current_size += underlying_data.column_sizes[column_hash]
+                            all_columns.add(column_hash)
+                elif node['type'] == 'Feature':
+                    underlying_data = node['data'].underlying_data
+                    column_hash = underlying_data.get_column_hash()
+                    if column_hash not in all_columns:
+                        current_size += underlying_data.get_size()
+                        all_columns.add(column_hash)
+                else:
+                    current_size += node['size']
 
         for rho in remaining_rhos:
             node = experiment_graph.graph.nodes[rho.node_id]
+            if not node['mat']:
+                node = workload_dag.graph.nodes[rho.node_id]
+                if node['type'] == 'Feature':
+                    underlying_data = node['data'].underlying_data
+                    column_hash = underlying_data.get_column_hash()
+                    if column_hash in all_columns:
+                        rho.size = 0.0
+                elif node['type'] == 'Dataset':
+                    underlying_data = node['data'].underlying_data
+                    for ch in underlying_data.get_column_hash():
+                        if ch in all_columns:
+                            rho.size -= underlying_data.column_sizes[ch]
 
-            if node['type'] == 'Feature':
-                if node['data'].get_column_hash() in to_keep:
-                    rho.size = 0.0
-            if node['type'] == 'Dataset':
-                cols = []
-                for c in node['data'].get_column_hash():
-                    if c not in to_keep:
-                        cols.append(c)
-
-                rho.size = experiment_graph.total_size(column_list=cols)
-
-        return experiment_graph.total_size(column_list=to_keep) + graph_size
+            return current_size
 
 
 class RHO(object):

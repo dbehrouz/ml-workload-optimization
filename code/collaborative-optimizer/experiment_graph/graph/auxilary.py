@@ -46,12 +46,16 @@ class DataFrame(Pandas):
         self.column_names = column_names
         self.column_hashes = column_hashes
         self.pandas_df = pandas_df
+        self.column_sizes = {}
 
     # TODO check if get_size is always going to be called for every object, if it is we can move the computation code to
     # the constructor
     def get_size(self):
         if self.size is None:
-            self.size = sum(self.pandas_df.memory_usage(index=True, deep=True)) / AS_KB
+            sizes = list(self.pandas_df.memory_usage(index=False, deep=True) / AS_KB)
+            for i in range(len(self.column_hashes)):
+                self.column_sizes[self.column_hashes[i]] = sizes[i]
+            self.size = sum(sizes)
         return self.size
 
     def get_column(self):
@@ -73,7 +77,7 @@ class DataSeries(Pandas):
 
     def get_size(self):
         if self.size is None:
-            self.size = self.pandas_series.memory_usage(index=True, deep=True) / AS_KB
+            self.size = self.pandas_series.memory_usage(index=False, deep=True) / AS_KB
         return self.size
 
     def get_column(self):

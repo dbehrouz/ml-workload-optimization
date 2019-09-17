@@ -217,7 +217,6 @@ class WorkloadDag(BaseGraph):
                 node['score'] = node['data'].get_model_score()
             if node['type'] == 'GroupBy':
                 node['size'] = prev_node['size']
-                # cur_node['data'].set_size(prev_node['size'])
             elif node['type'] is not 'SuperNode':
                 node['size'] = node['data'].compute_size()
             else:

@@ -1,9 +1,8 @@
 from abc import abstractmethod
 
-import pandas
+import pandas as pd
 
 from experiment_graph.graph.auxilary import Pandas, DataFrame, DataSeries
-import pandas as pd
 
 AS_KB = 1024.0
 
@@ -50,12 +49,18 @@ class StorageManager(object):
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
 
     @staticmethod
-    def compute_series_size(pandas_series):
-        return pandas_series.memory_usage(index=True, deep=True) / AS_KB
+    def invalid_artifact(artifact):
+        raise Exception('Invalid artifact type: {}'.format(artifact.__class__.__name__))
 
     @staticmethod
-    def compute_frame_size(pandas_frame):
-        return sum(pandas_frame.memory_usage(index=True, deep=True)) / AS_KB
+    def is_supported(artifact):
+        """
+        if the artifact is not supported, this method raises an Exception
+        :param artifact:
+        :return:
+        """
+        if not isinstance(artifact, DataSeries) or not isinstance(artifact, DataFrame):
+            StorageManager.invalid_artifact(artifact)
 
 
 class DedupedStorageManager(StorageManager):
@@ -76,6 +81,20 @@ class DedupedStorageManager(StorageManager):
         self.column_count = {}
         self.column_size = {}
 
+    def update_size(self, key, artifact):
+        self.key_value_size[key] = artifact.get_size()
+        if isinstance(artifact, DataFrame):
+            for ch in artifact.get_column_hash():
+                if ch not in self.column_size:
+                    self.column_size[ch] = artifact.column_sizes[ch]
+
+        elif isinstance(artifact, DataSeries):
+            column_hash = artifact.get_column_hash()
+            if column_hash not in self.column_size:
+                self.column_size[column_hash] = artifact.size
+        else:
+            self.invalid_artifact(artifact)
+
     def put(self, key, artifact):
         if key not in self.key_value:
             if isinstance(artifact, DataFrame):
@@ -83,16 +102,15 @@ class DedupedStorageManager(StorageManager):
                 data = artifact.get_data()
                 self.store_dataframe(column_hashes, data)
                 self.key_value[key] = column_hashes
-                data_frame_size = 0
-                for c in column_hashes:
-                    data_frame_size += self.column_size[c]
-                self.key_value_size[key] = data_frame_size
             elif isinstance(artifact, DataSeries):
                 column_hash = artifact.get_column_hash()
                 data = artifact.get_data()
                 self.store_dataseries(column_hash, data)
                 self.key_value[key] = column_hash
-                self.key_value_size[key] = self.column_size[column_hash]
+            else:
+                self.invalid_artifact(artifact)
+
+            self.update_size(key, artifact)
         else:
             print 'warning: key exists, abort put!!!'
 
@@ -112,6 +130,7 @@ class DedupedStorageManager(StorageManager):
             if self.column_count[ch] == 1:
                 del self.column_count[ch]
                 del self.column_store[ch]
+                del self.column_size[ch]
             elif self.column_count[ch] > 1:
                 self.column_count[ch] -= 1
 
@@ -121,7 +140,6 @@ class DedupedStorageManager(StorageManager):
         else:
             self.column_store[column_hash] = data_series
             self.column_count[column_hash] = 1
-            self.column_size[column_hash] = self.compute_series_size(data_series)
 
     def store_dataframe(self, column_hashes, dataframe):
         for i in range(len(column_hashes)):
@@ -141,6 +159,24 @@ class DedupedStorageManager(StorageManager):
         """
         return sum(self.key_value_size.values())
 
+    def portion_stored(self, artifact):
+        """
+        returns the size of the part of the given artifact which is already stored in the storage manager
+        For example, if an artifact has 5 columns, each having a size of 1000KB and the storage manager
+        contains three of the columns. The returning value will be 600 (3 x 200)
+        :param artifact:
+        :return:
+        """
+        if isinstance(artifact, DataFrame):
+            column_hashes = artifact.get_column_hash()
+            s = 0
+            for c in column_hashes:
+                s += self.column_size.get(c, default=0.0)
+        elif isinstance(artifact, DataSeries):
+            return self.column_size.get(artifact.get_column_hash(), 0.0)
+        else:
+            self.invalid_artifact(artifact)
+
 
 class SimpleStorageManager(StorageManager):
     """
@@ -153,15 +189,11 @@ class SimpleStorageManager(StorageManager):
         super(SimpleStorageManager, self).__init__()
 
     def put(self, key, artifact):
+        self.is_supported(artifact)
         if key not in self.key_value:
             data = artifact.get_data()
             self.key_value[key] = data
-            if isinstance(artifact, DataFrame):
-                self.key_value_size[key] = self.compute_frame_size(data)
-            elif isinstance(artifact, DataSeries):
-                self.key_value_size[key] = self.compute_series_size(data)
-            else:
-                raise Exception('Invalid artifact type: {}'.format(artifact.__class__.__name__))
+            self.key_value_size[key] = artifact.get_size()
         else:
             print 'warning: key exists, abort put!!!'
 
