@@ -44,7 +44,7 @@ class Reuse:
     def is_mat(self, history, vertex):
         self.history_reads += 1
         try:
-            return history.nodes[vertex]['data'].computed
+            return history.nodes[vertex]['mat']
         except KeyError:
             return False
 

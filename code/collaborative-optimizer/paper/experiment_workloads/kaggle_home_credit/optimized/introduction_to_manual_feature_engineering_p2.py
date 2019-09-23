@@ -232,7 +232,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                 df (dataframe): data at the loan level
                 group_vars (list of two strings): grouping variables for the loan
                 and then the client (example ['SK_ID_PREV', 'SK_ID_CURR'])
-                names (list of two strings): names to call the resulting columns
+                df_names (list of two strings): names to call the resulting columns
                 (example ['cash', 'client'])
 
             Returns:
@@ -293,7 +293,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                             df_names=['credit', 'client'])
         credit_by_client.head()
 
-        print 'Credit by client shape: '.format(credit_by_client.shape().data(verbose=verbose))
+        print 'Credit by client shape: {}'.format(credit_by_client.shape().data(verbose=verbose))
 
         train = train.merge(credit_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(credit_by_client, on='SK_ID_CURR', how='left')
@@ -307,7 +307,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                                   df_names=['installments', 'client'])
         installments_by_client.head()
 
-        print 'Installments by client shape: '.format(installments_by_client.shape().data(verbose=verbose))
+        print 'Installments by client shape: {}'.format(installments_by_client.shape().data(verbose=verbose))
 
         train = train.merge(installments_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(installments_by_client, on='SK_ID_CURR', how='left')
@@ -316,7 +316,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
         print 'Final Training Shape: {}'.format(train.shape().data(verbose=verbose))
         print 'Final Testing Shape: {}'.format(test.shape().data(verbose=verbose))
-
+        print train.id
         print 'Final training size: {}'.format(return_size(train))
         print 'Final testing size: {}'.format(return_size(test))
 
@@ -464,7 +464,7 @@ if __name__ == "__main__":
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)
-    executor.store_experiment_graph(database_path)
+    # executor.store_experiment_graph(database_path)
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
 

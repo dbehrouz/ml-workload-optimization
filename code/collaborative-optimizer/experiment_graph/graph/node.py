@@ -18,12 +18,14 @@ AS_KB = 1024.0
 
 
 class Node(object):
-    def __init__(self, node_id, execution_environment, size):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
         self.id = node_id
         self.computed = False
         self.access_freq = 0
         self.execution_environment = execution_environment
         self.size = size
+        self.underlying_data = underlying_data
+        self.computed = False if underlying_data is None else True
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -291,8 +293,7 @@ class Node(object):
 class Agg(Node):
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def clear_content(self):
         del self.underlying_data
@@ -343,9 +344,7 @@ class Dataset(Node):
 
         :type underlying_data: DataFrame
         """
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
-        self.computed = False if underlying_data is None else True
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def clear_content(self):
         del self.underlying_data
@@ -375,8 +374,10 @@ class Dataset(Node):
         return self.underlying_data.column_hashes
 
     def compute_size(self):
-        if self.computed and self.size is None:
-
+        if not self.computed:
+            # This happens when compute_size is directly called by the user.
+            self.data()
+        if self.size is None:
             start = datetime.now()
             self.size = self.underlying_data.get_size()
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
@@ -753,8 +754,7 @@ class Dataset(Node):
 class Evaluation(Node):
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def compute_size(self):
         if self.computed and self.size is None:
@@ -800,8 +800,7 @@ class Feature(Node):
 
         :type underlying_data: DataSeries
         """
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def clear_content(self):
         self.underlying_data = None
@@ -1120,8 +1119,7 @@ class Feature(Node):
 class GroupBy(Node):
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def clear_content(self):
         del self.underlying_data
@@ -1248,8 +1246,7 @@ class GroupBy(Node):
 
 class SK_Model(Node):
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, size)
-        self.underlying_data = underlying_data
+        Node.__init__(self, node_id, execution_environment, underlying_data, size)
         self.model_score = 0.0
 
     def clear_content(self):
@@ -1334,7 +1331,7 @@ class SuperNode(Node):
     """
 
     def __init__(self, node_id, execution_environment, nodes):
-        Node.__init__(self, node_id, execution_environment, 0.0)
+        Node.__init__(self, node_id, execution_environment, underlying_data=None, size=0.0)
         self.nodes = nodes
 
     def clear_content(self):

@@ -3,13 +3,12 @@ The CollaborativeScheduler module performs the scheduling and Reuse
 It receives the workload execution graph and the historical execution graph and a reuse algorirthm and
 optimizes the workload execution graph and returns the scheduled execution path
 """
-import copy
 from abc import abstractmethod
 from datetime import datetime
 
 from Reuse import Reuse
-from experiment_graph.graph.graph_representations import WorkloadDag
 from experiment_graph.graph.graph_representations import ExperimentGraph
+from experiment_graph.graph.graph_representations import WorkloadDag
 
 
 class CollaborativeScheduler:
@@ -50,8 +49,11 @@ class CollaborativeScheduler:
         """
         underlying_data = experiment_graph.retrieve_data(node_id)
         workload_node = workload_dag.graph.nodes[node_id]
+        size = experiment_graph.graph.nodes[node_id]['size']
+
         workload_node['data'].computed = True
-        workload_node['size'] = experiment_graph.graph.nodes[node_id]['size']
+        workload_node['data'].size = size
+        workload_node['size'] = size
         workload_node['data'].underlying_data = underlying_data
 
     @staticmethod
@@ -84,6 +86,9 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
             schedule_length = len(final_schedule)
             if schedule_length > 0:
                 print 'executing {} steps to compute vertex {}'.format(schedule_length, v_id)
+            else:
+                print '{} was copied directly from experiment graph'.format(v_id)
+
         lapsed = (datetime.now() - start).total_seconds()
         if v_id in self.times:
             raise Exception('something is wrong, {} should have been already computed'.format(v_id))
