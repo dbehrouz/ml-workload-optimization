@@ -10,7 +10,7 @@ pip2 install -U seaborn --user
 pip2 install -U pympler --user
 pip2.7 install -U lightgbm --user
 # copy scripts
-rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
+rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-40.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
 
 # preprocessing kaggle home credit
 kaggle competitions download -c home-credit-default-risk

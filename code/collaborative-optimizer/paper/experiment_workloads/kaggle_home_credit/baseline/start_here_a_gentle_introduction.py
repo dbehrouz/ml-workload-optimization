@@ -34,7 +34,7 @@ warnings.filterwarnings('ignore')
 
 class start_here_a_gentle_introduction(Workload):
 
-    def run(self, oot_data):
+    def run(self, root_data):
         print(os.listdir(root_data))
         app_train = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
         print('Training data shape: ', app_train.shape)

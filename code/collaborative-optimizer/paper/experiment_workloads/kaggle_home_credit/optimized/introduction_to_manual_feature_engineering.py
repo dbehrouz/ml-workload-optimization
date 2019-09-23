@@ -6,19 +6,19 @@
    For now, I removed the Kfold and Gradient Boosted Tree models
    TODO: Add Kfold and Gradient Boosted Tree
 """
+import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
+import pandas as pd
 
-from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
 import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
-import pandas as pd
 import seaborn as sns
 
 # Experiment Graph
@@ -67,7 +67,6 @@ class introduction_to_manual_feature_engineering(Workload):
             plt.ylabel('Density')
             plt.title('%s Distribution' % var_name)
             plt.legend()
-
             # print out the correlation
             print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
             # Print out average values
@@ -623,20 +622,30 @@ if __name__ == "__main__":
     import sys
 
     sys.path.append(ROOT_PACKAGE)
+    from experiment_graph.data_storage import DedupedStorageManager
+    from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
+    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
-    ee = ExecutionEnvironment('dedup', reuse_type=FastBottomUpReuse.NAME)
     workload = introduction_to_manual_feature_engineering()
 
-    root_data = ROOT + '/data'
-    database_path = root_data + '/experiment_graphs/kaggle_home_credit/all-materialized'
+    mat_budget = 16.0 * 1024.0 * 1024.0
+    sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    executor = CollaborativeExecutor(ee)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+
+    root_data = ROOT + '/data'
+    database_path = \
+        root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
+    if os.path.exists(database_path):
+        ee.load_history_from_disk(database_path)
+    executor = CollaborativeExecutor(ee, sa_materializer)
     execution_start = datetime.now()
 
-    executor.end_to_end_run(workload=workload, root_data=root_data, verbose=0)
+    executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)
 
+    # executor.store_experiment_graph(database_path)
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
 

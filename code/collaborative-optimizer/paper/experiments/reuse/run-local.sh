@@ -1,27 +1,33 @@
 #!/usr/bin/env bash
 
-#### Same Workload All Experiments ####
-# Runing on Local machine
-#for materialization_rate in 0.0 0.25 0.50 0.75 1.0
-#do
-#python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-#'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering' 'mode=local' 'mat_rate='${materialization_rate} 'run_baseline=no'
-#
-#python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-#'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering_p2' 'mode=local' 'mat_rate='${materialization_rate} 'run_baseline=no'
-#
-#
-#python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-#'experiment=kaggle_home_credit' 'workload=start_here_a_gentle_introduction' 'mode=local' 'mat_rate='${materialization_rate} 'run_baseline=no'
-#done
+current_date=$(date +'%Y-%m-%d')
+experiment='kaggle_home_credit'
+root='/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+result_path=${root}'/experiment_results/local/reuse/same-workload/kaggle_home_credit/'${current_date}
+
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=introduction_to_manual_feature_engineering' 'mat_budget=0.0' 'method=baseline' 'rep=2'
+
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=introduction_to_manual_feature_engineering' 'mat_budget=16.0' 'method=optimized' 'rep=2'
 
 
-python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering' 'mode=local' 'run_baseline=yes'
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=introduction_to_manual_feature_engineering_p2' 'mat_budget=0.0' 'method=baseline' 'rep=2'
 
-python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-'experiment=kaggle_home_credit' 'workload=introduction_to_manual_feature_engineering_p2' 'mode=local' 'run_baseline=yes'
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=introduction_to_manual_feature_engineering_p2' 'mat_budget=16.0' 'method=optimized' 'rep=2'
 
 
-python runner-same-workload.py '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/' 'root=/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/' \
-'experiment=kaggle_home_credit' 'workload=start_here_a_gentle_introduction' 'mode=local' 'run_baseline=yes'
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=start_here_a_gentle_introduction' 'mat_budget=0.0' 'method=baseline' 'rep=2'
+
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'workload=start_here_a_gentle_introduction' 'mat_budget=16.0' 'method=optimized' 'rep=2'
+

@@ -47,12 +47,13 @@ class DataFrame(Pandas):
         self.column_hashes = column_hashes
         self.pandas_df = pandas_df
         self.column_sizes = {}
+        self.pandas_df.columns = column_names
 
     # TODO check if get_size is always going to be called for every object, if it is we can move the computation code to
     # the constructor
     def get_size(self):
         if self.size is None:
-            sizes = list(self.pandas_df.memory_usage(index=False, deep=True) / AS_KB)
+            sizes = list(self.pandas_df.memory_usage(index=True, deep=True) / AS_KB)
             for i in range(len(self.column_hashes)):
                 self.column_sizes[self.column_hashes[i]] = sizes[i]
             self.size = sum(sizes)

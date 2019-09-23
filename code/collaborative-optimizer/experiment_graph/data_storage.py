@@ -59,7 +59,7 @@ class StorageManager(object):
         :param artifact:
         :return:
         """
-        if not isinstance(artifact, DataSeries) or not isinstance(artifact, DataFrame):
+        if not isinstance(artifact, DataSeries) and not isinstance(artifact, DataFrame):
             StorageManager.invalid_artifact(artifact)
 
 

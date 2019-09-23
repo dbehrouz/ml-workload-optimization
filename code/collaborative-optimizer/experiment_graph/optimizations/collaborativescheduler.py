@@ -102,7 +102,7 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
         materialized_vertices, execution_vertices, warmstarting_candidates, total_history_graph_reads = \
-            self.reuse().end_to_end_run(
+            self.reuse().run(
                 vertex=vertex,
                 workload_dag=workload,
                 experiment_graph=history,

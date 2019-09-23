@@ -27,7 +27,8 @@ class Node(object):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['execution_environment']
+        if 'execution_environment' in state:
+            del state['execution_environment']
         return state
 
     def __setstate__(self, state):
@@ -112,6 +113,8 @@ class Node(object):
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
+                                                                  'execution_time': -1,
+                                                                  'executed': False,
                                                                   'args': args,
                                                                   'hash': edge_hash},
                                                                  ntype=Agg.__name__)
@@ -127,6 +130,8 @@ class Node(object):
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
+                                                                  'execution_time': -1,
+                                                                  'executed': False,
                                                                   'args': args,
                                                                   'hash': edge_hash},
                                                                  ntype=GroupBy.__name__)
@@ -152,6 +157,7 @@ class Node(object):
         edge_arguments['oper'] = 'p_' + oper
         edge_arguments['args'] = args
         edge_arguments['execution_time'] = -1
+        edge_arguments['executed'] = False
         edge_arguments['hash'] = edge_hash
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  edge_arguments,
@@ -171,6 +177,7 @@ class Node(object):
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
                                                                   'execution_time': -1,
+                                                                  'executed': False,
                                                                   'args': args,
                                                                   'hash': edge_hash},
                                                                  ntype=Dataset.__name__)
@@ -186,6 +193,7 @@ class Node(object):
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'execution_time': -1,
+                                                                  'executed': False,
                                                                   'oper': 'p_' + oper,
                                                                   'args': args,
                                                                   'hash': edge_hash},
@@ -201,6 +209,7 @@ class Node(object):
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'execution_time': -1,
+                                                                  'executed': False,
                                                                   'oper': 'p_' + oper,
                                                                   'args': args,
                                                                   'hash': edge_hash},
@@ -231,7 +240,8 @@ class Node(object):
                                                                        # combine is a reserved word
                                                                        **{'name': COMBINE_OPERATION_IDENTIFIER,
                                                                           'oper': COMBINE_OPERATION_IDENTIFIER,
-                                                                          'execution_time': 0,
+                                                                          'execution_time': -1,
+                                                                          'executed': False,
                                                                           'args': args,
                                                                           'hash': edge_hash})
             return nextnode
@@ -379,9 +389,9 @@ class Dataset(Node):
         return self.generate_dataset_node('set_columns', {'columns': columns})
 
     def p_set_columns(self, columns):
-        df = self.get_materialized_data()
+        df = self.get_materialized_data().copy()
         # self.execution_environment.data_storage.store_dataset(self.c_hash, df)
-        df.columns = columns
+        # df.columns = columns
         return DataFrame(column_names=columns,
                          column_hashes=self.get_column_hash(),
                          pandas_df=df)
@@ -461,7 +471,7 @@ class Dataset(Node):
                          pandas_df=df)
 
     def copy(self):
-        return self.generate_dataset_node('copy', c_name=self.get_column(), c_hash=self.get_column_hash())
+        return self.generate_dataset_node('copy')
 
     def p_copy(self):
         return DataFrame(column_names=self.get_column(),

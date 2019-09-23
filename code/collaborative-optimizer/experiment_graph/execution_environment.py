@@ -1,6 +1,7 @@
 import cPickle as pickle
 import os
 
+from data_storage import SimpleStorageManager
 from experiment_graph.graph.graph_representations import WorkloadDag, ExperimentGraph
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
@@ -16,11 +17,11 @@ class ExecutionEnvironment(object):
     def construct_readable_root_hash(loc, extra_params=None):
         return loc[loc.rfind('/') + 1:] + str(extra_params)
 
-    def __init__(self, storage_type='dedup', scheduler_type=HashBasedCollaborativeScheduler.NAME,
+    def __init__(self, data_storage=SimpleStorageManager(), scheduler_type=HashBasedCollaborativeScheduler.NAME,
                  reuse_type=FastBottomUpReuse.NAME):
         self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
         self.workload_dag = WorkloadDag()
-        self.experiment_graph = ExperimentGraph(storage_type=storage_type)
+        self.experiment_graph = ExperimentGraph(data_storage=data_storage)
         self.time_manager = dict()
 
     def get_benchmark_results(self, keys=None):
@@ -48,9 +49,7 @@ class ExecutionEnvironment(object):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
         if not os.path.exists(environment_folder):
-            os.mkdir(environment_folder)
-        if not skip_history_update:
-            self.update_history()
+            os.makedirs(environment_folder)
         start_save_graph = datetime.now()
 
         with open(environment_folder + '/graph', 'wb') as output:
@@ -88,30 +87,29 @@ class ExecutionEnvironment(object):
         self.workload_dag = WorkloadDag()
         del self.time_manager
         self.time_manager = dict()
-        # scheduler_type = self.scheduler.NAME
-        # reuse_type = self.scheduler.reuse_type
-        # del self.scheduler
-        # self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
+        scheduler_type = self.scheduler.NAME
+        reuse_type = self.scheduler.reuse_type
+        del self.scheduler
+        self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
 
     def load_history_from_memory(self, history):
         self.experiment_graph = history
 
     def load_history_from_disk(self, environment_folder):
         start_graph_load = datetime.now()
+        if not os.path.isdir(environment_folder):
+            os.makedirs(environment_folder)
         with open(environment_folder + '/graph', 'rb') as g_input:
             graph = pickle.load(g_input)
 
         with open(environment_folder + '/roots', 'rb') as g_input:
             roots = pickle.load(g_input)
 
-        self.experiment_graph = ExperimentGraph(graph, roots)
-        self.experiment_graph.set_environment(self)
+        with open(environment_folder + '/storage', 'rb') as d_input:
+            data_storage = pickle.load(d_input)
+        self.experiment_graph = ExperimentGraph(data_storage, graph, roots)
 
         self.update_time(BenchmarkMetrics.LOAD_HISTORY, (datetime.now() - start_graph_load).total_seconds())
-        start_data_manager_load = datetime.now()
-        with open(environment_folder + '/storage', 'rb') as d_input:
-            self.experiment_graph.data_storage = pickle.load(d_input)
-        self.update_time(BenchmarkMetrics.LOAD_DATA_STORE, (datetime.now() - start_data_manager_load).total_seconds())
 
     def plot_graph(self, plt, graph_type='workload'):
         if graph_type == 'workload':
@@ -140,6 +138,7 @@ class ExecutionEnvironment(object):
             print 'the root node is in already the history graph'
             root = copy.deepcopy(self.experiment_graph.graph.nodes[root_hash])
             root['data'].execution_environment = self
+            root['data'].underlying_data = self.experiment_graph.retrieve_data(root_hash)
             self.workload_dag.roots.append(root_hash)
             self.workload_dag.add_node(root_hash, **root)
             return root['data']

@@ -27,6 +27,7 @@ class BaseGraph(object):
 
     def set_environment(self, env):
         for node in self.graph.nodes(data='data'):
+            print node
             node[1].execution_environment = env
 
     def is_empty(self):
@@ -344,8 +345,10 @@ class WorkloadDag(BaseGraph):
                         total_time = (datetime.now() - start_time).microseconds / 1000.0
 
                     edge['execution_time'] = total_time
+                    edge['executed'] = True
             else:
                 edge['execution_time'] = 0.0
+                edge['executed'] = True
                 cur_node['size'] = None
         return schedule
 
@@ -413,14 +416,9 @@ class WorkloadDag(BaseGraph):
 
 
 class ExperimentGraph(BaseGraph):
-    def __init__(self, storage_type, graph=None, roots=None):
+    def __init__(self, data_storage=SimpleStorageManager(), graph=None, roots=None):
         super(ExperimentGraph, self).__init__(graph, roots)
-        if storage_type == 'dedup':
-            self.data_storage = DedupedStorageManager()
-        elif storage_type == 'simple':
-            self.data_storage = SimpleStorageManager()
-        else:
-            raise Exception('Unknown storage type: {}'.format(storage_type))
+        self.data_storage = data_storage
 
     def retrieve_data(self, node_id):
         node = self.graph.nodes[node_id]
@@ -436,7 +434,7 @@ class ExperimentGraph(BaseGraph):
                               column_hash=node['data'].underlying_data.get_column_hash(),
                               pandas_series=self.data_storage.get(node_id))
         else:
-            return copy.deepcopy(self.graph.nodes[node_id]['data'])
+            return copy.deepcopy(self.graph.nodes[node_id]['data'].underlying_data)
 
     def get_real_size(self):
         return self.get_artifact_sizes(exclude_types=['Dataset', 'Feature'],
@@ -501,8 +499,11 @@ class ExperimentGraph(BaseGraph):
                     self.add_node_to_experiment_graph(node_id, node_attributes)
 
         for s, d, data in workload.graph.edges(data=True):
-            if s in self.graph.nodes and d in self.graph.nodes:
-                self.graph.add_edge(s, d, **data)
+            # TODO make a proper edge and node classes
+            # print s,d,data
+            if data['executed']:
+                if s in self.graph.nodes and d in self.graph.nodes:
+                    self.graph.add_edge(s, d, **data)
         # self.graph.add_edges_from(workload.graph.edges(data=True))
 
     def add_node_to_experiment_graph(self, node_id, node_attributes):

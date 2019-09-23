@@ -108,7 +108,8 @@ class AllMaterializer(Materializer):
     """
 
     def run(self, experiment_graph, workload_dag, verbose=0):
-        return [node_id for node_id, node_type in workload_dag.graph.nodes(data='type') if node_type != 'SuperNode']
+        return [node_id for node_id, node_type in workload_dag.graph.nodes(data='type') if
+                node_type != 'SuperNode' and node_type != 'GroupBy']
 
 
 class HeuristicsMaterializer(Materializer):
@@ -229,7 +230,7 @@ class StorageAwareMaterializer(Materializer):
                         if ch in all_columns:
                             rho.size -= underlying_data.column_sizes[ch]
 
-            return current_size
+        return current_size
 
 
 class RHO(object):
