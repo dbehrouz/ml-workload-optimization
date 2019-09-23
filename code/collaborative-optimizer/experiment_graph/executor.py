@@ -1,4 +1,6 @@
 from abc import abstractmethod
+
+from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.workload import Workload
 from heuristics import compute_recreation_cost, compute_vertex_potential
@@ -102,6 +104,7 @@ class CollaborativeExecutor(Executor):
         clean up the workload from the executor
         """
         # copy the time manager
+        self.execution_environment.compute_total_reuse_optimization_time()
         for k, v in self.execution_environment.time_manager.iteritems():
             if k in self.time_manager:
                 self.time_manager[k] += v
@@ -111,6 +114,14 @@ class CollaborativeExecutor(Executor):
 
     def store_experiment_graph(self, database_path, overwrite=False):
         self.execution_environment.save_history(database_path, overwrite=overwrite)
+
+    def get_benchmark_results(self, keys=None):
+        if keys is None:
+            return ','.join(
+                ['NOT CAPTURED' if key not in self.time_manager else str(self.time_manager[key]) for key in
+                 BenchmarkMetrics.keys])
+        else:
+            return ','.join([self.time_manager[key] for key in keys])
 
     @staticmethod
     def compute_heuristics(graph):
