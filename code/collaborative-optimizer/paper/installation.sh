@@ -22,4 +22,4 @@ python collaborative-optimization/code/collaborative-optimizer/paper/experiment_
 
 
 # load results from remote nodes
- scp -r behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/experiment_results/remote/ ./experiment_results/
+scp -r behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/experiment_results/remote/ ./experiment_results/

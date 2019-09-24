@@ -30,6 +30,7 @@ class Executor:
             return False
         if not self.cleanup():
             return False
+        return True
 
     @abstractmethod
     def run_workload(self, workload, **args):
@@ -39,7 +40,7 @@ class Executor:
         :param args:
         :rtype: bool
         """
-        return False
+        pass
 
     @abstractmethod
     def local_process(self):

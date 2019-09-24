@@ -1,21 +1,31 @@
 \section{Related Work} \label{sec-related-work}
-\begin{itemize}
-\item repository of ml experiments
-%Experiment databases include data and meta-data of different data analytics and machine learning experiments executed over time \cite{miao2018provdb, vanschoren2014openml, schelter2017automatically, vartak2016m}.
-%They include different information about datasets, data processing pipeline components, machine learning models, execution of machine learning training algorithms, and quality of the models. 
-%Moreover, some experiment databases allow users to store some of the artifacts generated during the execution of a workload, such as raw datasets, intermediate datasets (resulting from applying data transformation operations), and machine learning models and their hyperparameters.
-%However, due to limited storage space, experiment databases cannot store every artifact.
-% 
-%Experiment databases can help in designing a better future workload.
-%For example, users can query the database to find the answer to the following questions: what type of data transformations and model training operations are executed on a dataset and what is the accuracy of the final models?
-%As a result, users can avoid executing data transformations or model training operations that do not result in high-quality models.
-%Moreover, experiment databases enable reproducibility and validation of results.
-%For example, users can query information about the environment and list of operations in a specific workload.
-%As a result, users can re-execute the workload and compare the results.
-\item Scientific workflow systems?
-\item Hyperparameter tuning, random and grid search
-\item Dataset versioning and materialization \cite{bhattacherjee2015principles, vartak2018mistique}
-\item Transfer learning
-\end{itemize}
+Our system lies at the intersection of data science platforms that enable collaboration between users and machine learning and data processing systems which optimize workloads by storing intermediates.
 
+\textbf{Collaborative Data Science Platforms.}
+Cloud-based systems, such AzureML \cite{team2016azureml}, Google's AI platform \cite{googleai}, Kaggle \cite{kagglewebsite}, and Google Colaboratory \cite{googlecolab} provide the necessary tools for users to write ML workloads in Jupyter notebooks.
+Furthermore, users can publish and share their notebooks with others which could result in higher quality workloads.
+However, none of these systems manage the generated ML artifacts and do not utilize them to optimize the execution of the workloads.
+Our system manages and stores the intermediate ML artifacts and offer reuse and warmstarting methods to decrease the execution time of the future workloads.
 
+OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and MLflow \cite{zaharia2018accelerating} are platforms which extract and store ML artifacts, such as machine learning models and intermediate datasets, in a database \cite{schelter2017automatically, Vanschoren2012}.
+These platforms provide APIs and primitives for users to query the details of the ML artifacts, such as model evaluation result, preprocessing and feature engineering operations, and dataset descriptions.
+Contrary to our systems, none of these platforms offer automatic materialization and reuse of the ML artifacts and leave that task to the users.
+
+Context \cite{garcia2018context}, JuNEAU \cite{ives2019dataset}, Ground \cite{hellerstein2017ground}, ProvDB \cite{miao2018provdb}, Aurum \cite{fernandez2018aurum}, and DataHub \cite{bhardwaj2014datahub, bhattacherjee2015principles} are data management and provenance systems that efficiently store fine-grained lineage information about the data artifacts and operations.
+Furthermore, some of these systems provide primitives for querying lineage and discovering datasets.
+We design our Experiment Graph by utilizing the approaches discussed in these systems.
+However, contrary to these systems, we utilize the stored information to optimize the execution of future workloads.
+Furthermore, our materialization algorithm extends the materialization approach of Bhattacherjee et al. \cite{bhattacherjee2015principles} to tailor it to the machine learning workloads by considering the quality of the model artifacts.
+
+\textbf{Materialization and Reuse in ML Systems.}
+Helix \cite{xin2018h, xin2018helix}, Columbus \cite{zhang2016materialization}, and Mistique \cite{vartak2018mistique} are machine learning systems which optimize workloads by materializing intermediate data for reuse.
+There are three fundamental differences when compared to our system.
+First, the workload DAGs are typically small as these system work with machine learning or data processing pipelines of a few operations.
+Therefore, these systems do not need to tackle the problem of searching for reuse in a large graph.
+Second, the materialization algorithms in this system only utilize run-time and size and do not take into account the model quality.
+Lastly, our system operates in a collaborative and multi-tenant environment.
+Whereas, the scope of optimization in these systems is limited to a single session.
+
+Alpine Meadow \cite{shang2019democratizing} is an AutoML system that offers materialization and reuse of the intermediate data during the ML pipeline search.
+Contrary to our system, Alpine Meadow only operates on ML pipelines (chain of operations rather than a DAG). 
+Furthermore, Alpine Meadow assumes the storage budget is unlimited and materialize all the intermediate data.
