@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+file_name=$1
+
 current_date=$(date +'%Y-%m-%d')
 experiment='kaggle_home_credit'
 root='/home/behrouz/collaborative-optimization'
-result_path=${root}'/experiment_results/remote/reuse/same-workload/kaggle_home_credit/'${current_date}
+result_path=${root}'/experiment_results/remote/reuse/same-workload/kaggle_home_credit/'${current_date}'/'${file_name}
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/runner-same-workload.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \

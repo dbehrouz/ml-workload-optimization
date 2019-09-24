@@ -30,6 +30,7 @@ warnings.filterwarnings('ignore')
 
 
 class start_here_a_gentle_introduction(Workload):
+
     def run(self, execution_environment, root_data, verbose=0):
         print(os.listdir(root_data))
         app_train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
@@ -660,6 +661,8 @@ class start_here_a_gentle_introduction(Workload):
         fi_domain = model(app_train_domain, app_test_domain)
         fi_sorted = plot_feature_importances(fi_domain)
 
+        return True
+
 
 if __name__ == "__main__":
     ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
@@ -673,7 +676,7 @@ if __name__ == "__main__":
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
     from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    AllMaterializer
+        AllMaterializer
 
     workload = start_here_a_gentle_introduction()
 

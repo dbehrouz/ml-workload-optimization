@@ -22,10 +22,14 @@ class Executor:
         4. cleanup
         :type workload: Workload
         """
-        self.run_workload(workload, **args)
-        self.local_process()
-        self.global_process()
-        self.cleanup()
+        if not self.run_workload(workload, **args):
+            return False
+        if not self.local_process():
+            return False
+        if not self.global_process():
+            return False
+        if not self.cleanup():
+            return False
 
     @abstractmethod
     def run_workload(self, workload, **args):
@@ -33,20 +37,32 @@ class Executor:
         only runs the script, for running experiments and capturing run time
         :param workload:
         :param args:
-        :return:
+        :rtype: bool
+        """
+        return False
+
+    @abstractmethod
+    def local_process(self):
+        """
+
+        :rtype: bool
         """
         pass
 
     @abstractmethod
-    def local_process(self):
-        pass
-
-    @abstractmethod
     def global_process(self):
+        """
+
+        :rtype: bool
+        """
         pass
 
     @abstractmethod
     def cleanup(self):
+        """
+
+        :rtype: bool
+        """
         pass
 
 
@@ -79,7 +95,7 @@ class CollaborativeExecutor(Executor):
         """
         args['execution_environment'] = self.execution_environment
         # execute the workload and post process the workload dag
-        workload.run(**args)
+        return workload.run(**args)
 
     def local_process(self):
         """
@@ -87,6 +103,7 @@ class CollaborativeExecutor(Executor):
         :return:
         """
         self.execution_environment.workload_dag.post_process()
+        return True
 
     def global_process(self):
         """
@@ -98,6 +115,7 @@ class CollaborativeExecutor(Executor):
         self.compute_heuristics(self.execution_environment.experiment_graph.graph)
         self.materializer.run_and_materialize(self.execution_environment.experiment_graph,
                                               self.execution_environment.workload_dag)
+        return True
 
     def cleanup(self):
         """
@@ -111,6 +129,7 @@ class CollaborativeExecutor(Executor):
             else:
                 self.time_manager[k] = v
         self.execution_environment.new_workload()
+        return True
 
     def store_experiment_graph(self, database_path, overwrite=False):
         self.execution_environment.save_history(database_path, overwrite=overwrite)
@@ -134,13 +153,13 @@ class BaselineExecutor(Executor):
         Executor.__init__(self)
 
     def run_workload(self, workload, **args):
-        workload.run(**args)
+        return workload.run(**args)
 
     def local_process(self):
-        pass
+        return True
 
     def global_process(self):
-        pass
+        return True
 
     def cleanup(self):
-        pass
+        return True

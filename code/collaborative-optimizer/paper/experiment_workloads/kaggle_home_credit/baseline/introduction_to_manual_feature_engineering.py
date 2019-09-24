@@ -666,6 +666,8 @@ class introduction_to_manual_feature_engineering(Workload):
 
         fi_corrs_sorted = plot_feature_importances(fi_corrs)
 
+        return True
+
 
 if __name__ == "__main__":
     ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'

@@ -641,9 +641,7 @@ class start_here_a_gentle_introduction(Workload):
         fi_domain = model(app_train_domain, app_test_domain)
         fi_sorted = plot_feature_importances(fi_domain)
 
-        # it's difficult to capture model training time
-        # as many of the operations are fit_transform
-        return 0
+        return True
 
 
 if __name__ == "__main__":

@@ -434,6 +434,8 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
         fi = model(train, test)
 
+        return True
+
 
 if __name__ == "__main__":
     ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'

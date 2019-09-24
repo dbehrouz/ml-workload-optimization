@@ -29,6 +29,7 @@ from sklearn.preprocessing import LabelEncoder
 
 warnings.filterwarnings('ignore')
 
+
 class introduction_to_manual_feature_engineering_p2(Workload):
     def run(self, root_data):
         def agg_numeric(df, parent_var, df_name):
@@ -320,7 +321,8 @@ class introduction_to_manual_feature_engineering_p2(Workload):
         credit = pd.read_csv(root_data + '/kaggle_home_credit/credit_card_balance.csv')
         credit.head()
 
-        credit_by_client = aggregate_client(credit, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['credit', 'client'])
+        credit_by_client = aggregate_client(credit, group_vars=['SK_ID_PREV', 'SK_ID_CURR'],
+                                            df_names=['credit', 'client'])
         credit_by_client.head()
 
         print 'Credit by client shape: '.format(credit_by_client.shape)
@@ -455,6 +457,8 @@ class introduction_to_manual_feature_engineering_p2(Workload):
             return feature_importances
 
         fi = model(train, test)
+
+        return True
 
 
 if __name__ == "__main__":

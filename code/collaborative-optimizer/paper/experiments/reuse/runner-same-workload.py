@@ -27,7 +27,7 @@ from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
-ROOT = parser.get('root')
+ROOT = parser.get('root', SOURCE_CODE_ROOT)
 
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
@@ -56,10 +56,10 @@ result_file = RESULT_PATH + '/experiment_results.csv'
 def run(executor):
     if method == 'optimized':
         workload = ExperimentWorkloadFactory.get_workload(EXPERIMENT, method, WORKLOAD)
-        executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
+        return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
     elif method == 'baseline':
         workload = ExperimentWorkloadFactory.get_workload(EXPERIMENT, method, WORKLOAD)
-        executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
+        return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
 if not os.path.isdir(RESULT_PATH + '/details/'):
@@ -83,12 +83,14 @@ while i < rep:
 
     start = datetime.now()
     print '{}-Start of {} workload execution {}'.format(start, method, i + 1)
-    run(executor)
+    success = run(executor)
     end = datetime.now()
     print '{}-End of {} workload execution {}'.format(end, method, i + 1)
 
     elapsed = (end - start).total_seconds()
 
+    if not success:
+        elapsed = 'Failed!'
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(

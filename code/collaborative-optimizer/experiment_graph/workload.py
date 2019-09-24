@@ -7,4 +7,8 @@ class Workload:
 
     @abstractmethod
     def run(self, **args):
+        """
+
+        :rtype: bool returns True when the script successfully finishes
+        """
         raise Exception('{} class cannot be instantiated'.format(self.__class__.__name__))
