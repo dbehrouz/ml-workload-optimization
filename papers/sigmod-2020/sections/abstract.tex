@@ -6,7 +6,7 @@ This results in many redundant data processing and model training operations, as
 However, current collaborative platforms cannot detect and exploit such redundancies in the workloads as they execute them in isolation.
 
 In this paper, we present a system to optimize the execution of ML workloads in collaborative data science platforms.
-We utilize a graph to store the artifacts, i.e., raw and intermediate data or machine learning models, and operations of machine learning workloads as vertices and edges, which we refer to as the experiment graph.
+We utilize a graph to store the artifacts, i.e., raw and intermediate data or machine learning models, as vertices and operations of machine learning workloads as edges, which we refer to as the Experiment Graph.
 As more workloads are executed, the combined size of the artifacts grows rapidly, which renders their storage infeasible. 
 To alleviate this problem, we propose two algorithms for materializing the artifacts with high likelihoods of future reuse.
 The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning models to decide what artifacts to materialize.

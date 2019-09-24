@@ -1,17 +1,15 @@
 \section{Background} \label{sec-background}
 In this section, we first define the required terms referring to different entities in collaborative environments which we use throughout the paper.
-Next, we discuss a use case based on a real collaborative environment, which we will use throughout the paper.
+Next, we discuss a use case based on a real collaborative environment.
 
 \subsection{Preliminaries and Definitions}
 \textbf{ML Task.} 
 In a collaborative environment, an ML task specifies the requirements and the goal of the machine learning solutions.
-An ML task contains the following.
-(1) The type of the machine learning model, i.e., classification, regression, or clustering, (2) one or more training and test datasets, (3) an evaluation function which assigns a score to the user-provided solution.
+An ML task contains the following: (1) The type of the machine learning model, i.e., classification, regression, or clustering, (2) one or more training and test datasets, and (3) an evaluation function which assigns a score to the user-provided solution.
 For example, in an online advertising company, the ML task for the data scientists is to train Click-Through-Rate prediction models given one or multiple datasets containing users and ads features which minimize the logarithmic loss on a test dataset.
 
 \textbf{Data and Operations.}
-We support three types of data.
-(1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects, such as Pandas dataframe \cite{mckinney-proc-scipy-2010}), (2) an \textit{Aggregate} which contains a single value or list of values, and (3) a \textit{Model} which represents a machine learning model.
+We support three types of data: (1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects, such as Pandas dataframe \cite{mckinney-proc-scipy-2010}), (2) an \textit{Aggregate} which contains a single value or list of values, and (3) a \textit{Model} which represents a machine learning model.
 The type of data depends on the operations which generate them.
 \textit{Data preprocessing and feature engineering operations}, which include simple data transformation and aggregation, feature selection, and feature extraction operations, generate either a Dataset (e.g., map, filter, or one-hot encoding operations)  or an Aggregate (e.g., reduce operation).
 \textit{Model training operations} generate a Model.
