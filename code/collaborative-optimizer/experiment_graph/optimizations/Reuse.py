@@ -2,8 +2,6 @@ import copy
 from abc import abstractmethod
 from collections import deque
 
-import networkx as nx
-
 
 class Reuse:
     NAME = 'BASE_REUSE'
