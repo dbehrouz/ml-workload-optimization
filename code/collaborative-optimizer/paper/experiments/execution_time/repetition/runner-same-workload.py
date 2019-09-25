@@ -19,7 +19,6 @@ else:
 
 sys.path.append(SOURCE_CODE_ROOT)
 from paper.experiment_helper import ExperimentWorkloadFactory
-from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
@@ -62,12 +61,12 @@ def run(executor):
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
-if not os.path.isdir(RESULT_PATH + '/details/'):
-    os.makedirs(RESULT_PATH + '/details/')
+# if not os.path.isdir(RESULT_PATH + '/details/'):
+#     os.makedirs(RESULT_PATH + '/details/')
 
-if method == 'optimized':
-    with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'w') as result:
-        result.write(','.join(BenchmarkMetrics.keys) + "\n")
+# if method == 'optimized':
+#     with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'w') as result:
+#         result.write(','.join(BenchmarkMetrics.keys) + "\n")
 
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
@@ -101,7 +100,7 @@ while i < rep:
         executor.local_process()
         executor.global_process()
         executor.cleanup()
-        with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'a') as result:
-            result.write(executor.execution_environment.get_benchmark_results() + "\n")
+        # with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'a') as result:
+        #     result.write(executor.execution_environment.get_benchmark_results() + "\n")
 
     i += 1
