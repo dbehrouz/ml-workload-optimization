@@ -433,7 +433,7 @@ class start_here_a_gentle_introduction(Workload):
         from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
         # Make the random forest classifier
-        random_forest = RandomForestClassifier(n_estimators=10, random_state=50, verbose=1, n_jobs=-1)
+        random_forest = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
 
         # Train on the training data
         random_forest.fit(train, train_labels)
@@ -629,7 +629,7 @@ class start_here_a_gentle_introduction(Workload):
             feature_names = list(lgb_featres.data(verbose).columns)
 
             # Create the model
-            model = LGBMClassifier(n_estimators=10, objective='binary',
+            model = LGBMClassifier(n_estimators=10000, objective='binary',
                                    class_weight='balanced', learning_rate=0.05,
                                    reg_alpha=0.1, reg_lambda=0.1,
                                    subsample=0.8, n_jobs=-1, random_state=50)

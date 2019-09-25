@@ -524,7 +524,7 @@ class introduction_to_manual_feature_engineering(Workload):
             feature_names = list(lgb_featres.data(verbose=verbose).columns)
 
             # Create the model
-            model = LGBMClassifier(n_estimators=10, objective='binary',
+            model = LGBMClassifier(n_estimators=10000, objective='binary',
                                    class_weight='balanced', learning_rate=0.05,
                                    reg_alpha=0.1, reg_lambda=0.1,
                                    subsample=0.8, n_jobs=-1, random_state=50)

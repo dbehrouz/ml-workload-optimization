@@ -433,8 +433,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
             # Extract feature names
             feature_names = list(features.columns)
 
-            # TODO change n_estimators to 10000, he original number from the script
-            model = lgb.LGBMClassifier(n_estimators=10, objective='binary',
+            model = lgb.LGBMClassifier(n_estimators=10000, objective='binary',
                                        class_weight='balanced', learning_rate=0.05,
                                        reg_alpha=0.1, reg_lambda=0.1,
                                        subsample=0.8, n_jobs=-1, random_state=50)
