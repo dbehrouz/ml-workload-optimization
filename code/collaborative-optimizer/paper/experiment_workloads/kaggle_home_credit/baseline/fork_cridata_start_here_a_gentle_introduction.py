@@ -32,7 +32,7 @@ from sklearn.preprocessing import LabelEncoder
 warnings.filterwarnings('ignore')
 
 
-class cridata_start_here_a_gentle_introduction(Workload):
+class fork_cridata_start_here_a_gentle_introduction(Workload):
 
     def run(self, root_data):
         print(os.listdir(root_data))
@@ -641,7 +641,7 @@ if __name__ == "__main__":
 
     executor = BaselineExecutor()
     execution_start = datetime.now()
-    workload = cridata_start_here_a_gentle_introduction()
+    workload = fork_cridata_start_here_a_gentle_introduction()
     executor.end_to_end_run(workload=workload, root_data=root_data)
 
     execution_end = datetime.now()

@@ -29,7 +29,7 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-class cridata_start_here_a_gentle_introduction(Workload):
+class fork_cridata_start_here_a_gentle_introduction(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
         print(os.listdir(root_data))
@@ -572,7 +572,7 @@ if __name__ == "__main__":
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
     from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
 
-    workload = cridata_start_here_a_gentle_introduction()
+    workload = fork_cridata_start_here_a_gentle_introduction()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = AllMaterializer(storage_budget=mat_budget)
