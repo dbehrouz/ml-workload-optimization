@@ -29,7 +29,7 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-class start_here_a_gentle_introduction(Workload):
+class cridata_start_here_a_gentle_introduction(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
         print(os.listdir(root_data))
@@ -124,36 +124,37 @@ class start_here_a_gentle_introduction(Workload):
         print('Training Features shape: ', app_train.shape().data(verbose))
         print('Testing Features shape: ', app_test.shape().data(verbose))
 
-        (app_train['DAYS_BIRTH'] / 365).describe().data(verbose)
-
-        app_train['DAYS_EMPLOYED'].describe().data(verbose)
-
-        app_train['DAYS_EMPLOYED'].data(verbose).plot.hist(title='Days Employment Histogram')
-        plt.xlabel('Days Employment')
-
-        anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
-        non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
-        print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data(verbose)))
-        print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data(verbose)))
-        print('There are %d anomalous days of employment' % anom.shape().data(verbose)[0])
-
-        days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
-        app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
-        temp = app_train['DAYS_EMPLOYED'].replace({365243: np.nan})
-        app_train = app_train.drop('DAYS_EMPLOYED')
-        app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
-
-        app_train["DAYS_EMPLOYED"].data(verbose).plot.hist(title='Days Employment Histogram');
-        plt.xlabel('Days Employment')
-
-        days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
-        app_test = app_test.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
-        temp = app_test['DAYS_EMPLOYED'].replace({365243: np.nan})
-        app_test = app_test.drop('DAYS_EMPLOYED')
-        app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
-        print('There are %d anomalies in the test data out of %d entries'
-              % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(verbose),
-                 app_test.shape().data(verbose)[0]))
+        # CHANGE
+        # (app_train['DAYS_BIRTH'] / 365).describe().data(verbose)
+        #
+        # app_train['DAYS_EMPLOYED'].describe().data(verbose)
+        #
+        # app_train['DAYS_EMPLOYED'].data(verbose).plot.hist(title='Days Employment Histogram')
+        # plt.xlabel('Days Employment')
+        #
+        # anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
+        # non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
+        # print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data(verbose)))
+        # print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data(verbose)))
+        # print('There are %d anomalous days of employment' % anom.shape().data(verbose)[0])
+        #
+        # days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
+        # app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
+        # temp = app_train['DAYS_EMPLOYED'].replace({365243: np.nan})
+        # app_train = app_train.drop('DAYS_EMPLOYED')
+        # app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
+        #
+        # app_train["DAYS_EMPLOYED"].data(verbose).plot.hist(title='Days Employment Histogram');
+        # plt.xlabel('Days Employment')
+        #
+        # days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
+        # app_test = app_test.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
+        # temp = app_test['DAYS_EMPLOYED'].replace({365243: np.nan})
+        # app_test = app_test.drop('DAYS_EMPLOYED')
+        # app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
+        # print('There are %d anomalies in the test data out of %d entries'
+        #       % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(verbose),
+        #          app_test.shape().data(verbose)[0]))
 
         correlations = app_train.corr().data(verbose)
         top = correlations['TARGET'].sort_values()
@@ -329,32 +330,59 @@ class start_here_a_gentle_introduction(Workload):
         print('Testing data with polynomial features shape:  ',
               app_test_poly.shape().data(verbose))
 
-        app_train_domain = app_train.copy()
-        app_test_domain = app_test.copy()
-
-        app_train_domain = app_train_domain.add_columns('CREDIT_INCOME_PERCENT',
-                                                        app_train_domain['AMT_CREDIT'] / app_train_domain[
-                                                            'AMT_INCOME_TOTAL'])
-        app_train_domain = app_train_domain.add_columns('ANNUITY_INCOME_PERCENT',
-                                                        app_train_domain['AMT_ANNUITY'] / app_train_domain[
-                                                            'AMT_INCOME_TOTAL'])
-        app_train_domain = app_train_domain.add_columns('CREDIT_TERM',
-                                                        app_train_domain['AMT_ANNUITY'] / app_train_domain[
-                                                            'AMT_CREDIT'])
-        app_train_domain = app_train_domain.add_columns('DAYS_EMPLOYED_PERCENT',
-                                                        app_train_domain['DAYS_EMPLOYED'] / app_train_domain[
-                                                            'DAYS_BIRTH'])
-
-        app_test_domain = app_test_domain.add_columns('CREDIT_INCOME_PERCENT',
-                                                      app_test_domain['AMT_CREDIT'] / app_test_domain[
-                                                          'AMT_INCOME_TOTAL'])
-        app_test_domain = app_test_domain.add_columns('ANNUITY_INCOME_PERCENT',
-                                                      app_test_domain['AMT_ANNUITY'] / app_test_domain[
-                                                          'AMT_INCOME_TOTAL'])
-        app_test_domain = app_test_domain.add_columns('CREDIT_TERM',
-                                                      app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_CREDIT'])
-        app_test_domain = app_test_domain.add_columns('DAYS_EMPLOYED_PERCENT',
-                                                      app_test_domain['DAYS_EMPLOYED'] / app_test_domain['DAYS_BIRTH'])
+        # CHANGE
+        # app_train_domain = app_train.copy()
+        # app_test_domain = app_test.copy()
+        #
+        # app_train_domain = app_train_domain.add_columns('CREDIT_INCOME_PERCENT',
+        #                                                 app_train_domain['AMT_CREDIT'] / app_train_domain[
+        #                                                     'AMT_INCOME_TOTAL'])
+        # app_train_domain = app_train_domain.add_columns('ANNUITY_INCOME_PERCENT',
+        #                                                 app_train_domain['AMT_ANNUITY'] / app_train_domain[
+        #                                                     'AMT_INCOME_TOTAL'])
+        # app_train_domain = app_train_domain.add_columns('CREDIT_TERM',
+        #                                                 app_train_domain['AMT_ANNUITY'] / app_train_domain[
+        #                                                     'AMT_CREDIT'])
+        # app_train_domain = app_train_domain.add_columns('DAYS_EMPLOYED_PERCENT',
+        #                                                 app_train_domain['DAYS_EMPLOYED'] / app_train_domain[
+        #                                                     'DAYS_BIRTH'])
+        #
+        # app_test_domain = app_test_domain.add_columns('CREDIT_INCOME_PERCENT',
+        #                                               app_test_domain['AMT_CREDIT'] / app_test_domain[
+        #                                                   'AMT_INCOME_TOTAL'])
+        # app_test_domain = app_test_domain.add_columns('ANNUITY_INCOME_PERCENT',
+        #                                               app_test_domain['AMT_ANNUITY'] / app_test_domain[
+        #                                                   'AMT_INCOME_TOTAL'])
+        # app_test_domain = app_test_domain.add_columns('CREDIT_TERM',
+        #                                               app_test_domain['AMT_ANNUITY'] / app_test_domain['AMT_CREDIT'])
+        # app_test_domain = app_test_domain.add_columns('DAYS_EMPLOYED_PERCENT',
+        #                                               app_test_domain['DAYS_EMPLOYED'] / app_test_domain['DAYS_BIRTH'])
+        #
+        # plt.figure(figsize=(12, 20))
+        # # iterate through the new features
+        # for i, column in enumerate([
+        #     'CREDIT_INCOME_PERCENT', 'ANNUITY_INCOME_PERCENT', 'CREDIT_TERM',
+        #     'DAYS_EMPLOYED_PERCENT'
+        # ]):
+        #     # create a new subplot for each source
+        #     plt.subplot(4, 1, i + 1)
+        #     # plot repaid loans
+        #     negative = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 0]
+        #     sns.kdeplot(
+        #         negative[app_train_domain[column].notna()][column].data(verbose),
+        #         label='target == 0')
+        #     # plot loans that were not repaid
+        #     positive = app_train_domain[[column, 'TARGET']][app_train['TARGET'] == 1]
+        #     sns.kdeplot(
+        #         positive[app_train_domain[column].notna()][column].data(verbose),
+        #         label='target == 1')
+        #
+        #     # Label the plots
+        #     plt.title('Distribution of %s by Target Value' % column)
+        #     plt.xlabel('%s' % column)
+        #     plt.ylabel('Density')
+        #
+        # plt.tight_layout(h_pad=2.5)
 
         from experiment_graph.sklearn_helper.preprocessing import MinMaxScaler
 
@@ -403,6 +431,7 @@ class start_here_a_gentle_introduction(Workload):
         score = log_reg.score(test,
                               test_labels['TARGET'],
                               score_type='auc').data(verbose)
+
         print 'Logistic Regression with AUC score: {}'.format(score)
 
         from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
@@ -413,12 +442,14 @@ class start_here_a_gentle_introduction(Workload):
         # Train on the training data
         random_forest.fit(train, train_labels)
 
-        # Extract feature importance
-        feature_importances = random_forest.feature_importances(features)
+        # CHANGE
+        # # Extract feature importance
+        # feature_importances = random_forest.feature_importances(features)
 
         score = random_forest.score(test,
                                     test_labels['TARGET'],
                                     score_type='auc').data(verbose)
+
         print 'Random Forest Simple Data with AUC score: {}'.format(score)
 
         poly_features_names = list(app_train_poly.data(verbose).columns)
@@ -445,200 +476,85 @@ class start_here_a_gentle_introduction(Workload):
                                          score_type='auc').data(verbose)
         print 'Random Forest Poly Data with AUC score: {}'.format(score)
 
-        app_train_domain = app_train_domain.drop(columns='TARGET')
-
-        domain_features_names = list(app_train_domain.data(verbose).columns)
-
-        # Impute the domainnomial features
-        imputer = Imputer(strategy='median')
-
-        domain_features = imputer.fit_transform(app_train_domain)
-        domain_features_test = imputer.transform(app_test_domain)
-
-        # Scale the domainnomial features
-        scaler = MinMaxScaler(feature_range=(0, 1))
-
-        domain_features = scaler.fit_transform(domain_features)
-        domain_features_test = scaler.transform(domain_features_test)
-
-        # Train on the training data
-        random_forest_domain = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
-        random_forest_domain.fit(domain_features, train_labels)
-
-        # Extract feature importances
-        feature_importances_domain = random_forest_domain.feature_importances(domain_features_names)
-
-        score = random_forest_domain.score(domain_features_test,
-                                           test_labels['TARGET'],
-                                           score_type='auc').data(verbose)
-        print 'Random Forest Domain Data with AUC score: {}'.format(score)
-
-        def plot_feature_importances(df):
-            """
-            Plot importances returned by a model. This can work with any measure of
-            feature importance provided that higher importance is better.
-
-            Args:
-                df (dataframe): feature importances. Must have the features in a column
-                called `features` and the importances in a column called `importance
-
-            Returns:
-                shows a plot of the 15 most importance features
-
-                df (dataframe): feature importances sorted by importance (highest to lowest)
-                with a column for normalized importance
-                """
-
+        # CHANGE
+        # app_train_domain = app_train_domain.drop(columns='TARGET')
+        #
+        # domain_features_names = list(app_train_domain.data(verbose).columns)
+        #
+        # # Impute the domainnomial features
+        # imputer = Imputer(strategy='median')
+        #
+        # domain_features = imputer.fit_transform(app_train_domain)
+        # domain_features_test = imputer.transform(app_test_domain)
+        #
+        # # Scale the domainnomial features
+        # scaler = MinMaxScaler(feature_range=(0, 1))
+        #
+        # domain_features = scaler.fit_transform(domain_features)
+        # domain_features_test = scaler.transform(domain_features_test)
+        #
+        # # Train on the training data
+        # random_forest_domain = RandomForestClassifier(n_estimators=100, random_state=50, verbose=1, n_jobs=-1)
+        # random_forest_domain.fit(domain_features, train_labels)
+        #
+        # # Extract feature importances
+        # feature_importances_domain = random_forest_domain.feature_importances(domain_features_names)
+        #
+        # random_forest_domain.score(domain_features_test,
+        #                            test_labels['TARGET'],
+        #                            score_type='auc').data(verbose)
+        # CHANGE entire function
+        def show_feature_importances(model, feature):
+            plt.figure(figsize=(12, 8))
             # Sort features according to importance
-            df = df.sort_values('importance', ascending=False)
+            results = model.feature_importances(feature)
+            results = results.sort_values('importance', ascending=False).data(verbose=verbose)
 
-            # Normalize the feature importances to add up to one
-            df = df.add_columns('importance_normalized', df['importance'] / df['importance'].sum().data(verbose))
+            #  Display
+            print(results.head(10))
+            print('\nNumber of features with importance greater than 0.01 = ', np.sum(results['importance'] > 0.01))
 
-            # Make a horizontal bar chart of feature importances
-            plt.figure(figsize=(10, 6))
-            ax = plt.subplot()
+            # Plot of feature importances as horizontal bar chart
+            results.head(20).plot(x='feature', y='importance', kind='barh',
+                                  color='red', edgecolor='k', title='Feature Importances');
+            return results
 
-            # Need to reverse the index to plot most important on top
-            ax.barh(list(reversed(list(df.data(verbose).index[:15]))),
-                    df['importance_normalized'].data(verbose).head(15),
-                    align='center', edgecolor='k')
+        feature_importances = show_feature_importances(random_forest, features)
 
-            # Set the yticks and labels
-            ax.set_yticks(list(reversed(list(df.data(verbose).index[:15]))))
-            ax.set_yticklabels(df['feature'].data(verbose).head(15))
-
-            # Plot labeling
-            plt.xlabel('Normalized Importance')
-            plt.title('Feature Importances')
-            plt.show()
-
-            return df
-
-        # Show the feature importances for the default features
-        feature_importances_sorted = plot_feature_importances(feature_importances)
-
-        feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
+        # feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
 
         from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
-        def model(lgb_featres, test_features, encoding='ohe'):
+        # Extract the ids
 
-            """Train and test a light gradient boosting model using
-            cross validation.
+        app_train.drop(columns='TARGET')
 
-            Parameters
-            --------
-                features (pd.DataFrame):
-                    dataframe of training features to use
-                    for training a model. Must include the TARGET column.
-                test_features (pd.DataFrame):
-                    dataframe of testing features to use
-                    for making predictions with the model.
-                encoding (str, default = 'ohe'):
-                    method for encoding categorical variables. Either 'ohe' for one-hot encoding or 'le' for integer label encoding
-                    n_folds (int, default = 5): number of folds to use for cross validation
+        # Create the model
+        clf = LGBMClassifier(
+            n_estimators=10000,
+            learning_rate=0.1,
+            subsample=.8,
+            max_depth=7,
+            reg_alpha=.1,
+            reg_lambda=.1,
+            min_split_gain=.01,
+            min_child_weight=2
+        )
 
-            Return
-            --------
-                submission (pd.DataFrame):
-                    dataframe with `SK_ID_CURR` and `TARGET` probabilities
-                    predicted by the model.
-                feature_importances (pd.DataFrame):
-                    dataframe with the feature importances from the model.
-                valid_metrics (pd.DataFrame):
-                    dataframe with training and validation metrics (ROC AUC) for each fold and overall.
+        # Train the model
+        clf.fit(train, train_labels, custom_args={'eval_metric': 'auc',
+                                                  'verbose': False})
 
-            """
+        # Record the best iteration
+        best_iteration = clf.best_iteration()
 
-            # Extract the ids
-            train_ids = lgb_featres['SK_ID_CURR']
-            test_ids = test_features['SK_ID_CURR']
+        # Make predictions
+        score = clf.score(test,
+                          test_labels['TARGET'],
+                          score_type='auc',
+                          custom_args={'num_iteration': best_iteration}).data(verbose)
 
-            # Extract the labels for training
-            labels = lgb_featres['TARGET']
-
-            # Remove the ids and target
-            lgb_featres = lgb_featres.drop(columns=['SK_ID_CURR', 'TARGET'])
-            test_features = test_features.drop(columns=['SK_ID_CURR'])
-
-            # One Hot Encoding
-            if encoding == 'ohe':
-                lgb_featres = lgb_featres.onehot_encode()
-                test_features = test_features.onehot_encode()
-
-                features_columns = lgb_featres.data(verbose).columns
-                test_features_columns = test_features.data(verbose).columns
-                for c in features_columns:
-                    if c not in test_features_columns:
-                        lgb_featres = lgb_featres.drop(c)
-
-                # No categorical indices to record
-                cat_indices = 'auto'
-
-            # # Integer label encoding
-            # elif encoding == 'le':
-            #
-            #     # Create a label encoder
-            #     label_encoder = LabelEncoder()
-            #
-            #     # List for storing categorical indices
-            #     cat_indices = []
-            #
-            #     # Iterate through each column
-            #     for i, col in enumerate(lgb_featres):
-            #         if lgb_featres[col].dtype == 'object':
-            #             # Map the categorical features to integers
-            #             lgb_featres[col] = label_encoder.fit_transform(np.array(lgb_featres[col].astype(str)).reshape((-1,)))
-            #             test_features[col] = label_encoder.transform(
-            #                 np.array(test_features[col].astype(str)).reshape((-1,)))
-            #
-            #             # Record the categorical indices
-            #             cat_indices.append(i)
-
-            # Catch error if label encoding scheme is not valid
-            else:
-                raise ValueError("Encoding must be either 'ohe' or 'le'")
-
-            print('Training Data Shape: ', lgb_featres.shape().data(verbose))
-            print('Testing Data Shape: ', test_features.shape().data(verbose))
-
-            # Extract feature names
-            feature_names = list(lgb_featres.data(verbose).columns)
-
-            # Create the model
-            model = LGBMClassifier(n_estimators=10000, objective='binary',
-                                   class_weight='balanced', learning_rate=0.05,
-                                   reg_alpha=0.1, reg_lambda=0.1,
-                                   subsample=0.8, n_jobs=-1, random_state=50)
-
-            # Train the model
-            model.fit(lgb_featres, labels, custom_args={'eval_metric': 'auc',
-                                                        'categorical_feature': cat_indices,
-                                                        'verbose': 200})
-
-            # Record the best iteration
-            best_iteration = model.best_iteration()
-
-            # Make predictions
-            score = model.score(test_features,
-                                test_labels['TARGET'],
-                                score_type='auc',
-                                custom_args={'num_iteration': best_iteration}).data(verbose)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
-
-            feature_importances = model.feature_importances(feature_names)
-
-            return feature_importances
-
-        fi = model(app_train, app_test)
-        fi_sorted = plot_feature_importances(fi)
-
-        app_train_domain = app_train_domain.add_columns('TARGET', train_labels)
-
-        # Test the domain knowledge features
-        fi_domain = model(app_train_domain, app_test_domain)
-        fi_sorted = plot_feature_importances(fi_domain)
+        print 'LGBMClassifier with AUC score: {}'.format(score)
 
         return True
 
@@ -654,10 +570,9 @@ if __name__ == "__main__":
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-        AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
 
-    workload = start_here_a_gentle_introduction()
+    workload = cridata_start_here_a_gentle_introduction()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = AllMaterializer(storage_budget=mat_budget)

@@ -496,6 +496,9 @@ class cridata_start_here_a_gentle_introduction(Workload):
                                   color='red', edgecolor='k', title='Feature Importances');
             return results
 
+        # Show the feature importances for the default features
+        feature_importances = show_feature_importances(random_forest, features)
+
         # CHANGE
         # # Show the feature importances for the default features
         # feature_importances_sorted = plot_feature_importances(feature_importances)
@@ -604,9 +607,7 @@ class cridata_start_here_a_gentle_introduction(Workload):
         )
 
         # Train the model
-        clf.fit(train, train_labels, eval_metric='auc',
-                early_stopping_rounds=100,
-                verbose=False)
+        clf.fit(train, train_labels, eval_metric='auc', verbose=False)
 
         # Record the best iteration
         best_iteration = clf.best_iteration_

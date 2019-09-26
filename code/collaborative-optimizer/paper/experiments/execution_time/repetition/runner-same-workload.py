@@ -7,6 +7,7 @@ version will be long. The second run should be faster for optimized since the ex
 populated.
 
 """
+import errno
 import os
 import sys
 import uuid
@@ -48,8 +49,7 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 
 rep = int(parser.get('rep', 2))
 
-RESULT_PATH = parser.get('result')
-result_file = RESULT_PATH + '/experiment_results.csv'
+result_file = parser.get('result')
 
 
 def run(executor):
@@ -61,12 +61,12 @@ def run(executor):
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
-# if not os.path.isdir(RESULT_PATH + '/details/'):
-#     os.makedirs(RESULT_PATH + '/details/')
-
-# if method == 'optimized':
-#     with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'w') as result:
-#         result.write(','.join(BenchmarkMetrics.keys) + "\n")
+if not os.path.exists(os.path.dirname(result_file)):
+    try:
+        os.makedirs(os.path.dirname(result_file))
+    except OSError as exc:  # Guard against race condition
+        if exc.errno != errno.EEXIST:
+            raise
 
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
@@ -90,6 +90,7 @@ while i < rep:
 
     if not success:
         elapsed = 'Failed!'
+
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
@@ -100,7 +101,5 @@ while i < rep:
         executor.local_process()
         executor.global_process()
         executor.cleanup()
-        # with open(RESULT_PATH + '/details/{}.csv'.format(e_id), 'a') as result:
-        #     result.write(executor.execution_environment.get_benchmark_results() + "\n")
 
     i += 1
