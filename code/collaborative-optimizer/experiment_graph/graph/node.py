@@ -1450,8 +1450,6 @@ class SuperNode(Node):
         # Since both node 0 and 1 are already stored in the
         # TODO: This only works for adding one column at a time
         c_names = copy.copy(self.nodes[0].get_column())
-        print 'c_names: {}'.format(c_names)
-        print 'col_names: {}'.format(col_names)
         c_names.append(col_names)
         c_hash = copy.copy(self.nodes[0].get_column_hash())
         c_hash.append(copy.copy(self.nodes[1].get_column_hash()))

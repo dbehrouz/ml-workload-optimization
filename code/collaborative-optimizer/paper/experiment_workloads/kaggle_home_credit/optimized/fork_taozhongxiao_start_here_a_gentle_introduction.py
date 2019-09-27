@@ -484,14 +484,14 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
         print(app_train_poly.shape().data(verbose=verbose), app_test_poly.shape().data(verbose=verbose))
 
         # Drop the target from the training data
-        col_2 = app_train.data(verbose).columns
+        col_2 = app_train.data(verbose=verbose).columns
         if 'TARGET' in col_2:
             train = app_train.drop(columns=['TARGET'])
         else:
             train = app_train.copy()
 
         # Feature names
-        features = list(train.data(verbose).columns)
+        features = list(train.data(verbose=verbose).columns)
 
         # Copy of the testing data
         test = app_test.copy()
@@ -508,6 +508,9 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
 
         print('Training data shape: ', train.shape().data(verbose))
         print('Testing data shape: ', test.shape().data(verbose))
+
+        train = train.set_columns(features)
+        test = test.set_columns(features)
 
         train = train.add_columns('TARGET', train_labels)
         train.head().data(verbose=verbose)
@@ -589,7 +592,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
             return results
 
         grid_results = grid_search(param_grid)
-        print('The best validation score was {:.5f}'.format(grid_results.loc[0, 'score']))
+        print('The best validation score was {}'.format(grid_results.loc[0, 'score']))
         print('\nThe best hyperparameters were:')
         import pprint
         pprint.pprint(grid_results.loc[0, 'params'])
@@ -642,7 +645,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
 
         random_results = random_search(param_grid)
 
-        print('The best validation score was {:.5f}'.format(random_results.loc[0, 'score']))
+        print('The best validation score was {}'.format(random_results.loc[0, 'score']))
         print('\nThe best hyperparameters were:')
 
         import pprint
