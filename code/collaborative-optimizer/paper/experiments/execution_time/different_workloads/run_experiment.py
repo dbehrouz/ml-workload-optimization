@@ -17,7 +17,7 @@ else:
     SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
 
 sys.path.append(SOURCE_CODE_ROOT)
-from paper.experiments.scenario import get_kaggle_baseline_scenario, get_kaggle_optimized_scenario
+from paper.experiments.scenario import get_kaggle_baseline_scenario, get_kaggle_optimized_scenario, get_mock_scenario
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
@@ -25,7 +25,8 @@ from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
-ROOT = parser.get('root', SOURCE_CODE_ROOT)
+DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+ROOT = parser.get('root', DEFAULT_ROOT)
 
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
@@ -39,20 +40,22 @@ MODE = parser.get('mode', 'local')
 EXPERIMENT_TIMESTAMP = datetime.now()
 
 mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-method = parser.get('method', 'optimized')
+method = parser.get('method', 'mock')
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 
 rep = int(parser.get('rep', 2))
 
-result_file = parser.get('result')
+result_file = parser.get('result', ROOT + '/experiment_results/local/execution_time/mock/test.csv')
 
 
 def run(executor, workload):
     if method == 'optimized':
         return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
     elif method == 'baseline':
+        return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
+    elif method == 'mock':
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
@@ -71,9 +74,12 @@ if method == 'optimized':
 elif method == 'baseline':
     executor = BaselineExecutor()
     workloads = get_kaggle_baseline_scenario()
+elif method == 'mock':
+    executor = BaselineExecutor()
+    workloads = get_mock_scenario()
 else:
     raise Exception('invalid method: {}'.format(method))
-
+print result_file
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
