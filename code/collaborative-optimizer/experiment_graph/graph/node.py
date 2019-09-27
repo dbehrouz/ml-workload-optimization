@@ -407,6 +407,13 @@ class Dataset(Node):
                          column_hashes=self.get_column_hash(),
                          pandas_df=df)
 
+    def sample(self, n, random_state):
+        return self.generate_dataset_node('rename', {'n': n, 'random_state': random_state})
+
+    def p_sample(self, n, random_state):
+        return self.hash_and_return_dataframe('sample{}{}'.format(n, random_state),
+                                              self.get_materialized_data().sample(n=n, random_state=random_state))
+
     def project(self, columns):
         if type(columns) in [str, int]:
             return self.generate_feature_node('project', {'columns': columns})

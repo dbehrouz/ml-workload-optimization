@@ -31,4 +31,9 @@ warnings.filterwarnings('ignore')
 class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
+        MAX_EVALS = 5
+        print(os.listdir(root_data))
+        train_features = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
+        train_features = train_features.sample(n=16000, random_state=42)
+        print(train_features.shape)
         return True
