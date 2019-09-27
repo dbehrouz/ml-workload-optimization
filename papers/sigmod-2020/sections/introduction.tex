@@ -16,14 +16,13 @@ In the current collaborative environments, we identify two challenges which proh
 First, the quantity and size of the generated artifacts are large, which renders their storage not feasible.
 Second, naively searching through all the stored artifacts for reuse incurs a substantial overhead.
 
-
 % S
 We propose a solution which addresses these two challenges.
 Our solution only stores the ML artifacts with a high likelihood of reappearing in the future workloads.
 Furthermore, our solution organizes the ML artifacts and offers a fast reuse procedure.
 
 We model an ML workload with a directed acyclic graph (DAG), where vertices represent the ML artifacts and edges represent the operations in the workload.
-Each ML artifact is uniquely identified using the sequence of operations that generated it.
+%Each ML artifact is uniquely identified using the sequence of operations that generated it.
 An ML artifact comprises of two components: meta-data and underlying content.
 Meta-data refers to the column names of a dataframe, hyperparameters of a model, and evaluation score of a model on a testing dataset.
 Underlying content refers to the actual data inside a dataframe or the weight vector of a machine learning model.
@@ -32,25 +31,24 @@ The Experiment Graph is itself a DAG which contains all the vertices (ML artifac
 The size of the artifact meta-data is small.
 Thus, Experiment Graph stores the meta-data of all the artifacts.
 However, there are two scenarios where storing the underlying data in the Experiment Graph is not suitable, i.e., storage capacity is limited and when recreating an artifact is faster than storage/retrieval of the artifact.
-We propose an algorithm for materializing the underlying data of the artifacts given a storage budget.
-Our materialization algorithm utilizes several metrics such as the size, access frequency, operation run-time, and the score of the machine learning models to decide what artifacts to store.
+We propose two algorithms for materializing the underlying data of the artifacts given a storage budget.
+Our materialization algorithms utilize several statistics such as the size, recreation cost, access frequency, operation run-time, and the score of the machine learning models to decide what artifacts to store.
 
-To optimize the execution of future workloads, we propose efficient artifact reuse and model warmstarting methods.
-The process of reuse and warmstarting is as follows.
-Given a workload DAG, before executing the operations to generate an artifact, we search for the artifact in the Experiment Graph.
-If the Experiment Graph contains the artifact, we reuse the artifact instead of executing the operations.
-When the artifact in question is an ML model, due to the stochasticity of some model training operations, we cannot always reuse an existing model from the Experiment Graph.
-Instead, we warmstart the training operation of the workload with a model artifact from the Experiment Graph.
-Two factors impact the efficiency of the reuse and warmstarting methods, i.e., the number of the artifacts in the Experiment Graph and the storage method of the Experiment Graph (in memory, on disk, or in a remote location).
-Therefore, a brute-force artifact search may create a large overhead.
-In our reuse and warmstarting methods, we propose early stopping and pruning techniques as well as heuristics to speed up the search and decrease the optimization overhead.
+To optimize the execution of incoming ML workloads, we propose an efficient reuse algorithm, which receives the DAG representation of the workloads and performs the following steps.
+First, the algorithm queries the Experiment Graph for the list of the materialized artifacts belonging to the workload DAG.
+Then, for each materialized artifact, the reuse algorithm decides whether to retrieve the artifact from the Experiment Graph or to recompute it locally using the other artifacts inside the workload DAG.
+Our reuse algorithm has a linear time complexity and guarantees an optimal execution plan which minimizes the total execution cost, i.e., the sum of the retrieval and the computation costs.
+For some ML model artifacts, due to the stochasticity of the training operations, we cannot always directly reuse an existing model from the Experiment Graph.
+Instead, we warmstart the training operation of the workload DAG with a materialized model artifact from the Experiment Graph.
+\todo[inline]{In our reuse algorithm, we assume a node in the graph either has load cost (retrieving from EG) or computation cost but not both. However, for warmstarting, we have the load cost + "reduced" computation cost (due to warmstarting, training would be faster than without warmstarting). Should we address this in the reuse algorithm or leave it for future work? This could potentially be an interesting contribution, but I think we do not have enough time to come up with a solution.}
+Model warmstarting increases the convergence rate resulting in faster execution time of the model training operations.
 
 In summary, we make the following contributions:
 \begin{itemize}
 \item We propose a system for optimizing the execution of machine learning workloads in collaborative environments.
-\item We present Experiment Graph, a graph representation of the artifacts and operations of the machine learning workloads.
+\item We present Experiment Graph, a graph representation of the artifacts and operations of the ML workloads.
 \item We propose algorithms for materializing the artifacts in the Experiment Graph under limited storage capacity.
-\item We propose efficient reuse and warmstarting methods for new workloads.
+\item We propose efficient reuse algorithm for generating optimal execution plan of the incoming ML workloads.
 \end{itemize}
 
 The rest of this paper is organized as follows.
