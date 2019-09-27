@@ -64,7 +64,6 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
         train_features = train_features.drop(columns=['TARGET', 'SK_ID_CURR'])
 
         test_features = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')  # manually added
-        # test_features = test_features.sample(n=6000, random_state=42) # manually added
         test_features.head()  # manually added
         test_labels = pd.read_csv(root_data + '/kaggle_home_credit/application_test_labels.csv')  # manually added
         test_features = test_features.select_dtypes('number')  # manually added
@@ -651,7 +650,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
         random_search_params = random_results.loc[0, 'params']
 
         # Create, train, test model
-        grid_search_params['random_state'] = 42
+        random_search_params['random_state'] = 42
         model = lgb.LGBMClassifier(**random_search_params)
         labels = app_train['TARGET']
         features = app_train_poly.drop(columns=['SK_ID_CURR'])

@@ -408,7 +408,7 @@ class Dataset(Node):
                          pandas_df=df)
 
     def sample(self, n, random_state):
-        return self.generate_dataset_node('rename', {'n': n, 'random_state': random_state})
+        return self.generate_dataset_node('sample', {'n': n, 'random_state': random_state})
 
     def p_sample(self, n, random_state):
         return self.hash_and_return_dataframe('sample{}{}'.format(n, random_state),
@@ -1450,6 +1450,8 @@ class SuperNode(Node):
         # Since both node 0 and 1 are already stored in the
         # TODO: This only works for adding one column at a time
         c_names = copy.copy(self.nodes[0].get_column())
+        print 'c_names: {}'.format(c_names)
+        print 'col_names: {}'.format(col_names)
         c_names.append(col_names)
         c_hash = copy.copy(self.nodes[0].get_column_hash())
         c_hash.append(copy.copy(self.nodes[1].get_column_hash()))

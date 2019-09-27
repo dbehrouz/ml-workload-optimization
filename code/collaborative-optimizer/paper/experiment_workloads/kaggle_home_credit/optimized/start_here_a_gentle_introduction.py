@@ -89,10 +89,6 @@ class start_here_a_gentle_introduction(Workload):
         for col in columns:
             # we are not using nunique because it discard nan
             if app_train[col].nunique(dropna=False).data(verbose) <= 2:
-                # TODO If the LabelEncoder is built outside of the loop
-                # TODO the fit doesnt work properly
-                # TODO seems only the first time fit is really called and the other times
-                # TODO it is skipped
                 le = LabelEncoder()
                 le.fit(app_train[col])
 

@@ -45,6 +45,9 @@ class PredictiveModel:
     def feature_importances(self, features):
         return self.trained_node.feature_importances(features)
 
+    def get_params(self):
+        return self.underlying_sk_model.get_params()
+
 
 class LGBMClassifier(PredictiveModel):
     def __init__(self, should_warmstart=False, **args):
