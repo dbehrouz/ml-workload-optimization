@@ -537,10 +537,12 @@ class introduction_to_manual_feature_engineering(Workload):
             best_iteration = model.best_iteration()
 
             # Make predictions
-            model.score(test_features,
-                        test_labels['TARGET'],
-                        score_type='auc',
-                        custom_args={'num_iteration': best_iteration}).data()
+            score = model.score(test_features,
+                                test_labels['TARGET'],
+                                score_type='auc',
+                                custom_args={'num_iteration': best_iteration}).data()
+
+            print 'LGBMClassifier with AUC score: {}'.format(score)
 
             # test_predictions = test_predictions.setname('TARGET')
             # # Make the submission dataframe
