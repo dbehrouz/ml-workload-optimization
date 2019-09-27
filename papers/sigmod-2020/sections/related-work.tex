@@ -14,7 +14,8 @@ Contrary to our systems, none of these platforms offer automatic materialization
 \textbf{Data Management and Provenance.}
 Context \cite{garcia2018context}, JuNEAU \cite{ives2019dataset}, Ground \cite{hellerstein2017ground}, ProvDB \cite{miao2018provdb}, Aurum \cite{fernandez2018aurum}, and DataHub \cite{bhardwaj2014datahub, bhattacherjee2015principles} are data management and provenance systems that efficiently store fine-grained lineage information about the data artifacts and operations.
 Furthermore, some of these systems provide primitives for querying lineage and discovering datasets.
-We design our Experiment Graph by utilizing the approaches discussed in these systems, specifically we follow DataHub's graph representation.
+We design our Experiment Graph by utilizing the approaches discussed in these systems.
+Specifically, we follow DataHub's graph representation.
 However, contrary to these systems, we utilize the stored information to optimize the execution of future workloads.
 Furthermore, our materialization algorithm extends the materialization approach of Bhattacherjee et al. \cite{bhattacherjee2015principles} to tailor it to the machine learning workloads by considering the quality of the model artifacts.
 
