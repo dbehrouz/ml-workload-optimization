@@ -1,15 +1,14 @@
 \begin{abstract}
-Collaborative data science platforms, such as Kaggle and OpenML, bring a new paradigm for solving machine learning tasks.
-Users write and execute their machine learning workloads and publish them on the platforms.
-The platforms store the workloads either in a relational database using a predefined schema (e.g., OpenML) or as scripts which contain the actual analysis and training code (e.g., Kaggle).
-This results in many redundant data processing and model training operations, as users tend to utilize published workloads to improve their solutions.
-However, current collaborative platforms cannot detect and exploit such redundancies in the workloads as they execute them in isolation.
+Effective collaboration between data scientists results in high-quality and efficient machine learning (ML) workloads.
+In a collaborative environment, such as Kaggle or Google Colabratory, users typically re-execute or modify published scripts to recreate or improve the result.
+This results in many redundant data processing and model training operations.
+Existing collaborative platforms cannot detect and exploit such redundancies in the workloads as they execute them in isolation.
 
-In this paper, we present a system to optimize the execution of ML workloads in collaborative data science platforms.
-We utilize a graph to store the artifacts, i.e., raw and intermediate data or machine learning models, as vertices and operations of machine learning workloads as edges, which we refer to as the Experiment Graph.
-As more workloads are executed, the combined size of the artifacts grows rapidly, which renders their storage infeasible. 
-To alleviate this problem, we propose two algorithms for materializing the artifacts with high likelihoods of future reuse.
-The algorithms consider several metrics, such as access frequency, size of the artifact, and quality of machine learning models to decide what artifacts to materialize.
-Second, using the experiment graph, we propose a novel approach to reuse artifacts and warmstart model training operations in future workloads.
-%TODO one sentence the impact
+In this paper, we present a system to optimize the execution of ML workloads in collaborative environments.
+We utilize a graph to store the artifacts, i.e., raw and intermediate data or ML models, as vertices and operations of ML workloads as edges.
+Storing all the artifacts, especially under limited storage budget, is wasteful as storage and retrieval cost may outweigh the recomputation cost.
+To address this issue, first, we propose two algorithms for materializing artifacts with a high likelihood of future reuse.
+The algorithms utilize several statistics, such as access frequency, artifact size, and quality of the ML models.
+To optimize the execution of the incoming ML workloads, we devise a linear time reuse algorithm to find the optimal execution plan.
+Our reuse algorithm incurs a low overhead which is a requirement in collaborative environments where the rate of the incoming ML workloads may be high.
 \end{abstract}
