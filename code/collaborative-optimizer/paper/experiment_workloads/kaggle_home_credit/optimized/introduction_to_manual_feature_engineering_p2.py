@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-"""Optimized workload 2 for Home Credit Default Risk Competition
-    This is the optimized version of the baseline introduction_to_manual_feature_engineering script.
 
-   For now, I removed the Kfold and Gradient Boosted Tree models
-   TODO: Add Kfold and Gradient Boosted Tree
+"""Optimized workload 3
+
+This script is the optimized version of the workload 'introduction_to_manual_feature_engineering_p2'
+which utilizes our Experiment Graph for optimizing the workload
+
 """
 import os
 import warnings

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-"""Optimized workload 1 for Home Credit Default Risk Competition
-    This is the optimized version of the baseline workload_1 script.
+"""Optimized Fork of Workload 1
 
-   For now, I removed the Kfold and Gradient Boosted Tree models
-   TODO: Add Kfold and Gradient Boosted Tree
+This script is the optimized version of the fork of workload 1 submitted by user cridata
+which utilizes our Experiment Graph for optimizing the workload.
 """
 import os
 import warnings
