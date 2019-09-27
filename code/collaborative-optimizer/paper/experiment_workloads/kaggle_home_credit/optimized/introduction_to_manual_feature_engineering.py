@@ -639,10 +639,10 @@ if __name__ == "__main__":
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
 
     root_data = ROOT + '/data'
-    database_path = \
-        root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
-    if os.path.exists(database_path):
-        ee.load_history_from_disk(database_path)
+    # database_path = \
+    #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
+    # if os.path.exists(database_path):
+    #     ee.load_history_from_disk(database_path)
     executor = CollaborativeExecutor(ee, sa_materializer)
     execution_start = datetime.now()
 
