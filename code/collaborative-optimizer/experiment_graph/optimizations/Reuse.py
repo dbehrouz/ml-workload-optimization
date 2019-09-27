@@ -181,7 +181,7 @@ class FastBottomUpReuse(Reuse):
             self.inplace_reverse_bfs(terminal=vertex,
                                      workload_subgraph=workload_dag.graph,
                                      history=experiment_graph.graph)
-        warmstarting_candidates = self.check_for_warmstarting(experiment_graph, workload_dag.graph, model_candidates)
+        warmstarting_candidates = self.check_for_warmstarting(experiment_graph.graph, workload_dag.graph, model_candidates)
         return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def inplace_reverse_bfs(self, terminal, workload_subgraph, history):
@@ -240,7 +240,7 @@ class TopDownReuse(Reuse):
         materialized_vertices, execution_vertices, model_candidates = self.forward_bfs(terminal=vertex,
                                                                                        workload_subgraph=e_subgraph,
                                                                                        history=history.graph)
-        warmstarting_candidates = self.check_for_warmstarting(history, e_subgraph, model_candidates)
+        warmstarting_candidates = self.check_for_warmstarting(history.graph, e_subgraph, model_candidates)
         return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def forward_bfs(self, terminal, workload_subgraph, history):
