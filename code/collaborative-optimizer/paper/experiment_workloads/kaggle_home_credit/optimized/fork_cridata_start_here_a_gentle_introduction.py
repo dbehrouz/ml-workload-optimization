@@ -31,7 +31,6 @@ warnings.filterwarnings('ignore')
 class fork_cridata_start_here_a_gentle_introduction(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
-        print(os.listdir(root_data))
         app_train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
         print('Training data shape: ', app_train.shape().data(verbose))
         app_train.head().data(verbose)
