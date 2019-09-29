@@ -18,8 +18,6 @@ class Reuse:
             return FastBottomUpReuse()
         elif reuse_type == TopDownReuse.NAME:
             return TopDownReuse()
-        elif reuse_type == HybridReuse.NAME:
-            return HybridReuse()
         else:
             raise Exception('Undefined Reuse type: {}'.format(reuse_type))
 
@@ -181,7 +179,8 @@ class FastBottomUpReuse(Reuse):
             self.inplace_reverse_bfs(terminal=vertex,
                                      workload_subgraph=workload_dag.graph,
                                      history=experiment_graph.graph)
-        warmstarting_candidates = self.check_for_warmstarting(experiment_graph.graph, workload_dag.graph, model_candidates)
+        warmstarting_candidates = self.check_for_warmstarting(experiment_graph.graph, workload_dag.graph,
+                                                              model_candidates)
         return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
     def inplace_reverse_bfs(self, terminal, workload_subgraph, history):
@@ -349,38 +348,3 @@ class TopDownReuse(Reuse):
                 queue.popleft()
 
         return final_mat_candidates, final_execution_candidates, model_candidates
-
-
-class HybridReuse(Reuse):
-    NAME = 'HYBRID'
-
-    def __init__(self, graph_length_cutoff=10):
-        Reuse.__init__(self)
-
-    def run(self, vertex, workload, history, verbose):
-        e_subgraph = workload.compute_execution_subgraph(vertex)
-        graph_size = len(e_subgraph)
-        step_size = int(graph_size / 2)
-
-        self.bottomup()
-
-    def bottomup(self, terminal, workload, history, step_size):
-        prevs = workload.predecessors
-        queue = deque([(terminal, prevs(terminal))])
-        visited = {terminal}
-        i = 0
-        new_node = None
-        while queue:
-            current, prev_nodes_list = queue[0]
-            try:
-                prev_node = next(prev_nodes_list)
-                if prev_node not in visited:
-                    if i == step_size:
-                        new_node = prev_node
-                        break
-                    else:
-                        queue.append((prev_node, prevs(prev_node)))
-                        i += 1
-
-            except StopIteration:
-                queue.popleft()
