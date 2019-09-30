@@ -1480,7 +1480,9 @@ class SuperNode(Node):
             c_hashes[index] = self.nodes[1].get_column_hash()
         d1 = self.nodes[0].get_materialized_data()
         d2 = self.nodes[1].get_materialized_data()
-        d1[col_names] = d2
+        
+        temp = d1.copy()
+        temp[col_names] = d2
         # self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])
         return DataFrame(column_names=c_names,
                          column_hashes=c_hashes,
