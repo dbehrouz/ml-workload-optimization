@@ -1,43 +1,44 @@
 \documentclass{standalone}
 \usepackage{tikz}
-\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc}
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc, shapes, positioning}
 \usegdlibrary{trees}
 \begin{document}
 \begin{tikzpicture}
 %\draw[help lines]  (-2,0) grid (6,6);
 \tikzstyle{every node}=[inner sep=0.02cm]
-\node (train) [circle, draw] at (2,6) {$v_0$};
+\node (train) [ellipse, draw] at (2,6) {$train$};
 % layer 1
-\node (ad) [circle, draw] at (1,5.2) {$v_1$};
-\node (forselection) [circle, draw] at (2,5.2) {$v_2$};
-\node (y) [circle, draw] at (3,5.2) {$v_3$};
+\node (ad) [ellipse, draw, below left = of train] {$ad\_desc$};
+\node (forselection) [ellipse, draw, below = of train] {$t\_subset$};
+\node (y) [ellipse, draw, below right = of train] {$y$};
 % layer 2
-\node (cv) [circle, draw] at (1, 4.3) {$v_4$};
-\node(sk) [circle, draw] at (2, 4.3) {$v_5$};
+\node (cv) [ellipse, draw, below = of ad] {$cnt\_vect$};
+\node(sk) [ellipse, draw, below = of forselection] {$top\_features$};
 % layer 3
-\node (merged1) [circle, draw] at (1.5, 3.5) {$v_6$};
-\node (cvsk) [circle, draw] at (2, 2.8) {$v_7$};
+%\node (merged1) [circle, draw] at (1.5, 3.5) {$v_6$};
+\node (cvsk) [ellipse, draw, below = of sk] {$X$};
 % layer 4
-\node(merged2) [circle, draw] at (3, 2.8) {$v_8$};
+%\node(merged2) [circle, draw] at (3, 2.8) {$v_8$};
 % layer 5
-\node(model) [circle, draw] at (3,1.9) {$v_9$};
+\node(model) [ellipse, draw, below right = of cvsk]  {$model$};
 
 \graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\small}]{
 (train) [label=train]
 -> [anchor=east, align=center,"p1"] (ad)
 -> [anchor=east,align=center,"vf1"] (cv)
--> [anchor=east,align=center,"m"](merged1) 
+%-> [anchor=east,align=center,"m"](merged1) 
 -> [anchor=east,align=center,"c1"](cvsk) 
--> [anchor=south, align=center,"m"](merged2) ;
+%-> [anchor=south, align=center,"m"](merged2) ;
+-> [anchor=east,auto=false,align=center,"f"] (model);
 
 (train) 
 -> [anchor=east,align=center, "p2"] (forselection)
 -> [anchor=east,auto=false,align=center,"s1"] (sk)
--> [anchor=west,align=center,"m"](merged1) ;
+-> [anchor=east,align=center,"c1"](cvsk) ;
 
 (train) 
 -> [anchor=west, align=center,"p3"]   (y)
--> [anchor=west, align=center,"m"](merged2) 
+%-> [anchor=west, align=center,"m"](merged2) 
 -> [anchor=east,auto=false,align=center,"f"] (model);
 };
 \end{tikzpicture}

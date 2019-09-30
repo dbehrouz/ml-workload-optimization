@@ -24,7 +24,7 @@ from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
-verbose = parser.get('verbose', 0)
+verbose = parser.get('verbose', 1)
 DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 
@@ -40,7 +40,7 @@ MODE = parser.get('mode', 'local')
 EXPERIMENT_TIMESTAMP = datetime.now()
 
 mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-method = parser.get('method', 'mock')
+method = parser.get('method', 'optimized')
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
@@ -52,7 +52,7 @@ result_file = parser.get('result', ROOT + '/experiment_results/local/execution_t
 
 def run(executor, workload):
     if method == 'optimized':
-        return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
+        return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     elif method == 'baseline':
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
     elif method == 'mock':
