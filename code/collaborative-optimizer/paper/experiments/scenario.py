@@ -1,10 +1,10 @@
 from paper.experiment_helper import ExperimentWorkloadFactory
 
 EXPERIMENT_SCENARIO = ['start_here_a_gentle_introduction',
-                       #'introduction_to_manual_feature_engineering',
-                       #'introduction_to_manual_feature_engineering_p2',
-                       'fork_cridata_start_here_a_gentle_introduction']
-                       #'fork_taozhongxiao_start_here_a_gentle_introduction']
+                       'introduction_to_manual_feature_engineering',
+                       'introduction_to_manual_feature_engineering_p2',
+                       'fork_cridata_start_here_a_gentle_introduction',
+                       'fork_taozhongxiao_start_here_a_gentle_introduction']
 
 MOCK_SCENARIO = ['mock_workload_1', 'mock_workload_2', 'mock_workload_3']
 
