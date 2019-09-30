@@ -18,7 +18,7 @@ unzip '*.zip'
 mkdir original_train_test
 mv application_train.csv original_train_test/
 mv application_test.csv original_train_test/
-python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/reuse/kaggle_home_credit/competition_preprocessing.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization'
+python collaborative-optimization/code/collaborative-optimizer/paper/experiment_workloads/kaggle_home_credit/competition_preprocessing.py '/home/behrouz/collaborative-optimization/code/collaborative-optimizer/' 'root=/home/behrouz/collaborative-optimization'
 
 
 # load results from remote nodes
