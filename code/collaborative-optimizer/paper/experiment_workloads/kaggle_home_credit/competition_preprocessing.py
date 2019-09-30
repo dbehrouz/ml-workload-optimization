@@ -24,10 +24,10 @@ def split_and_store(root_data, test_size=0.2):
     test_labels = test[['SK_ID_CURR', 'TARGET']]
     test = test.drop(columns='TARGET', inplace=False)
 
-    train.to_csv(root_data + '/kaggle_home_credit/application_train.csv')
-    test.to_csv(root_data + '/kaggle_home_credit/application_test.csv')
+    train.to_csv(root_data + '/kaggle_home_credit/application_train.csv', index=False)
+    test.to_csv(root_data + '/kaggle_home_credit/application_test.csv', index=False)
 
-    test_labels.to_csv(root_data + '/kaggle_home_credit/application_test_labels.csv')
+    test_labels.to_csv(root_data + '/kaggle_home_credit/application_test_labels.csv', index=False)
 
 
 if __name__ == "__main__":
