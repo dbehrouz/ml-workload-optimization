@@ -136,32 +136,32 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         app_train['TARGET'] = train_labels
 
         # CHANGE
-        # (app_train['DAYS_BIRTH'] / -365).describe()
-        #
-        # app_train['DAYS_EMPLOYED'].describe()
-        #
-        # app_train['DAYS_EMPLOYED'].plot.hist(title='Days Employment Histogram')
-        # plt.xlabel('Days Employment')
-        #
-        # anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
-        # non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
-        # print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean()))
-        # print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean()))
-        # print('There are %d anomalous days of employment' % len(anom))
-        #
-        # # Create an anomalous flag column
-        # app_train['DAYS_EMPLOYED_ANOM'] = app_train["DAYS_EMPLOYED"] == 365243
-        #
-        # # Replace the anomalous values with nan
-        # app_train['DAYS_EMPLOYED'].replace({365243: np.nan}, inplace=True)
-        #
-        # app_train['DAYS_EMPLOYED'].plot.hist(title='Days Employment Histogram')
-        # plt.xlabel('Days Employment')
-        #
-        # app_test['DAYS_EMPLOYED_ANOM'] = app_test["DAYS_EMPLOYED"] == 365243
-        # app_test["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace=True)
-        # print('There are %d anomalies in the test data out of %d entries' % (
-        #     app_test["DAYS_EMPLOYED_ANOM"].sum(), len(app_test)))
+        (app_train['DAYS_BIRTH'] / -365).describe()
+
+        app_train['DAYS_EMPLOYED'].describe()
+
+        app_train['DAYS_EMPLOYED'].plot.hist(title='Days Employment Histogram')
+        plt.xlabel('Days Employment')
+
+        anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
+        non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
+        print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean()))
+        print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean()))
+        print('There are %d anomalous days of employment' % len(anom))
+
+        # Create an anomalous flag column
+        app_train['DAYS_EMPLOYED_ANOM'] = app_train["DAYS_EMPLOYED"] == 365243
+
+        # Replace the anomalous values with nan
+        app_train['DAYS_EMPLOYED'].replace({365243: np.nan}, inplace=True)
+
+        app_train['DAYS_EMPLOYED'].plot.hist(title='Days Employment Histogram')
+        plt.xlabel('Days Employment')
+
+        app_test['DAYS_EMPLOYED_ANOM'] = app_test["DAYS_EMPLOYED"] == 365243
+        app_test["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace=True)
+        print('There are %d anomalies in the test data out of %d entries' % (
+            app_test["DAYS_EMPLOYED_ANOM"].sum(), len(app_test)))
 
         # Find correlations with the target and sort
         correlations = app_train.corr()['TARGET'].sort_values()

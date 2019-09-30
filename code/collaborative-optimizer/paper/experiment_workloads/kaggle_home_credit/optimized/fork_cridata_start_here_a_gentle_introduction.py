@@ -123,36 +123,36 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         print('Testing Features shape: ', app_test.shape().data(verbose))
 
         # CHANGE
-        # (app_train['DAYS_BIRTH'] / 365).describe().data(verbose)
-        #
-        # app_train['DAYS_EMPLOYED'].describe().data(verbose)
-        #
-        # app_train['DAYS_EMPLOYED'].data(verbose).plot.hist(title='Days Employment Histogram')
-        # plt.xlabel('Days Employment')
-        #
-        # anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
-        # non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
-        # print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data(verbose)))
-        # print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data(verbose)))
-        # print('There are %d anomalous days of employment' % anom.shape().data(verbose)[0])
-        #
-        # days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
-        # app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
-        # temp = app_train['DAYS_EMPLOYED'].replace({365243: np.nan})
-        # app_train = app_train.drop('DAYS_EMPLOYED')
-        # app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
-        #
-        # app_train["DAYS_EMPLOYED"].data(verbose).plot.hist(title='Days Employment Histogram');
-        # plt.xlabel('Days Employment')
-        #
-        # days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
-        # app_test = app_test.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
-        # temp = app_test['DAYS_EMPLOYED'].replace({365243: np.nan})
-        # app_test = app_test.drop('DAYS_EMPLOYED')
-        # app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
-        # print('There are %d anomalies in the test data out of %d entries'
-        #       % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(verbose),
-        #          app_test.shape().data(verbose)[0]))
+        (app_train['DAYS_BIRTH'] / 365).describe().data(verbose)
+
+        app_train['DAYS_EMPLOYED'].describe().data(verbose)
+
+        app_train['DAYS_EMPLOYED'].data(verbose).plot.hist(title='Days Employment Histogram')
+        plt.xlabel('Days Employment')
+
+        anom = app_train[app_train['DAYS_EMPLOYED'] == 365243]
+        non_anom = app_train[app_train['DAYS_EMPLOYED'] != 365243]
+        print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean().data(verbose)))
+        print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean().data(verbose)))
+        print('There are %d anomalous days of employment' % anom.shape().data(verbose)[0])
+
+        days_employed_anom = app_train["DAYS_EMPLOYED"] == 365243
+        app_train = app_train.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
+        temp = app_train['DAYS_EMPLOYED'].replace({365243: np.nan})
+        app_train = app_train.drop('DAYS_EMPLOYED')
+        app_train = app_train.add_columns('DAYS_EMPLOYED', temp)
+
+        app_train["DAYS_EMPLOYED"].data(verbose).plot.hist(title='Days Employment Histogram');
+        plt.xlabel('Days Employment')
+
+        days_employed_anom = app_test["DAYS_EMPLOYED"] == 365243
+        app_test = app_test.add_columns('DAYS_EMPLOYED_ANOM', days_employed_anom)
+        temp = app_test['DAYS_EMPLOYED'].replace({365243: np.nan})
+        app_test = app_test.drop('DAYS_EMPLOYED')
+        app_test = app_test.add_columns('DAYS_EMPLOYED', temp)
+        print('There are %d anomalies in the test data out of %d entries'
+              % (app_test['DAYS_EMPLOYED_ANOM'].sum().data(verbose),
+                 app_test.shape().data(verbose)[0]))
 
         correlations = app_train.corr().data(verbose)
         top = correlations['TARGET'].sort_values()
