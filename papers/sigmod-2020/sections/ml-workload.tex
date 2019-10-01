@@ -106,29 +106,28 @@ After successful execution, the executor prompts the materializer component to u
 
 \subsection{Server Components}
 \textbf{Experiment Graph.}
-The union of all the workloads DAGs of the previously executed ML workloads forms another DAG, which we refer to as the \textit{Experiment Graph}.
-Every vertex in the Experiment Graph has the attributes $frequency$, $size$, and $compute_time$, representing the number of different workloads an artifact appeared in, the storage size of the artifact, and time required to compute the artifact given its input artifacts, respectively.
-
-Every vertex in the Experiment Graph carries the meta-data of the artifact it represent.
+Experiment Graph (EG) is the union of all the executed workload DAGs, where vertices represent the artifacts and edges represent the operations.
+Every vertex in EG has the attributes $frequency$, $size$, and $compute_time$, representing the number of different workloads an artifact appeared in, the storage size of the artifact, and the time required to compute the artifact given its input artifacts, respectively.
+Every vertex in the experiment Graph carries the meta-data of the artifact it represents.
 If the artifact is a \textit{Dataset}, then its meta-data includes the name, type, and total size of each column of the data.
 If the artifact is a \textit{Model}, its meta-data includes the name, type, hyperparameters, and the error metric of the model.
 The decision to store the underlying content of an artifact, i.e., Pandas dataframe and model weights, is left to the materializer component.
 
 The Experiment Graph maintains the list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
-Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workloa DAG.
+Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source vertex.
 
 \textbf{Optimizer. }
-The optimizer component is responsible for finding the optimal DAG which incurs the lowest cost when executed.
-The optimizer receives the (pruned) workload DAG from the client and for every vertex in the workload DAG, the optimizer queries the Experiment Graph.
-The optimizer finds the set of materialized artifacts from the Experiment Graph.
-Then, using our reuse algorithm, the optimizer decides what materialized artifacts it should load into the optimized DAG and what artifacts should be recomputed.
-The optimizer guarantees the DAG incurs the lowest execution cost, i.e., sum of loading the materialized artifacts and executing the remaining operations.
+The optimizer component is responsible for finding the optimized DAG with the smallest execution cost.
+The optimizer receives the (pruned) workload DAG from the client and queries the Experiment Graph for materialized vertices.
+Then, using our reuse algorithm, the optimizer decides what materialized artifacts to load into the optimized DAG and what artifacts should be recomputed by the executor.
+The optimizer guarantees the optimized DAG incurs the lowest execution cost, i.e., the sum of loading the materialized artifacts and executing the remaining operations.
 
 \textbf{Materializer.}
-After the executor finishes the execution of a workload DAG, it annotates the DAG with the execution time and artifact sizes.
+After the executor finishes the execution of a workload DAG, it annotates the DAG with the execution times and artifact sizes.
 The Materializer utilizes this information to decide what artifacts have a high likelihood of reappearing in future workloads.
 The Materializer then stores these artifacts in the Experiment Graph.
+Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
 
 %Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, and hyperparameters.
 %To uniquely identify an edge, we utilize a hash function which receives as input the operation and its hyperparameters (if it has any).
