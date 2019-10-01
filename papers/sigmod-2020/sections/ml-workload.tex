@@ -9,7 +9,7 @@ Finally, the client executes the optimized DAG (Step 4) and prompts the material
 This architecture enables us to integrate into existing collaborative environments without requiring any changes to their workflow.
 In the rest of this section, we describe the process of parsing, pruning, generating workload DAGs, and executing the workloads.
 Then, we describe the process of constructing the Experiment Graph and how we utilize the Experiment Graph in our materialization and reuse algorithm. 
-Finally, we address the integration process and the impact of our system on the use case in Section \ref{subsec-motivational-example}.
+Finally, we show the integration process and the impact of our system on the use case in Section \ref{subsec-motivational-example}.
 
 \begin{figure}
 \centering
@@ -113,9 +113,14 @@ If the artifact is a \textit{Dataset}, then its meta-data includes the name, typ
 If the artifact is a \textit{Model}, its meta-data includes the name, type, hyperparameters, and the error metric of the model.
 The decision to store the underlying content of an artifact, i.e., Pandas dataframe and model weights, is left to the materializer component.
 
-The Experiment Graph maintains the list of all the source vertices that it contains.
+EG maintains the list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
 Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source vertex.
+
+Note that we construct one EG per ML task.
+Every source vertex of EG corresponds to a training or testing dataset in the ML task.
+Furthermore, all the model artifacts in EG are evaluated using the metric defined in the ML task.
+As a result, we can compare ML model performances, which is a requirement for our materialization algorithm.
 
 \textbf{Optimizer. }
 The optimizer component is responsible for finding the optimized DAG with the smallest execution cost.
@@ -174,13 +179,9 @@ Note that the Experiment Graph contains the meta-data of all the artifacts, incl
 %Lastly, a materializer component decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 6).
 
 \subsection{Improved Use Case}
-In this section, we show how our collaborative workload optimizer improves the workload execution process of the Kaggle use case we described in Section \ref{sec-background}.
-For the Home Credit Default Risk competition, we maintain an Experiment Graph.
-Before any workloads are executed, the Experiment Graph is empty.
-Given an empty Experiment Graph, when users submit workloads for execution, our collaborative workload optimizer skips Step 3 of Figure \ref{system-workflow} and generates the execution plan directly from the workload execution subgraph.
-We update the Experiment Graph with the DAG of incoming user workloads.
-The materializer component decides what artifacts of incoming the user workloads to keep and what are artifacts to discard.
-Since one criterion for selecting artifacts to materialize is execution frequency, the materializer selects the artifacts of the two popular workloads described in the use case for materialization.
-For all the future workloads, the global optimizer, Step 3 of Figure \ref{system-workflow}, looks for reuse and warmstarting opportunities. 
-As a result, our optimizer reduces the execution time of all the 6000 copied and edited versions of the two popular workloads. 
+In this section, we show how our collaborative workload optimizer improves the workload execution process of the Kaggle use case.
+For the given ML task, i.e., Home Credit Default Risk competition, we maintain an Experiment Graph.
+After users start publishing their workload scripts on the Kaggle platform, other users will read, re-run, or modify the published scripts.
+Our system stores the artifacts belonging to popular workloads in the Experiment Graph and optimizes the execution of incoming workloads.
+As a result, for the 3 scripts introduced in Section \ref{subsec-motivational-example}, our system saves 100s of hours of execution time.
 This reduces the required resources and operation cost of Kaggle.
