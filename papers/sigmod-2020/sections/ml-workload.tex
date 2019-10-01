@@ -3,7 +3,7 @@ In this section, we provide an overview of our collaborative ML workload optimiz
 Figure \ref{system-workflow} shows the high-level architecture of our system.
 In a typical collaborative environment, users fetch datasets from a central server, perform their analysis on their local machine, and optionally store the results back in the central server.
 Our system also comprises of a client and server component.
-The client is responsible for parsing the user workload into workload DAG (Step 1) and prunes the workload DAG (Step 2).
+The client is responsible for parsing the user workload into a DAG (Step 1) and prunes the workload DAG (Step 2).
 The server receives the workload DAG and utilizes our reuse algorithm to optimize the DAG and sends it back to the client (Step 3).
 Finally, the client executes the optimized DAG (Step 4) and prompts the materializer to update the Experiment Graph and store the artifacts from the executed workload DAG (Step 5).
 This architecture enables us to integrate into existing collaborative environments without requiring any changes to their workflow.
@@ -20,11 +20,11 @@ Finally, we address the integration process and the impact of our system on the 
 
 \subsection{Client Components}
 \textbf{Parser. }
-Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are frequently used for data analysis and machine learning workloads.
-Upon invocation of the program, the parser transforms the ML workload into a directed acyclic Graph (DAG).
+Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are common choices for data analysis and machine learning workloads.
+Upon invocation of the program, the parser transforms the ML workload into a DAG.
 Listing \ref{listing-simple-workload} shows an example of a workload script.
-With only a slight modification of the import commands, we are able to load our system's modules.
-This enables us to provide support for both python scripts and interactive Jupyter notebooks.
+With only a slight modification of the import commands, we can load our parser modules.
+As a result, we can support both long-running python scripts and interactive Jupyter notebooks.
 Listing \ref{listing-simple-workload} shows an example of a workload.
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-simple-workload}]
 import custom_pandas as pd
@@ -52,12 +52,13 @@ print model # terminal vertex
 
 \textbf{Workload DAG.}
 In our DAG representation, vertices represent the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges represent the operations in the workload.
-Each workload DAG has one or more initial vertices representing the raw datasets which are defined as part of the task definition in the collaborative environment.
-We refer to these initial vertices as the sources.
+Each workload DAG has one or more initial vertices representing the raw datasets.
+We refer to the initial vertices as the sources.
 A workload DAG also contains one or more terminal vertices.
 Terminal vertices represent the output of the workload.
-For example, a terminal vertex is a trained ML model, a preprocessed dataset, or an aggregated dataset for visualization. 
-Figure \ref{fig-workload-dag} shows an example DAG constructed from the code in Listing \ref{listing-simple-workload}.
+For example, a terminal vertex is a trained ML model, a preprocessed dataset, or an aggregated dataset.
+Requesting the result of a terminal vertex triggers the optimization and execution of the workload DAG.
+Figure \ref{fig-workload-dag} shows a workload DAG constructed from the code in Listing \ref{listing-simple-workload}.
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/example-graph}
@@ -66,20 +67,18 @@ Figure \ref{fig-workload-dag} shows an example DAG constructed from the code in 
 \end{figure}
 
 \textbf{Local Pruner.}
-Once the user requests the result of a terminal vertex, the client first performs a local pruning of the DAG and then sends the DAG to the server for further processing and optimization.
-The local pruning step finds the operation (edges) which are not required to execute to compute the terminal vertex.
-There are two scenarios where local pruning is beneficial.
-First, the local pruning marks all the edges which are not in the path from a source vertex to the terminal vertex.
-This is a simple optimization which removes all the operations whose result are not required.
-Second, interactive workloads may process a DAG multiple times, after each cell invocation in the Jupyter notebook.
-As a result, the result of some vertices is already available.
-The local pruning marks all the operations which were previously executed and ensures the executor will not execute them twice.
-For example, in Figure \ref{fig-workload-dag}, if $t_subset$ artifact was previously computed, the local pruning step will remove the edge between $train$ and $t_subset$ before sending the DAG to the server.
+Once the user requests the result of a terminal vertex, the client prunes the DAG before sending it to the server.
+The task of the pruner is to remove all the unnecessary edges.
+There are two groups of unnecessary edges: edges that are not in the path from source to terminal and edges with their endpoint vertex already computed.
+The latter is very common in interactive workloads since every cell invocation in Jupyter notebooks computes some of the vertices.
+As a result, in future cell invocations, previously executed operations can be skipped.
+For example, in Figure \ref{fig-workload-dag}, if $t_subset$ artifact is previously computed, the local pruner marks the edge between $train$ and $t_subset$ before sending the DAG to the server.
 
 \textbf{Executor. }
 After the server optimizes a workload DAG, the executor receives the optimized DAG to execute the operations and returns the result to the user.
-The executor runs the operations in the optimized DAG in their topological order and returns the result back to the user.
-After a successful execution, the executor prompts the materialiezr component to update the Experiment Graph and store the computed artifacts.
+The executor runs the operations in the optimized DAG in their topological order and returns the result to the user.
+After successful execution, the executor prompts the materializer component to update the Experiment Graph and store the computed artifacts.
+
 %
 %\begin{figure}\label{DAG-workflow}
 %\begin{subfigure}{\columnwidth}
