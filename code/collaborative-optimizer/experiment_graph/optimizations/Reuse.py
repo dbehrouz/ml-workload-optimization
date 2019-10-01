@@ -60,7 +60,7 @@ class Reuse:
         except KeyError:
             # the node does not exist in history
             return 0
-        if node['data'].computed:
+        if node['mat']:
             # the node is materialized
             return 2
         else:
