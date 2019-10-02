@@ -13,7 +13,9 @@ def get_scenario(scenario_type):
     if scenario_type == 'baseline':
         return get_kaggle_baseline_scenario(EXPERIMENT_SCENARIO)
     elif scenario_type == 'optimized':
-        return get_kaggle_optimized_scenario(EXPERIMENT_SCENARIO)
+        return get_kaggle_optimized_scenario(scenario=EXPERIMENT_SCENARIO)
+    elif scenario_type == 'mock_optimized':
+        return get_kaggle_optimized_scenario(package='mock_optimized', scenario=EXPERIMENT_SCENARIO)
     elif scenario_type == 'mock':
         return get_mock_scenario(MOCK_SCENARIO)
 
@@ -35,9 +37,8 @@ def get_kaggle_baseline_scenario(scenario=None):
     return [ExperimentWorkloadFactory.get_workload(experiment_name, method, w) for w in scenario]
 
 
-def get_kaggle_optimized_scenario(scenario=None):
+def get_kaggle_optimized_scenario(package='optimized', scenario=None):
     scenario = EXPERIMENT_SCENARIO if scenario is None else scenario
     experiment_name = 'kaggle_home_credit'
-    method = 'optimized'
 
-    return [ExperimentWorkloadFactory.get_workload(experiment_name, method, w) for w in scenario]
+    return [ExperimentWorkloadFactory.get_workload(experiment_name, package, w) for w in scenario]

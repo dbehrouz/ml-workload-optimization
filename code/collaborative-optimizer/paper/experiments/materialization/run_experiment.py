@@ -35,7 +35,7 @@ from experiment_graph.materialization_algorithms.materialization_methods import 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
-MODE = parser.get('mode', 'local')
+method = parser.get('method', 'mock_optimized')
 
 EXPERIMENT_TIMESTAMP = datetime.now()
 
@@ -46,7 +46,7 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 
 rep = int(parser.get('rep', 2))
 
-result_file = parser.get('result', ROOT + '/experiment_results/local/execution_time/mock/test.csv')
+result_file = parser.get('result', ROOT + '/experiment_results/local/materialization/mock/test.csv')
 
 if not os.path.exists(os.path.dirname(result_file)):
     try:
@@ -59,7 +59,7 @@ print result_file
 ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
 sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 executor = CollaborativeExecutor(ee, sa_materializer)
-workloads = get_kaggle_optimized_scenario()
+workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
