@@ -624,7 +624,7 @@ class start_here_a_gentle_introduction(Workload):
             # test_features = np.array(test_features)
 
             # Create the model
-            model = lgb.LGBMClassifier(n_estimators=10000, objective='binary',
+            model = lgb.LGBMClassifier(objective='binary',
                                        class_weight='balanced', learning_rate=0.05,
                                        reg_alpha=0.1, reg_lambda=0.1,
                                        subsample=0.8, n_jobs=-1, random_state=50)
