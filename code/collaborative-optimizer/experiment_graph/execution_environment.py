@@ -1,4 +1,6 @@
 import cPickle as pickle
+import copy
+
 import os
 
 from data_storage import SimpleStorageManager
