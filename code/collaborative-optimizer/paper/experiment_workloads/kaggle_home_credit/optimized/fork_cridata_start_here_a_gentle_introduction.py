@@ -529,7 +529,6 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
 
         # Create the model
         clf = LGBMClassifier(
-            n_estimators=10000,
             learning_rate=0.1,
             subsample=.8,
             max_depth=7,

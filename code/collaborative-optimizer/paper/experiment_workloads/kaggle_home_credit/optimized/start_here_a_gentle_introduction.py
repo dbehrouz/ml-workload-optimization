@@ -602,7 +602,7 @@ class start_here_a_gentle_introduction(Workload):
             feature_names = list(lgb_featres.data(verbose).columns)
 
             # Create the model
-            model = LGBMClassifier(n_estimators=10000, objective='binary',
+            model = LGBMClassifier(objective='binary',
                                    class_weight='balanced', learning_rate=0.05,
                                    reg_alpha=0.1, reg_lambda=0.1,
                                    subsample=0.8, n_jobs=-1, random_state=50)
@@ -649,8 +649,7 @@ if __name__ == "__main__":
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-        AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
 
     workload = start_here_a_gentle_introduction()
 
