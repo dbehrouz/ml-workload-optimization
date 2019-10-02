@@ -1,32 +1,32 @@
 \section{Artifact Materialization}\label{sec-materialization}
 Depending on the number of executed workloads, the generated artifacts may require a large amount of storage space.
-For example, the two workloads in the use case of Section \ref{sec-background} generate up to \hl{60 GB of artifacts}.
-Moreover, depending on the storage and retrieval cost of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact than storing it.
-In this section, we introduce two algorithms for materializing the artifacts of the Experiment Graph under limited storage while addressing the storage and recomputation trade-off.
-The first algorithm utilizes both general metrics, such as the size and the access frequency of the vertices, execution time of the edges, and storage and retrieval cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
-The second algorithm extends the first algorithm to consider how the dataset artifacts are stored on the file system.
-Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact.
-For example, projection or drop operations return a new dataset artifact with a subset of the original columns.
-Storing both dataset artifacts in their entirety will result in many duplicated columns.
-To address this issue, we implement a compression strategy to avoid storing duplicated columns.
-The second algorithm takes the duplication information into account when making the decision on what artifacts to materialize.
+For example, the three workloads in the use case of Section \ref{sec-background} generate up to \hl{130 GB of artifacts}.
+Moreover, depending on the storage and retrieval cost of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact from scratch.
+In this section, we introduce two algorithms for materializing the artifacts with a high likelihood of future reuse while ensuring the storage/retrieval cost does not surpass the recomputation cost.
+\todo[inline]{Are we really addressing the storage/recomputation trade-off? In materialization algorithm, we only examine whether the re-computation of a node (from scratch) is more costly than storing and retrieving the node. In our reuse algorithm, we address the problem: given a set of materialized artifacts, which one to retrieve from EG and which ones to recompute locally. }
+The first algorithm utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
+The second algorithm extends the first algorithm and considers the duplication rate among the artifacts.
+Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact (for example, the drop and projection operations).
+As a result, many Dataset artifacts have duplicated columns.
+To address this issue, we implement a deduplication strategy to avoid storing duplicated columns.
+The second algorithm takes the duplication information into account when deciding on what artifacts to materialize.
 Throughout the rest of the paper, we use the terms artifact and vertex interchangeably.
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
-%Bhattacherjee et al. \cite{bhattacherjee2015principles} proposes an algorithm for efficient storage of different versions of a dataset (i.e., artifacts) under limited storage.
-Existing work proposes different algorithms for efficient storage of dataset versions and their storage and recomputation trade-off \cite{bhattacherjee2015principles}.
-The goal of the existing algorithms is to materialize the artifacts that result in small recomputation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
-However, there are several reasons that render the existing algorithms inapplicable to the artifact materialization problem.
-First, their approach only considers access frequency and reconstruction cost of an artifact.
-For the experiment graph, we must also consider the effect of the materialized artifacts on the efficiency of machine learning workloads, i.e., materialize artifacts which result in high-quality machine learning models.
-Second, their solution does not consider merge operations, e.g., join, concatenation, and model training, which are common in machine learning workloads.
-Lastly, their solution considers a scenario where new artifacts are rarely added.
-In the machine learning workload optimization, new artifacts are continuously added to the experiment graph.
-As a result, a proper solution must accommodate the addition of new artifacts.
+Existing work proposes different algorithms for the efficient storage of dataset versions and their storage and recomputation trade-off \cite{bhattacherjee2015principles}.
+The goal of the existing algorithms is to materialize the artifacts that result in a small recomputation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.
+However, two reasons render the existing algorithms inapplicable to our artifact materialization problem.
+First, existing approaches only consider access frequency and reconstruction cost of an artifact.
+In collaborative workload optimization, we consider the effect of the materialized artifacts on the efficiency of machine learning workloads, i.e., materialize artifacts that result in high-quality machine learning models.
+%TODO check DAX paper about this
+%Second, their solution does not consider merge operations, e.g., join, concatenation, and model training, which are common in machine learning workloads.
+Second, existing solutions address an offline scenario where new artifacts do not arrive at the system.
+In a collaborative environment, users continuously execute workloads resulting in new artifacts.
 
-Here, we first formulate the problem of artifact materialization as a multi-objective optimization problem, with the goal of minimizing two functions which consider both the artifact recreation cost and the model quality of the artifacts, given the storage requirement constraint.
+Here, we formulate the problem of artifact materialization as a multi-objective optimization problem.
+The goal of artifact materialization is to materialize a subset of the artifacts which minimizes the weighted recomputation cost while maximizing the estimated quality.
 
-\textbf{Weighted Recreation Cost Function (WC).} 
+\textbf{Weighted Recomputation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the non-merged vertices in the graph:
 \[
 WC(G) \coloneqq   \sum\limits_{v \in V}  (1-v.mat) \times v.f \times in\_edge(v).t
