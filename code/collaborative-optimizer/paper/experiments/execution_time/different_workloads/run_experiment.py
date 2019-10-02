@@ -24,7 +24,7 @@ from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
-verbose = parser.get('verbose', 1)
+verbose = parser.get('verbose', 0)
 DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 
