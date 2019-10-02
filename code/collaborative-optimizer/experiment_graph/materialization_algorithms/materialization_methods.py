@@ -71,6 +71,7 @@ class Materializer:
         :type experiment_graph: ExperimentGraph
         :param should_materialize: list of vertices to materialize (vertex ids)
         """
+        print 'should_materialize: {}'.format(should_materialize)
         for node_id, attributes in experiment_graph.graph.nodes(data=True):
             if node_id in should_materialize:
                 if not attributes['mat']:
