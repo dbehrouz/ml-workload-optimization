@@ -1,10 +1,12 @@
 from abc import abstractmethod
 
+from data_storage import SimpleStorageManager, DedupedStorageManager
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.workload import Workload
 from heuristics import compute_recreation_cost, compute_vertex_potential
-from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
+    StorageAwareMaterializer
 
 
 class Executor:
@@ -74,8 +76,13 @@ class CollaborativeExecutor(Executor):
         :type execution_environment: ExecutionEnvironment
         """
         Executor.__init__(self)
+
         self.execution_environment = execution_environment
         self.materializer = AllMaterializer(storage_budget=0) if materializer is None else materializer
+        # storage aware materialization only works with deduped storage manager
+        if isinstance(self.materializer, StorageAwareMaterializer):
+            assert isinstance(execution_environment.experiment_graph.data_storage, DedupedStorageManager)
+
         self.time_manager = {}
 
     # def end_to_end_run(self, workload, **args):

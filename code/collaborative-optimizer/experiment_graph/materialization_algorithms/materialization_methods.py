@@ -79,6 +79,7 @@ class Materializer:
                                                  artifact=artifact)
             else:
                 if attributes['mat']:
+                    print 'unmaterialize node {}'.format(node_id)
                     experiment_graph.unmaterialize(node_id)
 
     @abstractmethod

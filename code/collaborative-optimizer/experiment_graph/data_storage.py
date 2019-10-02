@@ -126,6 +126,8 @@ class DedupedStorageManager(StorageManager):
 
     def delete(self, key):
         column_hashes = self.key_value[key]
+        if type(column_hashes) == str:
+            column_hashes = [column_hashes]
         for ch in column_hashes:
             if self.column_count[ch] == 1:
                 del self.column_count[ch]

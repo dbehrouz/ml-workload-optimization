@@ -24,18 +24,20 @@ from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
 
 parser = Parser(sys.argv)
-verbose = parser.get('verbose', 1)
+verbose = parser.get('verbose', 0)
 DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
-from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
+    HeuristicsMaterializer, AllMaterializer
 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
 method = parser.get('method', 'mock_optimized')
+materializer_type = parser.get('materializer', 'storage_aware')
 
 EXPERIMENT_TIMESTAMP = datetime.now()
 
@@ -55,10 +57,17 @@ if not os.path.exists(os.path.dirname(result_file)):
         if exc.errno != errno.EEXIST:
             raise
 
-print result_file
 ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
-sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-executor = CollaborativeExecutor(ee, sa_materializer)
+if materializer_type == 'storage_aware':
+    materializer = StorageAwareMaterializer(storage_budget=mat_budget)
+elif materializer_type == 'simple':
+    materializer = HeuristicsMaterializer(storage_budget=mat_budget)
+elif materializer_type == 'all':
+    materializer = AllMaterializer(storage_budget=mat_budget)
+else:
+    raise Exception('Invalid materializer type: {}'.format(materializer_type))
+
+executor = CollaborativeExecutor(ee, materializer)
 workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
@@ -82,7 +91,6 @@ for workload in workloads:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                               EXPERIMENT, workload_name, mat_budget, total_mat,
-                                               total_size,
-                                               elapsed))
+            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                                  EXPERIMENT, workload_name, materializer_type, mat_budget, total_mat,
+                                                  total_size, elapsed))
