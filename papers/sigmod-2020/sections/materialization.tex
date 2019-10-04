@@ -181,7 +181,7 @@ Next, we update the required storage size of the remaining artifacts (Line 8).
 For example, if the materialized artifact $v_1$ contains some of the columns of the non-materialized artifact $v_2$, then we only need to store the remaining columns of $v_2$ to fully materialize it.
 Therefore, we update the size of $v_2$ to indicate the amount of storage it requires to fully materialize.
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
-
+%TODO $\mathcal{M'} \coloneqq  materialized\_nodes(G)$\; no need for this line
 \begin{algorithm}[h]
 \KwData  {$G$: experiment graph, $\mathcal{B}$: storage budget}
 \KwResult {$\mathcal{M}$: set of vertices to materialize}
