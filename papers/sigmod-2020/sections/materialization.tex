@@ -3,7 +3,7 @@ Depending on the number of executed workloads, the generated artifacts may requi
 For example, the three workloads in the use case of Section \ref{sec-background} generate up to \hl{130 GB of artifacts}.
 Moreover, depending on the storage and retrieval cost of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact from scratch.
 In this section, we introduce two algorithms for materializing the artifacts with a high likelihood of future reuse while ensuring the storage/retrieval cost does not surpass the recomputation cost.
-\todo[inline]{Are we really addressing the storage/recomputation trade-off? In materialization algorithm, we only examine whether the re-computation of a node (from scratch) is more costly than storing and retrieving the node. In our reuse algorithm, we address the problem: given a set of materialized artifacts, which one to retrieve from EG and which ones to recompute locally. }
+\todo[inline]{Are we really addressing the storage/recomputation trade-off? In the materialization algorithm, we only examine whether the re-computation of a node (from scratch) is more costly than storing and retrieving the node. In our reuse algorithm, we address the problem: given a set of materialized artifacts, which one to retrieve from EG and which ones to recompute locally. }
 The first algorithm utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
 The second algorithm extends the first algorithm and considers the duplication rate among the artifacts.
 Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact (for example, the drop and projection operations).
@@ -13,11 +13,13 @@ The second algorithm takes the duplication information into account when decidin
 
 \textbf{Notations. }
 We use the following notations in this section.
-$G = (V,E)$ is the Experiment Graph with $V$ representing the set of artifacts and $E$ representing the set of operations.
+Graph $G = (V,E)$ is the Experiment Graph with $V$ representing the set of artifacts and $E$ representing the set of operations.
 We use the terms artifact and vertex interchangeably.
 Each vertex $v \in V$ has the attributes $\langle f, t, s, mat \rangle$.
-$\langle f, t, s \rangle$ refer to the frequency, computation time, size while $mat=1$ indicates $v$ is materialized and $0$ otherwise.
-We also define $ M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}$ as the set of all ML models in $G$ and $ M(v) \coloneqq  \{m \in M(G) \mid\text{there is path from } v \text{ to } m\}$ as the set of all ML models that are reachable from vertex $v$.
+$\langle f, t, s \rangle$ refer to the frequency, computation time, and size while $mat=1$ indicates $v$ is materialized and $0$ otherwise.
+We also define:
+\[M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}\] as the set of all ML models in $G$ and 
+\[M(v) \coloneqq  \{m \in M(G) \mid\text{there is path from } v \text{ to } m\}\] as the set of all ML models that are reachable from vertex $v$.
 
 \textbf{Assumptions. }
 We assume there exists an evaluation function that assigns a score to user-created ML models.
@@ -115,7 +117,7 @@ cost(v) \coloneqq \sum\limits_{v' \in G_v} v'.t
 where $G_v \subset G$ is the compute graph of $v$, i.e., the set of all vertices and edges which one must execute to recreate the vertex $v$.
 The compute graph of a vertex always starts at one or more source vertices of the Experiment Graph and ends at the vertex itself.
 We also define $cost_l(v)$ as the cost (in seconds) of  loading the vertex $v$ from the Experiment Graph. 
-The $cost_l$ function depends on the size of the vertex and where the Experiment Graph resides (i.e., in-memory, on disk, or in a remote location).
+The $cost_l$ function depends on the size of the vertex and where the Experiment Graph resides (i.e., in memory, on disk, or in a remote location).
 Furthermore, we compute the normalized cost as:
 \[cost'(v) = \dfrac{v.f  \times cost(v) }{\sum\limits_{v' \in G} v'.f \times cost(v')}\],
 and normalized potential as:
@@ -128,23 +130,27 @@ We now define the utility function is defined as:
 		\dfrac{\alpha p'(v) + (1-\alpha)cost'(v)}{v.s}, & \text{otherwise}.
 		\end{cases}
 \]
-where $0 \leq \alpha \leq 1$ is the quality-importance factor.
-If $cost_l(v) \ge cost(v)$, then recomputing the vertex is always more efficient than loading it from the Experiment Graph, therefore, we never materialize such vertices.
-Taking the load cost into account enables us to adapt the materialization algorithm to different system architecture types (i.e., single node vs distributed) and storage unit types (i.e., in-memory or on-disk Experiment Graphs).
+If $cost_l(v) \ge cost(v)$, then recomputing the vertex is always more efficient than loading it from the Experiment Graph.
+Therefore, we never materialize such vertices.
+Taking the load cost into account enables us to adapt the materialization algorithm to different system architecture types (i.e., single node vs distributed) and storage unit types (i.e., memory or disk).
+$0 \leq \alpha \leq 1$ is the quality-importance factor.
 For example, when $\alpha > 0.5$, we assign more importance to model quality than computation cost.
-Therefore, we still materialize vertices with high potential even though they incur a large recreation cost. recreation cost.
+Therefore, we still materialize vertices with high potential even though they incur a large recreation cost.
 Note that we take the frequency of the vertices into account only when we compute the normalized cost ($cost'(v)$) and not the normalized potential.
-We reason that once a workload results in a high-quality model, subsequent users will use this workload a as baseline and try to compare their solutions with this model.
+We reason that if a workload generates in a high-quality model, subsequent users will use this workload as a baseline for comparison.
+Therefore, the artifacts of workloads generating high-quality models have a high likelihood of future reuse.
 Lastly, the utility of a vertex is proportional to the inverse of its size.
-This penalizes very large artifacts and in presence of equal potential and recreation cost, our algorithm selects smaller vertices to materialize.
+This penalizes very space-consuming artifacts.
+Therefore, in the presence of equal potentials and recreation costs, our algorithm selects smaller vertices for materialization.
 
 \textbf{Run-time and Complexity.}
-The complexity of the materialization algorithm is $\mathcal{O}(|V|)$ where $|V|$ is the number of vertices in EG.
-As users execute more workloads, the size of EG increases and running the materialization algorithm becomes more costly.
+The complexity of the materialization algorithm is $\mathcal{O}(|V|)$ where $|V|$ is the number of vertices in the Experiment Graph.
+The size of the Experiment Graph increases as users execute more workloads.
+This increases the execution cost of the materialization algorithm.
 However, we only need to compute the utility for a subset of the vertices. 
 First, we must compute the utility of the vertices belonging to the new workload.
-Addition of the vertices affect the normalized cost and potential of other vertices, thus requiring a recomputation.
-However, we only need to recompute the utility of the materialized vertices.
+The addition of the new vertices affects the normalized cost and potential of other vertices, thus requiring a recomputation.
+However, we only need to recompute the utility of the materialized vertices and compare them with the utility of the workload vertices.
 As a result, the complexity of each run of the materialization algorithm is $\mathcal{O}(|W| + |M|)$, where $|W|$ is the number of vertices in the new workload DAG and $|M|$ is the number of the materialized vertices.
 
 \subsection{Storage-Aware Materialization Algorithm}
@@ -152,8 +158,8 @@ Since many feature engineering operations only operate on one or a few columns o
 As a result, after materialization, there are many duplicated columns across different dataset artifacts.
 To further reduce the storage cost, we implement a deduplication mechanism.
 We assign a unique id to every column of the dataset artifacts.
-After an operation is applied to an artifact, to compute the unique id of the columns, we first determine the columns which are affected by the operation.
-Then, we use a hash function which receives the operation hash and the input column unique id and outputs a new id.
+To compute the unique id of the columns after the execution of an operation, we first determine the columns which are affected by the operation.
+Then, we use a hash function that receives the operation hash and the input column's unique id and outputs a new id.
 Our approach for computing the unique column id ensures the following.
 First, after the execution of an operation, all the columns which are not affected by the operation will carry the same unique id.
 Second, two columns belonging to two different dataset artifacts have the same unique id, if and only if, the same operations have been applied to both columns.
