@@ -10,7 +10,19 @@ Many data preprocessing and feature engineering operations only affect a subset 
 As a result, many Dataset artifacts have duplicated columns.
 To address this issue, we implement a deduplication strategy to avoid storing duplicated columns.
 The second algorithm takes the duplication information into account when deciding on what artifacts to materialize.
-Throughout the rest of the paper, we use the terms artifact and vertex interchangeably.
+
+\textbf{Notations. }
+We use the following notations in this section.
+$G = (V,E)$ is the Experiment Graph with $V$ representing the set of artifacts and $E$ representing the set of operations.
+We use the terms artifact and vertex interchangeably.
+Each vertex $v \in V$ has the attributes $\langle f, t, s, mat \rangle$.
+$\langle f, t, s \rangle$ refer to the frequency, computation time, size while $mat=1$ indicates $v$ is materialized and $0$ otherwise.
+We also define $ M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}$ as the set of all ML models in $G$.
+
+\textbf{Assumptions. }
+We assume there exists an evaluation function that assigns a score to user-created ML models.
+This is a reasonable assumption as the success of any ML application can only be measured through an evaluation function (e.g., using a test dataset in a Kaggle competition or monitoring certain KPIs in a company).
+In the Experiment Graph, any vertex that represents an ML model artifact contains an extra attribute $\langle q \rangle$ representing the quality of the model, where $0 \leq q \leq 1$.
 
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
 Existing work proposes different algorithms for the efficient storage of dataset versions and their storage and recomputation trade-off \cite{bhattacherjee2015principles}.
@@ -29,42 +41,32 @@ The goal of artifact materialization is to materialize a subset of the artifacts
 \textbf{Weighted Recomputation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the non-merged vertices in the graph:
 \[
-WC(G) \coloneqq   \sum\limits_{v \in V}  (1-v.mat) \times v.f \times in\_edge(v).t
+WC(G) \coloneqq   \sum\limits_{v \in V}  (1-v.mat) \times v.f \times v.t
 \]
-where $v.mat = 1$ if artifact $v$ is materialized and $0$ otherwise, $v.f$ is the frequency of the artifact $v$, and $in\_edge(v).t$ returns the edges with destination $v$ and run-time $t$.
-Merged vertices have no impact on $WC(G)$ since they carry no actual data content except for pointers to the original vertices, therefore, we are not computing the weighted recreation cost for the merged vertices.
 Intuitively, the weighted recreation cost computes the total amount of execution time required to recompute all the vertices while considering their frequencies.
 Materialized artifacts incur no cost since they are stored.
-Non-materialized artifacts incur a cost equal to the execution time of the proceeding operations multiplied by their frequency.
-For example, in Figure \ref{fig-experiment-graph}, if we do not materialize $v_4$ and assuming it has a frequency of 2, we must consider both executions of the operation \textit{vectorizer.f\_t}  when computing the weighted cost.
-Whereas, if $v_4$ is materialized, the \textit{vectorizer.f\_t} operation has no impact on the weighted recreation cost.
+Non-materialized artifacts incur a cost equal to their computation time multiplied by their frequency.
 
 \textbf{Estimated Quality Function (EQ).} 
-In order to define the estimated quality function, we need to define the followings first.
+To compute EQ, we first define the potential of a vertex.
 \[
-M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}
-\]
-is the set of all the terminal models in the experiment graph.
-For every vertex $v$ in the graph, 
-\[
-M(G, v) \coloneqq  \{m \in M(G) \mid (v = m) \vee (v \text{ is connected to } m)\}
-\]
-is either $v$ itself, when $v$ is a terminal model, or the set of all terminal models to which $v$ is connected.
-\[
-p(G, v) \coloneqq  
+p( v) \coloneqq  
 		\begin{cases}
-		quality(v) , & \text{if } v \in M(G)  \\
-		\max\limits_{m \in M(v)} \Big( \dfrac{quality(m)}{cost(v,m)} \Big) , & \text{otherwise}
+		v.q , & \text{if } v \in M(G)  \\
+		\max\limits_{m \in M(G)} \Big( \dfrac{m.q}{cost(v,m)} \Big) , & \text{otherwise}
 		\end{cases}
 \]
-is the potential of an artifact, where $quality(m)$ represents the quality of a terminal model measured by the evaluation function of the task.
-We define $cost(v,m)$ as the total time of executing all the operations starting from vertex $v$ until model $m$,
+where,
 \[
-cost(v,m) \coloneqq \sum\limits_{e \in path(v, m)} e.t
+cost(v,m) \coloneqq 
+\begin{cases}
+\sum\limits_{w \in path(v, m)} w.t, & \text{if } v  \text{ and } m \text{ are connected} \\
+\infty, & \text{otherwise}
+\end{cases}
 \]
-If $v$ itself is a model, then $p(G, v) = quality(v)$.
-When $v$ is not a model, we first compute the ratio of quality over cost for all of $v$'s connected models and the potential of $v$ to the ratio with the largest value.
-Intuitively, a high potential artifact is an artifact which results in a high-quality terminal model with low cost.
+where $path(v, m)$ is the sequence of vertices from $v$ to $m$, excluding $v$.
+Intuitively, a vertex with a high potential indicates that we can eventually train a high quality model using the vertex with small computation cost.
+Note that vertices that are not connected to any model have a potential of 0.
 
 Now, we define the estimated quality function as:
 \[
