@@ -1,27 +1,27 @@
 \section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
 In this section, we provide an overview of our collaborative ML workload optimization system.
 Figure \ref{system-workflow} shows the high-level architecture of our system.
-In a typical collaborative environment, users fetch datasets from a central server, perform their analysis on their local machine, and optionally store the results back in the central server.
-Our system also comprises of a client and server component.
+Similar to collaborative environments, our system also comprises of a client and server component.
 The client is responsible for parsing the user workload into a DAG (Step 1) and prunes the workload DAG (Step 2).
 The server receives the workload DAG and utilizes our reuse algorithm to optimize the DAG (Step 3) and sends it back to the client.
-Finally, the client executes the optimized DAG (Step 4) and prompts the materializer to update the Experiment Graph and store the artifacts from the executed workload DAG (Step 5).
+Finally, the client executes the optimized DAG (Step 4) and prompts the server to update the Experiment Graph and store the artifacts of the executed workload DAG (Step 5).
 This architecture enables us to integrate into existing collaborative environments without requiring any changes to their workflow.
+Similar to collaborative environments, the client and server can run within a single cloud environment where each client is an isolated container.
 In the rest of this section, we describe the process of parsing, pruning, generating workload DAGs, and executing the workloads.
 Then, we describe the process of constructing the Experiment Graph and how we utilize the Experiment Graph in our materialization and reuse algorithms. 
 Finally, we show the integration process and the impact of our system on the use case in Section \ref{subsec-motivational-example}.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.8\columnwidth]{../images/system-workflow}
+\includegraphics[width=0.9\columnwidth]{../images/system-workflow}
 \caption{System overview of the collaborative workload optimizer}
 \label{system-workflow}
 \end{figure}
 
 \subsection{Client Components}
-\textbf{Parser. }
+\textbf{ML Script and Parser.}
 Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are common choices for data analysis and machine learning workloads.
-Upon invocation of the program, the parser transforms the ML workload into a DAG.
+Upon invocation of the program, the parser reads the script and transforms it into a DAG.
 Listing \ref{listing-simple-workload} shows an example of a workload script.
 With only a slight modification of the import commands, we can load our parser modules.
 As a result, we can support both long-running python scripts and interactive Jupyter notebooks.
@@ -80,7 +80,7 @@ To minimize the transfer cost, the client does not send the content of the compu
 After the server optimizes a workload DAG, the executor receives the optimized DAG to execute the operations and returns the result to the user.
 The executor runs the operations in the optimized DAG in their topological order and returns the result to the user.
 To avoid redundant computation, the executor ignores inactive edges.
-After the executor completes the execution of a workload DAG, it annotates the DAG vertices with compute-time and sizes before sending it to the materializer for storage.
+After the executor completes the execution of a workload DAG, it annotates the DAG vertices with compute-time and sizes before sending it to the updater for storage.
 
 %
 %\begin{figure}\label{DAG-workflow}
@@ -110,15 +110,15 @@ After the executor completes the execution of a workload DAG, it annotates the D
 \subsection{Server Components}
 \textbf{Experiment Graph.}
 Experiment Graph (EG) is the union of all the executed workload DAGs, where vertices represent the artifacts and edges represent the operations.
-Every vertex in EG has the attributes $frequency$, $size$, and $compute_time$, representing the number of different workloads an artifact appeared in, the storage size of the artifact, and the time required to compute the artifact given its input artifacts, respectively.
+Every vertex in EG has the attributes $frequency$, $size$, and $compute\_time$, representing the number of different workloads an artifact appeared in, the storage size of the artifact, and the time required to compute the artifact given its input artifacts, respectively.
 Every vertex in the experiment Graph carries the meta-data of the artifact it represents.
-If the artifact is a \textit{Dataset}, then its meta-data includes the name, type, and total size of each column of the data.
-If the artifact is a \textit{Model}, its meta-data includes the name, type, hyperparameters, and the error metric of the model.
-The decision to store the underlying content of an artifact, i.e., Pandas dataframe and model weights, is left to the materializer component.
+For datasets, the meta-data includes the name, type, and size of each column.
+For ML models, the meta-data includes the name, type, hyperparameters, and the evaluation score of the model.
+The decision to store the underlying content of an artifact, i.e., Pandas data frame and model weights, is left to the updater component.
 
 EG maintains the list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
-Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source vertex.
+Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
 %Note that we construct one EG per ML task.
 %Every source vertex of EG corresponds to a training or testing dataset in the ML task.
 %Furthermore, all the model artifacts in EG are evaluated using the metric defined in the ML task.
@@ -130,11 +130,15 @@ Then, the optimizer utilizes our reuse algorithm to generate an optimized DAG wi
 Similar to the local pruning step, the optimizer also marks unnecessary edges as inactive before returning the optimized DAG to the client.
 The optimized DAG guarantees to incur the smallest execution cost, i.e., the cost of transferring the materialized artifacts plus executing the remaining operations.
 
-\textbf{Materializer.}
-The materializer receives the executed DAG from the client.
-Vertices in the DAG contain the size and compute-time of the artifact they represent.
-The materializer utilizes this information to decide what artifacts have a high likelihood of reappearing in future workloads.
-The Materializer then stores these artifacts in the Experiment Graph.
+\textbf{Updater.}
+The updater receives the executed DAG from the client.
+The vertices in the executed DAG contain the size and compute-time of the artifacts they represent.
+The updater performs the three following tasks.
+First, it stores any source artifact, both the meta-data and the underlying content, that is not in EG.
+This is to ensure that EG contains every raw dataset.
+Second, it updates EG to include all the vertices and edges of the executed DAG.
+If EG already contains a vertex, the updater increases its frequency.
+Lastly, by utilizing our materialization algorithm, the updater stores the underlying content of a selected set of artifacts (i.e., the output of the materialization algorithm).
 Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
 
 %Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, and hyperparameters.
@@ -185,9 +189,9 @@ Note that the Experiment Graph contains the meta-data of all the artifacts, incl
 In this section, we show how our collaborative workload optimizer improves the workload execution process of the Kaggle use case.
 We maintain an Experiment Graph for the Home Credit Default Risk competition.
 After users start publishing their workload scripts on the Kaggle platform, other users will read, re-run, or modify the existing scripts.
-Our materializer stores the artifacts with a high likelihood of reuse into EG and optimizes the execution of incoming workloads.
-Our optimizer generates more efficient workloads by querying EG for materialized artifacts.
+The updater component of our system stores the artifacts with a high likelihood of reuse into EG.
+Our optimizer generates efficient workloads by querying EG for materialized artifacts and rewriting the workload DAG into a more optimized DAG.
 In the use case, we highlighted 3 workloads that were copied and modified 7000 times.
 Optimizing the execution of these workloads saves 100s of hours of execution time.
-This reduces the required resources and operation cost of Kaggle.
+As a result, our collaborative optimizer reduces the required resources and operation cost of Kaggle.
 
