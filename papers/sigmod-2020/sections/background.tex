@@ -2,25 +2,33 @@
 In this section, we first define the required terms referring to different entities in collaborative environments which we use throughout the paper.
 Next, we discuss a use case based on a real collaborative environment.
 
-\subsection{Preliminaries and Definitions}
-\textbf{ML Task.} 
-In a collaborative environment, an ML task specifies the requirements and the goal of the machine learning solutions.
-An ML task contains the following: (1) The type of the machine learning model, i.e., classification, regression, or clustering, (2) one or more training and test datasets, and (3) an evaluation function which assigns a score to the user-provided solution.
-For example, in an online advertising company, the ML task for the data scientists is to train Click-Through-Rate prediction models given one or multiple datasets containing users and ads features which minimize the logarithmic loss on a test dataset.
+\subsection{Collaborative Environment for Data Science}
+A typical collaborative environment consists of a client and server space.
+Users write a script to fetch datasets from the server, analyze the data, and train machine learning models.
+The client is responsible for executing the script.
+Although the client can be a single machine, however, users typically utilize Jupyter notebooks  \cite{Kluyver:2016aa} to write and execute their scripts in isolated containers \cite{merkel2014docker} within the server itself \cite{kagglewebsite, googlecolab, netflix-notebook}.
+Users can publish the results and the scripts on the server for other users to see.
+Isolated execution environments enable collaborative environments to better allocate resources for running scripts.
 
-\textbf{Data and Operations.}
-We support three types of data: (1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects, such as Pandas dataframe \cite{mckinney-proc-scipy-2010}), (2) an \textit{Aggregate} which contains a single value or list of values, and (3) a \textit{Model} which represents a machine learning model.
-The type of data depends on the operations which generate them.
-\textit{Data preprocessing and feature engineering operations}, which include simple data transformation and aggregation, feature selection, and feature extraction operations, generate either a Dataset (e.g., map, filter, or one-hot encoding operations)  or an Aggregate (e.g., reduce operation).
-\textit{Model training operations} generate a Model.
-A Model is used either in other feature engineering operations, e.g., PCA model for dimensionality reduction, or to perform predictions on a test dataset.
- 
-\textbf{ML Workload.}
-An ML workload is a script or a machine learning pipeline which performs several data preprocessing, feature engineering, and model training operations. 
-Collaborative platforms execute a workload in either a long-running process or an interactive environment using Jupyter notebooks \cite{Kluyver:2016aa}.
+%\subsection{Preliminaries and Definitions}
+%\textbf{ML Task.} 
+%In a collaborative environment, an ML task specifies the requirements and the goal of the machine learning solutions.
+%An ML task contains the following: (1) The type of the machine learning model, i.e., classification, regression, or clustering, (2) one or more training and test datasets, and (3) an evaluation function which assigns a score to the user-provided solution.
+%For example, in an online advertising company, the ML task for the data scientists is to train Click-Through-Rate prediction models given one or multiple datasets containing users and ads features which minimize the logarithmic loss on a test dataset.
+%
+%\textbf{Data and Operations.}
+%We support three types of data: (1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects, such as Pandas dataframe \cite{mckinney-proc-scipy-2010}), (2) an \textit{Aggregate} which contains a single value or list of values, and (3) a \textit{Model} which represents a machine learning model.
+%The type of data depends on the operations which generate them.
+%\textit{Data preprocessing and feature engineering operations}, which include simple data transformation and aggregation, feature selection, and feature extraction operations, generate either a Dataset (e.g., map, filter, or one-hot encoding operations)  or an Aggregate (e.g., reduce operation).
+%\textit{Model training operations} generate a Model.
+%A Model is used either in other feature engineering operations, e.g., PCA model for dimensionality reduction, or to perform predictions on a test dataset.
+% 
+%\textbf{ML Workload.}
+%An ML workload is a script or a machine learning pipeline which performs several data preprocessing, feature engineering, and model training operations. 
+%Collaborative platforms execute a workload in either a long-running process or an interactive environment using Jupyter notebooks \cite{Kluyver:2016aa}.
 
 \subsection{Use Case}\label{subsec-motivational-example}
-Kaggle is a collaborative data science platform which enables users and organizations to publish datasets and organize machine learning competitions by defining an ML task where all the users can participate and submit ML workloads for solving the task \cite{kagglewebsite}.
+Kaggle is a collaborative environment that enables users and organizations to publish datasets and organize machine learning competitions by defining a task where all the users can participate and submit workloads for solving the task \cite{kagglewebsite}.
 Kaggle utilizes docker containers, which are called kernels, to execute user workloads.
 If the workload produces machine learning model artifacts, the users can choose to submit them and attain a score of how good their model performs on a test dataset.
 
