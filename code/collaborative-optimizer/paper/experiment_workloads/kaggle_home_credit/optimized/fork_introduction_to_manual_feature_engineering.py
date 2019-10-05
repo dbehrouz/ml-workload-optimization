@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""Optimized workload 2
+"""Optimized Fork of Workload 2
 
-This script is the optimized version of the workload 'introduction_to_manual_feature_engineering'
+This script is the optimized version of the workload 'fork_introduction_to_manual_feature_engineering'
 which utilizes our Experiment Graph for optimizing the workload
 """
 import warnings

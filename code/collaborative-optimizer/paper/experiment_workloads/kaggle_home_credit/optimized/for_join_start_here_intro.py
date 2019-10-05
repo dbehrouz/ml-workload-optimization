@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""Optimized workload 1
+"""Optimized Fork of Joined Workload 1 and 2
 
-This script is the optimized version of the workload 'start_here_a_gentle_introduction'
+This script is the optimized version of the workload 'fork_join_start_here_intro.py'
 which utilizes our Experiment Graph for optimizing the workload
 """
 import os
@@ -621,6 +621,7 @@ class start_here_a_gentle_introduction(Workload):
         print('Training Corrs Removed Shape: ', train_corrs_removed.shape().data(verbose=verbose))
         print('Testing Corrs Removed Shape: ', test_corrs_removed.shape().data(verbose=verbose))
         model(app_train_domain, app_test_domain)
+        # LGBMClassifier with AUC score: {'auc': 0.62983905432040155}
 
         return True
 

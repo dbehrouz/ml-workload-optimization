@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Fork of baseline workload 1
+"""Fork of Baseline workload 1
 
 A fork of the original workload 'start_here_a_gentle_introduction'.
 The fork is submitted by user "crldata" to Kaggle's Home Credit Default Risk competition
