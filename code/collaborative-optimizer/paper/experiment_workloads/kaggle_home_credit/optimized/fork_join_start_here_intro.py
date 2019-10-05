@@ -28,7 +28,7 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-class for_join_start_here_intro(Workload):
+class fork_join_start_here_intro(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
         print(os.listdir(root_data))
@@ -639,7 +639,7 @@ if __name__ == "__main__":
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
     from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
 
-    workload = for_join_start_here_intro()
+    workload = fork_join_start_here_intro()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = AllMaterializer(storage_budget=mat_budget)
