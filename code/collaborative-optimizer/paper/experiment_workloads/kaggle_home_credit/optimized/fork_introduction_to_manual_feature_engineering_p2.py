@@ -7,7 +7,6 @@ This script is the optimized version of the workload 'introduction_to_manual_fea
 which utilizes our Experiment Graph for optimizing the workload
 
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
@@ -17,10 +16,7 @@ import matplotlib
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
-import matplotlib.pyplot as plt
 # numpy and pandas for data manipulation
-import pandas as pd
-import seaborn as sns
 
 # Experiment Graph
 
@@ -28,7 +24,7 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 
-class introduction_to_manual_feature_engineering_p2(Workload):
+class fork_introduction_to_manual_feature_engineering_p2(Workload):
 
     def run(self, execution_environment, root_data, verbose=0):
 
@@ -113,37 +109,6 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
             return categorical.set_columns(column_names)
 
-        # Plots the distribution of a variable colored by value of the target
-        def kde_target(var_name, df):
-            # Calculate the correlation coefficient between the new variable and the target
-            corr = df['TARGET'].corr(df[var_name])
-
-            # Calculate medians for repaid vs not repaid
-            avg_repaid = df[df['TARGET'] == 0][var_name].median()
-            avg_not_repaid = df[df['TARGET'] == 1][var_name].median()
-
-            plt.figure(figsize=(12, 6))
-
-            # Plot the distribution for target == 0 and target == 1
-            sns.kdeplot(df[df['TARGET'] == 0][var_name].dropna().data(verbose=verbose), label='TARGET == 0')
-            sns.kdeplot(df[df['TARGET'] == 1][var_name].dropna().data(verbose=verbose), label='TARGET == 1')
-
-            # label the plot
-            plt.xlabel(var_name)
-            plt.ylabel('Density')
-            plt.title('%s Distribution' % var_name)
-            plt.legend()
-
-            # print out the correlation
-            print('The correlation between %s and the TARGET is %0.4f' % (var_name, corr.data(verbose=verbose)))
-            # Print out average values
-            print('Median value for loan that was not repaid = %0.4f' % avg_not_repaid.data(verbose=verbose))
-            print('Median value for loan that was repaid =     %0.4f' % avg_repaid.data(verbose=verbose))
-
-        def return_size(df):
-            """Return size of dataframe in gigabytes"""
-            return round(df.compute_size() / 1e9, 2)
-
         previous = execution_environment.load(root_data + '/kaggle_home_credit/previous_application.csv')
         previous.head().data(verbose=verbose)
 
@@ -168,34 +133,6 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
         test = test.merge(previous_counts, on='SK_ID_CURR', how='left')
         test = test.merge(previous_agg, on='SK_ID_CURR', how='left')
-
-        # Function to calculate missing values by column# Funct
-        def missing_values_table(dataset):
-            # Total missing values
-            mis_val = dataset.isnull().sum().data(verbose=verbose)
-
-            mis_val_percent = 100 * mis_val / len(dataset.data(verbose=verbose))
-
-            # Make a table with the results
-            mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
-            # Rename the columns
-            mis_val_table_ren_columns = mis_val_table.rename(columns={
-                0: 'Missing Values',
-                1: '% of Total Values'
-            })
-            # Sort the table by percentage of missing descending
-            mis_val_table_ren_columns = mis_val_table_ren_columns[
-                mis_val_table_ren_columns.iloc[:, 1] != 0].sort_values(
-                '% of Total Values', ascending=False).round(1)
-
-            # Print some summary information
-            print("Your selected dataframe has " + str(dataset.shape().data(verbose=verbose)[1]) + " columns.\n"
-                                                                                                   "There are " + str(
-                mis_val_table_ren_columns.shape[0]) +
-                  " columns that have missing values.")
-
-            # Return the dataframe with missing information
-            return mis_val_table_ren_columns
 
         def remove_missing_columns(train, test, threshold=90):
 
@@ -318,9 +255,6 @@ class introduction_to_manual_feature_engineering_p2(Workload):
         print 'Final Training Shape: {}'.format(train.shape().data(verbose=verbose))
         print 'Final Testing Shape: {}'.format(test.shape().data(verbose=verbose))
 
-        print 'Final training size: {}'.format(return_size(train))
-        print 'Final testing size: {}'.format(return_size(test))
-
         from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
         def model(lgb_featres, test_features, encoding='ohe'):
@@ -353,10 +287,6 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
             """
 
-            # Extract the ids
-            train_ids = lgb_featres['SK_ID_CURR']
-            test_ids = test_features['SK_ID_CURR']
-
             # Extract the labels for training
             labels = lgb_featres['TARGET']
 
@@ -377,26 +307,6 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
                 # No categorical indices to record
                 cat_indices = 'auto'
-
-            # # Integer label encoding
-            # elif encoding == 'le':
-            #
-            #     # Create a label encoder
-            #     label_encoder = LabelEncoder()
-            #
-            #     # List for storing categorical indices
-            #     cat_indices = []
-            #
-            #     # Iterate through each column
-            #     for i, col in enumerate(lgb_featres):
-            #         if lgb_featres[col].dtype == 'object':
-            #             # Map the categorical features to integers
-            #             lgb_featres[col] = label_encoder.fit_transform(np.array(lgb_featres[col].astype(str)).reshape((-1,)))
-            #             test_features[col] = label_encoder.transform(
-            #                 np.array(test_features[col].astype(str)).reshape((-1,)))
-            #
-            #             # Record the categorical indices
-            #             cat_indices.append(i)
 
             # Catch error if label encoding scheme is not valid
             else:
@@ -429,11 +339,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                 custom_args={'num_iteration': best_iteration}).data(verbose=verbose)
             print 'LGBMClassifier with AUC score: {}'.format(score)
 
-            feature_importances = model.feature_importances(feature_names)
-
-            return feature_importances
-
-        fi = model(train, test)
+        model(train, test)
 
         return True
 
@@ -451,7 +357,7 @@ if __name__ == "__main__":
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
     from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
-    workload = introduction_to_manual_feature_engineering_p2()
+    workload = fork_introduction_to_manual_feature_engineering_p2()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
