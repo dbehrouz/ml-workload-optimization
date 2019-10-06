@@ -17,6 +17,14 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=storage_aware'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=simple'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=16.0' 'method=optimized' 'materializer=storage_aware'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
@@ -38,12 +46,12 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=64.0' 'method=optimized' 'materializer=simple'
-
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=128.0' 'method=optimized' 'materializer=storage_aware'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=128.0' 'method=optimized' 'materializer=simple'
+#
+#
+#python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+#${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+#'mat_budget=128.0' 'method=optimized' 'materializer=storage_aware'
+#
+#python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+#${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+#'mat_budget=128.0' 'method=optimized' 'materializer=simple'
