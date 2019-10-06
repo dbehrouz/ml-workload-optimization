@@ -79,7 +79,6 @@ elif method == 'mock':
     workloads = get_mock_scenario()
 else:
     raise Exception('invalid method: {}'.format(method))
-print result_file
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
