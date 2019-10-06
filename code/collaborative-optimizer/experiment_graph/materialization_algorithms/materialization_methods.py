@@ -3,6 +3,8 @@ from abc import abstractmethod
 from experiment_graph.graph.graph_representations import ExperimentGraph
 from experiment_graph.graph.graph_representations import WorkloadDag
 
+ALPHA = 0.5
+
 
 class Materializer:
     def __init__(self, storage_budget, modify_graph=False):
@@ -29,12 +31,11 @@ class Materializer:
                 # only compute the utility for the vertices which are already
                 # materialized or are in the workload graph
                 if node[1]['mat'] or node[0] in w_dag.nodes():
-                    rho_object = RHO(node[0], node[1]['recreation_cost'],
-                                     node[1]['potential'],
-                                     node[1]['meta_freq'],
-                                     node[1]['size'], True, True)
-                    rhos.append(rho_object)
-                    rho = rho_object.rho
+                    node_info = NodeInfo(node[0], node[1]['n_recreation_cost'],
+                                         node[1]['n_potential'],
+                                         node[1]['size'])
+                    rhos.append(node_info)
+                    rho = node_info.utility_value
                 else:
                     rho = 0
 
@@ -71,7 +72,7 @@ class Materializer:
         :type experiment_graph: ExperimentGraph
         :param should_materialize: list of vertices to materialize (vertex ids)
         """
-        print 'should_materialize: {}'.format(should_materialize)
+        # print 'should_materialize: {}'.format(should_materialize)
         for node_id, attributes in experiment_graph.graph.nodes(data=True):
             if node_id in should_materialize:
                 if not attributes['mat']:
@@ -132,7 +133,7 @@ class HeuristicsMaterializer(Materializer):
             if n[1]['root']:
                 root_size += n[1]['size']
                 to_mat.append(n[0])
-        should_materialize, remaining = self.select_nodes_to_materialize(rhos, self.storage_budget - root_size,
+        should_materialize, remaining = self.select_nodes_to_materialize(rhos, self.storage_budget,
                                                                          to_mat)
 
         total_node_size = experiment_graph.get_size_of(should_materialize)
@@ -159,7 +160,7 @@ class StorageAwareMaterializer(Materializer):
                 root_size += n[1]['size']
                 materialization_candidates.append(n[0])
 
-        remaining_budget = self.storage_budget - root_size
+        remaining_budget = self.storage_budget
         i = 1
         while remaining_budget >= 0:
             start_list = list(materialization_candidates)
@@ -235,32 +236,24 @@ class StorageAwareMaterializer(Materializer):
         return current_size
 
 
-class RHO(object):
-    def __init__(self, node_id, recreation_cost, potential, freq, size, use_rc=True, use_pt=True):
+class NodeInfo(object):
+    def __init__(self, node_id, normalized_cost, normalized_potential, size):
         self.node_id = node_id
-        self.recreation_cost = recreation_cost
-        self.potential = potential
-        self.freq = freq
+        self.normalized_cost = normalized_cost
+        self.normalized_potential = normalized_potential
         self.size = size
-        self.rho = self.compute_rho(use_rc, use_pt)
+        self.utility_value = self.compute_rho()
 
-    def compute_rho(self, use_rc, use_pt):
-        rho = self.freq
-        if use_rc:
-            rho *= self.recreation_cost
-        if use_pt:
-            rho *= self.potential
-        rho /= self.size
-        return rho
+    def compute_rho(self):
+        return (ALPHA * self.normalized_potential + (1 - ALPHA) * self.normalized_cost) / self.size
 
     def __lt__(self, other):
-        return self.rho < other.rho
+        return self.utility_value < other.utility_value
 
     def __repr__(self):
-        return 'node: {}, recreation_cost: {:.3f}, potential: {:.3f}, frequency: {}, size: {:.3f}, rho: {:.5f}' \
+        return 'node: {}, cost: {:.3f}, potential: {:.3f}, size: {:.3f}, utility: {:.5f}' \
             .format(self.node_id[0:12],  # 32 is too long to show
-                    self.recreation_cost,
-                    self.potential,
-                    self.freq,
+                    self.normalized_cost,
+                    self.normalized_potential,
                     self.size,
-                    self.rho)
+                    self.utility_value)
