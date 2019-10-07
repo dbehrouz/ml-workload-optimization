@@ -1,7 +1,15 @@
 import errno
 import os
+import sys
 
-from graph.graph_representations import ExperimentGraph
+if len(sys.argv) > 1:
+    SOURCE_CODE_ROOT = sys.argv[1]
+else:
+    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
+                       '-optimizer/ '
+
+sys.path.append(SOURCE_CODE_ROOT)
+from experiment_graph.graph.graph_representations import ExperimentGraph
 from datetime import datetime
 import json
 
@@ -54,14 +62,15 @@ if __name__ == "__main__":
                            '-optimizer/ '
     from paper.experiment_helper import Parser
 
+    sys.path.append(SOURCE_CODE_ROOT)
     parser = Parser(sys.argv)
-    verbose = parser.get('verbose', 0)
+    trial = int(parser.get('trial', '5'))
     database_path = parser.get('experiment_graph',
                                '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/data'
-                               '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat')
+                               '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all')
     result_folder = parser.get('result_folder',
                                '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/data/profiles')
-    profile_name = parser.get('profile', 'local-dedup-multi-2')
+    profile_name = parser.get('profile', 'local-dedup')
     from experiment_graph.execution_environment import ExecutionEnvironment
 
     ee = ExecutionEnvironment()
