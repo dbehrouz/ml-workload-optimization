@@ -11,6 +11,8 @@ import sys
 import uuid
 from datetime import datetime
 
+
+
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -22,6 +24,7 @@ from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
+from experiment_graph.storage_managers import storage_profiler
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
@@ -48,7 +51,7 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 rep = int(parser.get('rep', 2))
 
 result_file = parser.get('result', ROOT + '/experiment_results/local/execution_time/mock/test.csv')
-
+profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
 def run(executor, workload):
     if method == 'optimized':
@@ -69,7 +72,7 @@ if not os.path.exists(os.path.dirname(result_file)):
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=sa_materializer)
     workloads = get_kaggle_optimized_scenario()
 elif method == 'baseline':
     executor = BaselineExecutor()

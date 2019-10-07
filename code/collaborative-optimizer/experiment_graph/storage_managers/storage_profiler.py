@@ -14,6 +14,11 @@ from datetime import datetime
 import json
 
 
+def get_profile(profile_location):
+    print open(profile_location, 'rb').read()
+    return json.loads(open(profile_location, 'rb').read())
+
+
 def profile_experiment_graph(profile_name, experiment_graph, result_folder, TRIAL=10):
     """
     :param profile_name:
@@ -32,7 +37,7 @@ def profile_experiment_graph(profile_name, experiment_graph, result_folder, TRIA
                 for i in range(TRIAL):
                     temp = experiment_graph.retrieve_data(node)
                 end = datetime.now()
-                time = (end - start).total_seconds() / TRIAL
+                time = ((end - start).microseconds / 1000.0) / TRIAL
                 if d_type not in time_size:
                     time_size[d_type] = {'size': [], 'time': []}
 

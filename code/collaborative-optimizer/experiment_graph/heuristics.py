@@ -1,6 +1,13 @@
 import networkx as nx
 
 
+def compute_load_costs(graph, cost_profile):
+    for n, d in graph.nodes(data=True):
+        if 'load_cost' not in d:
+            if d['type'] != 'SuperNode' and d['type'] != 'GroupBy':
+                d['load_cost'] = d['size'] * cost_profile[d['type']]
+
+
 def compute_recreation_cost(graph):
     """
     computes the recreation cost of every vertex in the graph according to formula in the paper

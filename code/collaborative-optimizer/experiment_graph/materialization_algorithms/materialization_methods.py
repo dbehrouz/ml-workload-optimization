@@ -27,6 +27,9 @@ class Materializer(object):
                 # we are not materializing group by nodes at any cost
                 rho = 0
                 # node[1]['data'].clear_content()
+            elif node[1]['load_cost'] > node[1]['recreation_cost']:
+                print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
+                rho = 0
             else:
                 # only compute the utility for the vertices which are already
                 # materialized or are in the workload graph

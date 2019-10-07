@@ -4,7 +4,7 @@ from data_storage import SimpleStorageManager, DedupedStorageManager
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.workload import Workload
-from heuristics import compute_recreation_cost, compute_vertex_potential
+from heuristics import compute_recreation_cost, compute_vertex_potential, compute_load_costs
 from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
     StorageAwareMaterializer
 
@@ -70,15 +70,18 @@ class Executor:
 
 
 class CollaborativeExecutor(Executor):
-    def __init__(self, execution_environment, materializer=None):
+    DEFAULT_PROFILE = {"Agg": 0.08959999999999999, "SK_Model": 0.0002258063871079322, "Evaluation": 0.02909090909090909,
+                       "Feature": 2.5703229163279242e-05, "Dataset": 0.0005039403928584662}
+
+    def __init__(self, execution_environment, cost_profile=None, materializer=None):
         """
 
         :type execution_environment: ExecutionEnvironment
         """
         Executor.__init__(self)
-
+        self.cost_profile = CollaborativeExecutor.DEFAULT_PROFILE if cost_profile is None else cost_profile
         self.execution_environment = execution_environment
-        self.materializer = AllMaterializer(storage_budget=0) if materializer is None else materializer
+        self.materializer = AllMaterializer() if materializer is None else materializer
         # storage aware materialization only works with deduped storage manager
         if isinstance(self.materializer, StorageAwareMaterializer):
             assert isinstance(execution_environment.experiment_graph.data_storage, DedupedStorageManager)
@@ -120,7 +123,7 @@ class CollaborativeExecutor(Executor):
         self.execution_environment.experiment_graph.extend(self.execution_environment.workload_dag)
         # TODO: implementing this in a truly online manner, i.e., only computing nodes which are
         # affected is a bit of work. For now, we recompute for the entire graph
-        self.compute_heuristics(self.execution_environment.experiment_graph.graph)
+        self.compute_heuristics(self.execution_environment.experiment_graph.graph, self.cost_profile)
         self.materializer.run_and_materialize(self.execution_environment.experiment_graph,
                                               self.execution_environment.workload_dag)
         return True
@@ -151,7 +154,8 @@ class CollaborativeExecutor(Executor):
             return ','.join([self.time_manager[key] for key in keys])
 
     @staticmethod
-    def compute_heuristics(graph):
+    def compute_heuristics(graph, profile):
+        compute_load_costs(graph, profile)
         compute_recreation_cost(graph)
         compute_vertex_potential(graph)
 

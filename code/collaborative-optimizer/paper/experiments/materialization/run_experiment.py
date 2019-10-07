@@ -22,6 +22,7 @@ from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
+from experiment_graph.storage_managers import storage_profiler
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
@@ -49,6 +50,7 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 rep = int(parser.get('rep', 2))
 
 result_file = parser.get('result', ROOT + '/experiment_results/local/materialization/mock/test.csv')
+profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
 if not os.path.exists(os.path.dirname(result_file)):
     try:
@@ -67,7 +69,7 @@ elif materializer_type == 'all':
 else:
     raise Exception('Invalid materializer type: {}'.format(materializer_type))
 
-executor = CollaborativeExecutor(ee, materializer)
+executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
 workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
