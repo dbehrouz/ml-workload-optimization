@@ -6,7 +6,7 @@ from experiment_graph.graph.graph_representations import WorkloadDag
 ALPHA = 0.5
 
 
-class Materializer:
+class Materializer(object):
     def __init__(self, storage_budget, modify_graph=False):
         """
 
@@ -109,6 +109,9 @@ class AllMaterializer(Materializer):
     This class materializes everything (except for SuperNode which cannot be materialized)
     We will use this as a baseline
     """
+
+    def __init__(self):
+        super(AllMaterializer, self).__init__(0)
 
     def run(self, experiment_graph, workload_dag, verbose=0):
         return [node_id for node_id, node_type in workload_dag.graph.nodes(data='type') if

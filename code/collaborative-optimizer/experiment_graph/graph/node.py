@@ -1286,8 +1286,20 @@ class SK_Model(Node):
     def compute_size(self):
         if self.computed and self.size is None:
             start = datetime.now()
-            from pympler import asizeof
-            self.size = asizeof.asizeof(self.underlying_data) / AS_KB
+
+            if self.underlying_data.__class__.__name__ == 'RandomForestClassifier':
+                # pympler returns the wrong size by a large margin for random forest
+                # default random forest size is in the order 100s MBs where pympler returns
+                # KBs
+                import cPickle as pickle
+                import os
+                with open(self.id, 'wb') as output:
+                    pickle.dump(self.underlying_data, output, protocol=pickle.HIGHEST_PROTOCOL)
+                self.size = os.stat(self.id).st_size / AS_KB
+                os.remove(self.id)
+            else:
+                from pympler import asizeof
+                self.size = asizeof.asizeof(self.underlying_data) / AS_KB
             self.execution_environment.update_time(BenchmarkMetrics.NODE_SIZE_COMPUTATION,
                                                    (datetime.now() - start).total_seconds())
         return self.size
@@ -1480,7 +1492,7 @@ class SuperNode(Node):
             c_hashes[index] = self.nodes[1].get_column_hash()
         d1 = self.nodes[0].get_materialized_data()
         d2 = self.nodes[1].get_materialized_data()
-        
+
         temp = d1.copy()
         temp[col_names] = d2
         # self.execution_environment.data_storage.store_dataset(c_hashes, d1[c_names])

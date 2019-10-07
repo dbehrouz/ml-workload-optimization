@@ -6,12 +6,19 @@ This script is the optimized version of the workload 'start_here_a_gentle_introd
 which utilizes our Experiment Graph for optimizing the workload
 """
 import os
+import sys
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
 
+if len(sys.argv) > 1:
+    SOURCE_CODE_ROOT = sys.argv[1]
+else:
+    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
+                       '-optimizer/ '
+sys.path.append(SOURCE_CODE_ROOT)
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -639,36 +646,58 @@ class start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
     import sys
 
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
+    if len(sys.argv) > 1:
+        SOURCE_CODE_ROOT = sys.argv[1]
+    else:
+        SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
+                           '-optimizer/ '
+    sys.path.append(SOURCE_CODE_ROOT)
+    from paper.experiment_helper import Parser
+    from experiment_graph.data_storage import DedupedStorageManager, StorageManagerFactory
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
+        StorageAwareMaterializer, HeuristicsMaterializer
+
+    parser = Parser(sys.argv)
+    verbose = parser.get('verbose', 0)
+    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    ROOT = parser.get('root', DEFAULT_ROOT)
+    ROOT_DATA_DIRECTORY = ROOT + '/data'
+    mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
+    materializer_type = parser.get('materializer', 'all')
+    storage_type = parser.get('storage_type', 'dedup')
+    if materializer_type == 'storage_aware':
+        materializer = StorageAwareMaterializer(storage_budget=mat_budget)
+    elif materializer_type == 'simple':
+        materializer = HeuristicsMaterializer(storage_budget=mat_budget)
+    elif materializer_type == 'all':
+        materializer = AllMaterializer()
+    else:
+        raise Exception('invalid materializer: {}'.format(materializer_type))
+
+    storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type'))
 
     workload = start_here_a_gentle_introduction()
 
-    mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer(storage_budget=mat_budget)
+    ee = ExecutionEnvironment(storage_manager, reuse_type=FastBottomUpReuse.NAME)
+    ROOT_DATA_DIRECTORY = ROOT + '/data'
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    if parser.has('experiment_graph'):
+        database_path = parser.get('experiment_graph')
+        if os.path.exists(database_path):
+            ee.load_history_from_disk(database_path)
 
-    root_data = ROOT + '/data'
-    # database_path = \
-    #     root_data + '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat'
-    # if os.path.exists(database_path):
-    #     ee.load_history_from_disk(database_path)
-
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer)
     execution_start = datetime.now()
 
-    executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)
-    # executor.store_experiment_graph(database_path)
+    executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=1)
+    if parser.get('update_graph', 'No').lower() == 'yes':
+        executor.store_experiment_graph(database_path, overwrite=True)
+
     execution_end = datetime.now()
     elapsed = (execution_end - execution_start).total_seconds()
 

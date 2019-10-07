@@ -205,3 +205,14 @@ class SimpleStorageManager(StorageManager):
 
     def total_size(self):
         return sum(self.key_value_size.values())
+
+
+class StorageManagerFactory:
+    def __init__(self):
+        pass
+
+    valid_storage_types = {'simple': SimpleStorageManager(), 'dedup': DedupedStorageManager()}
+
+    @staticmethod
+    def get_storage(storage_type):
+        return StorageManagerFactory.valid_storage_types[storage_type]

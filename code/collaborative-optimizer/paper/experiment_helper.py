@@ -6,6 +6,9 @@ class Parser:
         self.key_val = dict()
         self.parse(args)
 
+    def has(self, key):
+        return key in self.key_val
+
     def parse(self, arguments):
         for arg in arguments:
             if '=' in arg:
