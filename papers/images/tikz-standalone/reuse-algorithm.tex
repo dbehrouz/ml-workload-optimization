@@ -1,60 +1,80 @@
 \documentclass{standalone}
 \usepackage{tikz}
 \usepackage{soul}
+%\usepackage{libertine}
 
 \usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc, shapes, positioning,patterns}
 \usegdlibrary{trees}
+% \newcommand{\libcircblk}[1]{\pgfmathparse{
+%     ifthenelse(#1 > 0 && #1 < 11, Hex(10101+#1),
+%         ifthenelse(#1 > 10 && #1 < 21, Hex(9450-10+#1),
+%             Hex(9471)
+%         )
+%     )
+%     }\libertineGlyph{uni\pgfmathresult}}
+%\newcommand{\juncircblk}[1]{{\fontspec[Ligatures=Discretionary]{Junicode}<#1>}}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+             \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
 \begin{document}
 \begin{tikzpicture}
 %\draw[help lines]  (-2,0) grid (6,6);
 \tikzstyle{every node}=[inner sep=0.2cm]
 % Legend
-\node (m) [circle, draw,pattern=crosshatch, pattern color = green] at (1,0) {};
-\node (m) [circle,] at (2.5,0) {materialized};
+\node (m) [circle, draw,inner sep=0.08cm, pattern=crosshatch, pattern color = green] at (0.5,1) {$v_i$};
+\node (m) [] at (1.8,1) {materialized};
 
-\node (c) [circle, draw, fill=black] at (2.5,0) {};
-\node (c) [circle] at (2.8,0) {computed};
+\node (c) [circle, draw, fill=black] at (3.2,1) {};
+\node (c) [] at (4.3,1) {computed};
 
-\node (eg_not) [circle, draw] at (5,0) {};
-\node (eg_not) [circle] at (5.3,0) {in EG and not materialized};
+\node (eg_not) [circle, draw] at (5.5,1) {};
+\node (eg_not) [] at (7,1) {unmaterialized};
 
-\node (not_eg) [circle, draw, pattern=north east lines,  pattern color = red] at (7.5,0) {};
-\node (not_eg) [circle] at (7.8,0) {not in EG};
+\node (not_eg) [circle, draw, pattern=north east lines,  pattern color = red] at (8.6,1) {};
+\node (not_eg) [] at (9.8,1) {not in EG};
 % End of Legend
 \node (source1) [circle, draw, fill=black] at (1,10) {};
-\node (source1_c) [circle, align=left] at (1,10.7) {root 1 \\ $\langle0,\inf\rangle$};
-\node (start_1) [circle, inner sep=0.0cm] at (1.6,11.4) {};
-\node (end_1) [circle,inner sep=0.0cm] at (1.6,9) {};
+\node (source1_c) [align=left] at (1,10.7) {root 1 \\ $\langle0,\inf\rangle$};
+\node (start_1) [] at (1.6,11.4) {};
+\node (end_1) [] at (1.6,9) {};
 
 \node (source2) [circle, draw, fill=black] at (5,10) {};
-\node (source2_c) [circle, align=left] at (5,10.7) {root 2 \\ $\langle0,\inf\rangle$};
-\node (start_2) [circle, inner sep=0.0cm] at (5.6,11.4) {};
-\node (end_2) [circle,inner sep=0.0cm] at (5.6,9) {};
+\node (source2_c) [align=left] at (5,10.7) {root 2 \\ $\langle0,\inf\rangle$};
+\node (start_2) [] at (5.6,11.4) {};
+\node (end_2) [] at (5.6,9) {};
 
 \node (source3) [circle, draw, fill=black] at (9,10) {};
-\node (source3_c) [circle] at (9,10.7) {root 3 \\ $\langle0,\inf\rangle$};
-\node (start_3) [circle, inner sep=0.0cm] at (10,11.4) {};
-\node (end_3) [circle,inner sep=0.0cm] at (10,9) {};
+\node (source3_c) [align=left] at (9,10.7) {root 3 \\ $\langle0,\inf\rangle$};
+\node (start_3) [] at (10,11.4) {};
+\node (end_3) [] at (10,9) {};
 
 % layer 1
 \node (l1_1) [circle, draw] at (1,8.3) {};
-\node (l1_1_c) [circle, align=left] at (2,8.5) {\ \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{3}}}\\$\langle$ \hl{$10$}$,\inf\rangle$};
-\node (l1_2) [circle, draw, inner sep=0.1cm, pattern=crosshatch, pattern color = green] at (5,8.3) {1};
-\node (l1_2_c) [circle, align=left] at (5.8,8.5) {\ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{2}}}\\$\langle10,$ \hl{$5$}$\rangle$};
+\node (l1_1_c) [circle, align=left] at (2,8.5) {\ \ \ \ \circled{\large{\textbf{3}}}\\$\langle$ \hl{$10$}$,\inf\rangle$};
+\node (l1_2) [circle, draw, inner sep=0.08cm, pattern=crosshatch, pattern color = green] at (5,8.3) {$v_1$};
+\node (l1_2_c) [circle, align=left] at (5.8,8.5) {\ \ \ \circled{\large{\textbf{2}}}\\$\langle10,$ \hl{$5$}$\rangle$};
 \node (l1_3) [circle, draw] at (9,8.3) {};
-\node (l1_3_c) [circle, align=left] at (8,8.5) {\ \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{3}}}\\$\langle$ \hl{$10$}$,\inf\rangle$};
+\node (l1_3_c) [circle, align=left] at (8,8.5) {\ \ \ \ \circled{\large{\textbf{3}}}\\$\langle$ \hl{$10$}$,\inf\rangle$};
 %layer 2
-\node (l2_1) [circle, draw, inner sep=0.1cm,pattern=crosshatch, pattern color = green] at (3,6.6) {2};
-\node (l2_1_c) [circle, align=left] at (3.9,6.8) {\ \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{5}}}\\$\langle$ \hl{$16$} $,2\rangle$};
+\node (l2_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (3,6.6) {$v_2$};
+\node (l2_1_c) [circle, align=left] at (3.9,6.8) {\ \ \ \ \circled{\large{\textbf{5}}}\\$\langle$ \hl{$16$} $,2\rangle$};
 \node (l2_2) [circle, draw, fill=black] at (9,6.6) {};
-\node (l2_2_c) [circle, align=left] at (8,6.8) {\ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{4}}}\\$\langle0,\inf\rangle$};
+\node (l2_2_c) [circle, align=left] at (8,6.8) {\ \ \ \circled{\large{\textbf{4}}}\\$\langle0,\inf\rangle$};
 %layer 3
-\node (l3_1) [circle, draw, inner sep=0.1cm,pattern=crosshatch, pattern color = green] at (6,4.8) {3};
-\node (l3_1_c) [circle, align=left] at (7,4.9) { \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{5}}} \\ $\langle$ \hl{$20$}$,5\rangle$};
-\node (l3_1_l) [circle, align=left] at (4,5) {\ \ \ \ \ \ \ \ \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{8}}} \\ stop backward pass $\rightarrow$};
+\node (l3_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (6,4.8) {$v_3$};
+\node (l3_1_c) [circle, align=left] at (7,4.9) { \ \ \ \circled{\large{\textbf{5}}} \\ $\langle$ \hl{$20$}$,5\rangle$};
+\node (l3_1_l) [circle, align=left] at (4,5) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{8}}} \\ stop backward pass $\rightarrow$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (4.23,4.2) {$v_3$};
+\node (m) [] at (3.8,4.2) {$\mathcal{M}=\Big\{ \ \ \ \Big\}$};
+\node (m) [rectangle, minimum height=0.7cm, minimum width=2cm, draw] at (3.8,4.2) {};
+\node (m) [] at (1.5,4.2) {Final Solution:};
+
 %layer 4
 \node (l4_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,3.5) {};
-\node (l4_1_c) [circle, align=left] at (7.9,3.7) {\ \ \ \ \ \ \ \ \ \ \ \textcircled{\raisebox{-0.9pt}{\textbf{6}}} \\ $\leftarrow$ stop forward pass};
+\node (l4_1_c) [circle, align=left] at (7.9,3.7) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{6}}} \\ $\leftarrow$ stop forward pass};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8,3) {$v_2$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8.5,3) {$v_3$};
+\node (m) [circle] at (7.8,3) {$\mathcal{M}=\Big\{ \ \ \ \ \ \ \ \Big\}$};
+
 %layer 5
 \node (l5_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,2) {};
 \node (l5_1_c) [circle] at (7.1,2) {terminal};
@@ -77,10 +97,10 @@
 -> [sloped, align=center,above, "T=0" ](l1_3) 
 -> [sloped, align=center,above, "T=10"](l2_2)
 -> [sloped, align=center,above, "T=0"](l3_1);
-(start_1) -> [sloped, align=center,above, "\textcircled{\raisebox{-0.9pt}{\textbf{1}}}forward pass" ] (end_1);
-(start_2) -> [sloped, align=center,above, "\textcircled{\raisebox{-0.9pt}{\textbf{1}}}forward pass" ] (end_2);
-(start_3) -> [sloped, align=center,above, "\textcircled{\raisebox{-0.9pt}{\textbf{1}}}forward pass" ] (end_3);
-(start_5) -> [sloped, align=center,above, "\textcircled{\raisebox{-0.9pt}{\textbf{7}}}backward pass" ] (end_5);
+(start_1) -> [sloped, align=center,above, "\circled{\large{\textbf{1}}}forward pass" ] (end_1);
+(start_2) -> [sloped, align=center,above, "\circled{\large{\textbf{1}}}forward pass" ] (end_2);
+(start_3) -> [sloped, align=center,above, "\circled{\large{\textbf{1}}}forward pass" ] (end_3);
+(start_5) -> [sloped, align=center,above, "\circled{\large{\textbf{7}}}backward pass" ] (end_5);
 };
 \end{tikzpicture}
 \end{document}

@@ -9,26 +9,6 @@ Reusing model artifacts
 Then, we discuss our warmstarting approach for model training operations.
 Due to stochastic behavior of some model training operations, we can always directly reuse a materialized model.
 Therefore, we opt to warmstart the training operation of the model artifact which leads to a decrease in training time.
-%\begin{figure}
-%\centering
-%\includegraphics[width=\columnwidth]{../images/reuse-optimization}
-%\caption{Reuse and Warmstarting Optimizations}
-%\label{reuse-warmstart-figure}
-%\end{figure}
-%Figure \ref{reuse-warmstart-figure} shows an example of the optimization process for reuse and warmstarting.
-%In the workload DAG, the user invokes the $.get()$ command on vertex 7, which represents a machine learning model.
-%To compute the local execution DAG, the local optimizer scans the workload DAG to find previously computed vertices. 
-%This is an important step for interactive workloads.
-%In this example, besides from the root vertex (vertex 0), vertex 2 and 3 are already computed (represented by black color).
-%Therefore, the local optimizer prunes vertex 0 and edges $e_1$ and $e_2$.
-%Then, the global optimizer looks for reuse and warmstarting opportunities in the experiment graph.
-%In this example, vertex 5 was computed in a previous workload and its result was materialized in the experiment graph.
-%Similarly, the model training operation $e_8$ was already executed in an existing workload.
-%The global optimizer transfers vertex 5 to the workload, which results in further pruning of vertex 3 and edge $e_4$.
-%The global optimizer also warmstarts $e_8$ which increases the convergence rate of the training operation.
-%Both Reuse and Warmstarting can reduce the total execution time of the workload.
-%In the rest of this section, we present the details of both Reuse and Warmstarting methods.
-
 
 \subsection{Reuse Algorithm} 
 \textbf{Preliminaries.} 
@@ -44,7 +24,7 @@ Our reuse algorithm comprised of two parts: forward-pass and backward-pass.
 In forward-pass, the algorithm selects the set of materialized vertices to load from Experiment Graph into the workload DAG.
 After the forward-pass, the inclusion of some vertices in the materialized set is not necessary since they will be pruned from the execution.
 Therefore, the backward-pass removes all the unnecessary materialized vertices.
-Algorithm \ref{algorithm-reuse} shows the details of our reuse algorithm.
+Algorithm \ref{forward-pass} shows the details of our reuse algorithm.
 For every vertex of $WG$, we store its total computation cost, i.e., computing the vertex from the sources, inside the $total\_cost$ dictionary.
 In collaborative environments, the client always loads the source artifacts completely.
 Therefore, we set their total cost to 0 (Lines 1 and 2).
@@ -74,69 +54,112 @@ $\mathcal{M} = \emptyset$\;
 		}
 	}
 }
-\caption{Forward-pass Algorithm}\label{forward-pass}
+\caption{Forward-pass}\label{forward-pass}
 \end{algorithm}
-During the backward-pass, we visit every vertex of $WG$ in reverse of their topological order (from terminal to roots).
-For every materialized vertex that we encounter, we add the vert
-The algorithm visits each node only once, thus incurring a complexity of $\mathcal{O}(|V|)$ where $|V|$ is the number of vertices in $WG$.
-Figure \ref{fig-reuse-algorithm} show an example of the reuse algorithm.
+After the forward pass, we must prune the result set and remove any materialized artifact that is not part of the execution path.
+The client, inside the executor, performs this step, however, to minimize the total load cost the reuse algorithm prunes the unnecessary materialized vertices before transferring the optimized DAG to the client.
+During the backward-pass, we visit every vertex of $WG$ starting from the terminal vertices.
+For every materialized vertex that we encounter, we add the materialized vertex to the final solution set and stop traversing the parents of the vertex.
+Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
 
+\begin{algorithm}[h]
+\KwData {$\mathcal{M}$: Materialized vertices, $WG$: workload DAG}
+\KwResult {$\mathcal{M}_p$: Pruned set of materialized vertices}
+$\mathcal{M}_p = \emptyset$\;
+$v\_queue = terminals(WG)$\;
+\While{$v \leftarrow v\_queue.next()$}{
+	\eIf{$v \in \mathcal{M}$}{
+			$\mathcal{M}_p = \mathcal{M}_p \cup v$\;
+	}{
+		$v\_queue.add(parents(v))$\;
+	}
+}
+return $\mathcal{M}_p$\;
+\caption{Backward-pass}\label{backward-pass}
+\end{algorithm}
+
+Figure \ref{fig-reuse-algorithm} shows how the reuse algorithm (forward-pass and backward-pass) works on an example workload DAG.
+There are 3 roots in the workload DAG.
+The algorithm starts with the forward path, traversing the graph from root (Step \textcircled{\raisebox{-0.9pt}{\textbf{1}}}).
+For materialzied vertices which have a larger load cost than sum of compute costs (i.e., sum of compute cost of the vertex and compute costs of the parents), the algorithm set the total cost to the compute cost (Step \textcircled{\raisebox{-0.9pt}{\textbf{2}}}).
+For vertices that in the Experiment Graph but are unmaterialized, the algorithm has to select compute (Step \textcircled{\raisebox{-0.9pt}{\textbf{3}}}).
+If a vertex is already computed inside the workload DAG, then the algorithm sets its total cost to zero (Step \textcircled{\raisebox{-0.9pt}{\textbf{4}}}).
+For materialized vertices, which have a smaller load cost than sum of compute costs, the algorithm sets the total cost to the load cost of the vertex (Step \textcircled{\raisebox{-0.9pt}{\textbf{5}}}).
+For example, for the materialized vertex with label 2, the total compute cost is $2 + 5 + 10 = 17$, which is larger than its load cost of $16$.
+Once the traversal reaches a node that does not exist in EG, the forward-pass stops (Step \textcircled{\raisebox{-0.9pt}{\textbf{6}}}).
+At this stage, the materialzied vertices $v_2$ and $v_3$ are selected.
+Then the algorithm starts the backward-pass from the terminal vertex (Step \textcircled{\raisebox{-0.9pt}{\textbf{7}}}).
+Once the backward-pass visits a materialized vertex, it stops traversing its parents.
+The backward-pass removes any materialized vertex that it does not visit from the final solution (Step \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
 
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
-\caption{Reuse Algorithm Example.}
+\caption{Reuse Algorithm Example. Each vertex has the label $\langle C,L \rangle$, where $C$ is the compute cost and $L$ is the load cost. $T$ represent the total cost passed along to the children vertices.}
 \label{fig-reuse-algorithm}
 \end{figure}
 
 
-\textbf{Early-Stopping.} 
-An artifact can exist in the Experiment Graph if and only if its parents also exist in the Experiment Graph.
-Therefore, during the traversal of the workload DAG, if a vertex does not exist in the Experiment Graph, we can stop the traversal down that branch (Figre xxx). 
+\textbf{Complexity.} 
+Both the forward and backward passes traverses the workload DAG once.
+This results in $2*|V|$ vertex visits, where $V$ is the set of vertices in the workload DAG.
+Therefore, our reuse algorithm has a worst-case complexity of $\mathcal{O}(|V|)$.
+Typically the number of node visits in each direction is enough smaller than $|V|$ because of the early-stopping conditions in forward and backward passes.
+In forward pass, we stop traversing a path when a vertex is not in EG and in backward pass, we stop traversing a path when a vertex is in the materialized set.
+Thus, the reuse algorithm generates the optimal execution plan with small overhead.
+This is an important requirement of the collaborative environments for the following two reasons.
+First, many clients send workloads to the server for optimization, therefore, if reuse incurs a large overhead, the server might become unresponsive.
+Second, in interactive workloads, clients expect a response very fast, therefore, optimization overhead must be minimal.
+
 \subsection{Warmstarting}
 Many model training operations include random processes.
 For example, in random forests, to decide when to split a tree node, features are randomly permuted.
 A random seed parameter controls the random behavior.
 Two training operations on the same dataset with the same hyperparameters may result in completely different models if the random seeds are different.
-Therefore, the Reuse algorithm is not able to find the previously trained model, if the random seeds are different.
-Instead, we try to warmstart model training operations using the existing models in the experiment graph.
+As a result, loading a materialized vertex from EG may result in a different model than executing the model training operation.
+Therefore, instead of reusing a model, we try to warmstart the model training operations using the models in EG.
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
 Warmstarting has shown to decrease the total training time \cite{baylor2017tfx}.
 
-During the graph construction, for every model training operation, we compute an extra hash value, which does not consider the random seed parameter.
-We refer to this hash value as the seedless hash.
-The seedless hash allows us to find similar training operations that only differ in the random seed.
-When the Reuse algorithm encounters a machine learning model vertex, two scenarios can occur.
-In the first scenario, a similar model vertex with the same id also exists in the experiment graph. 
-In this scenario, we can safely reuse the model vertex since the only way for both model vertices to have the same id is that both models are trained on the same data using the same training operations with the equal hyperparameters and random seeds.
-In the second scenario, the machine learning model vertex does not exist in the experiment graph.
-In this scenario, we utilize Algorithm \ref{algorithm-warmstarting} to detect whether warmstarting is possible.
-The warmstarting algorithm receives the model vertex $v_m$, the local execution DAG, and the experiment graph as inputs and tries to warmstart the training operation for $v_m$ with a model from the experiment graph.
-The algorithm first finds the parent of the model vertex, represented by $v_{dataset}$ on Line 1 and the training operation, represented by $e_{train}$ on Line 2.
-$v_{dataset}$ is the dataset used in the operation $e_{train}$.
-To warmstart $e_{train}$, the algorithm first ensures $v_{dataset}$ is in the experiment graph (Line 4).
-Then, for every outgoing edge of the $v_{dataset}$, the algorithm compares the seedless hash of the edge with the seedless hash of $e_{train}$.
-In the algorithm, the function $sl\_hash$ computes the seedless hash of an edge.
-Equal seedless hashes indicate that the training operation from the experiment graph only differs in the random seed when compared to $e_{train}$.
-Therefore, the result of the training operation in the experiment graph is a candidate for warmstarting $e_{train}$ (Lines 6-8).
-In case there are more than one wamrstarting candidates, we select the candidate model with the maximum quality to warmstart the training operation (Lines 9-11).
-\begin{algorithm}[h]
-\KwData {$v_m$: model vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
-\KwResult {modified $G_L$ with warmstarted training} 
-$v_{dataset} \coloneqq parent(G_L, v_m)$\;
-$e_{train} \coloneqq edge(G_L, v_{dataset}, v_m)$\;
-$\mathcal{C}\coloneqq \emptyset$\tcp*{set of candidate models}
-\If{$v_{dataset} \in G_E$}{
-	\For{$e \in out\_edges(G_E, v_{dataset})$}{
-		\If {$sl\_hash(e) = sl\_hash(e_{train})$}{
-			$m \coloneqq e.dest$\;
-			$\mathcal{C}.add(m)$\;		
-		}	
-	}
-}
-\If{$\mathcal{C}.not\_empty()$}{
-	$m \coloneqq \argmax\limits_{m \in \mathcal{C}} \text{ } quality(m)$\;
-	$warmstart(e_{train}, m)$\;
-}
-\caption{Warmstarting}\label{algorithm-warmstarting}
-\end{algorithm}
+Once we encounter a model in the workload DAG during the forward-pass of the reuse algorithm, we check if there are candidates for warmstarting in EG.
+A candidate for warmstarting is a model which is trained on the same artifact as the mode in the workload DAG
+When there are more than one candidate for warmstarting, we select the model with the highest evaluation score.
+Finally, we initialize the model training operation with the selected model.
+%
+%During the graph construction, for every model training operation, we compute an extra hash value, which does not consider the random seed parameter.
+%We refer to this hash value as the seedless hash.
+%The seedless hash allows us to find similar training operations that only differ in the random seed.
+%When the Reuse algorithm encounters a machine learning model vertex, two scenarios can occur.
+%In the first scenario, a similar model vertex with the same id also exists in the experiment graph. 
+%In this scenario, we can safely reuse the model vertex since the only way for both model vertices to have the same id is that both models are trained on the same data using the same training operations with the equal hyperparameters and random seeds.
+%In the second scenario, the machine learning model vertex does not exist in the experiment graph.
+%In this scenario, we utilize Algorithm \ref{algorithm-warmstarting} to detect whether warmstarting is possible.
+%The warmstarting algorithm receives the model vertex $v_m$, the local execution DAG, and the experiment graph as inputs and tries to warmstart the training operation for $v_m$ with a model from the experiment graph.
+%The algorithm first finds the parent of the model vertex, represented by $v_{dataset}$ on Line 1 and the training operation, represented by $e_{train}$ on Line 2.
+%$v_{dataset}$ is the dataset used in the operation $e_{train}$.
+%To warmstart $e_{train}$, the algorithm first ensures $v_{dataset}$ is in the experiment graph (Line 4).
+%Then, for every outgoing edge of the $v_{dataset}$, the algorithm compares the seedless hash of the edge with the seedless hash of $e_{train}$.
+%In the algorithm, the function $sl\_hash$ computes the seedless hash of an edge.
+%Equal seedless hashes indicate that the training operation from the experiment graph only differs in the random seed when compared to $e_{train}$.
+%Therefore, the result of the training operation in the experiment graph is a candidate for warmstarting $e_{train}$ (Lines 6-8).
+%In case there are more than one wamrstarting candidates, we select the candidate model with the maximum quality to warmstart the training operation (Lines 9-11).
+%\begin{algorithm}[h]
+%\KwData {$v_m$: model vertex, $G_L$: local execution DAG, $G_E$: experiment graph}
+%\KwResult {modified $G_L$ with warmstarted training} 
+%$v_{dataset} \coloneqq parent(G_L, v_m)$\;
+%$e_{train} \coloneqq edge(G_L, v_{dataset}, v_m)$\;
+%$\mathcal{C}\coloneqq \emptyset$\tcp*{set of candidate models}
+%\If{$v_{dataset} \in G_E$}{
+%	\For{$e \in out\_edges(G_E, v_{dataset})$}{
+%		\If {$sl\_hash(e) = sl\_hash(e_{train})$}{
+%			$m \coloneqq e.dest$\;
+%			$\mathcal{C}.add(m)$\;		
+%		}	
+%	}
+%}
+%\If{$\mathcal{C}.not\_empty()$}{
+%	$m \coloneqq \argmax\limits_{m \in \mathcal{C}} \text{ } quality(m)$\;
+%	$warmstart(e_{train}, m)$\;
+%}
+%\caption{Warmstarting}\label{algorithm-warmstarting}
+%\end{algorithm}
