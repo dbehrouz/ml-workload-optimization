@@ -33,19 +33,19 @@
 \node (not_eg) [] at (9.8,1) {not in EG};
 % End of Legend
 \node (source1) [circle, draw, fill=black] at (1,10) {};
-\node (source1_c) [align=left] at (1,10.7) {root 1 \\ $\langle0,\inf\rangle$};
-\node (start_1) [] at (1.6,11.4) {};
-\node (end_1) [] at (1.6,9) {};
+\node (source1_c) [align=left] at (1,10.7) {source 1 \\ $\langle0,\inf\rangle$};
+\node (start_1) [] at (1.7,11.4) {};
+\node (end_1) [] at (1.7,9) {};
 
 \node (source2) [circle, draw, fill=black] at (5,10) {};
-\node (source2_c) [align=left] at (5,10.7) {root 2 \\ $\langle0,\inf\rangle$};
-\node (start_2) [] at (5.6,11.4) {};
-\node (end_2) [] at (5.6,9) {};
+\node (source2_c) [align=left] at (5,10.7) {source 2 \\ $\langle0,\inf\rangle$};
+\node (start_2) [] at (5.7,11.4) {};
+\node (end_2) [] at (5.7,9) {};
 
 \node (source3) [circle, draw, fill=black] at (9,10) {};
-\node (source3_c) [align=left] at (9,10.7) {root 3 \\ $\langle0,\inf\rangle$};
-\node (start_3) [] at (10,11.4) {};
-\node (end_3) [] at (10,9) {};
+\node (source3_c) [align=left] at (9,10.7) {source 3 \\ $\langle0,\inf\rangle$};
+\node (start_3) [] at (9.7,11.4) {};
+\node (end_3) [] at (9.7,9) {};
 
 % layer 1
 \node (l1_1) [circle, draw] at (1,8.3) {};
@@ -55,10 +55,10 @@
 \node (l1_3) [circle, draw] at (9,8.3) {};
 \node (l1_3_c) [circle, align=left] at (8,8.5) {\ \ \ \ \circled{\large{\textbf{3}}}\\$\langle$ \hl{$10$}$,\inf\rangle$};
 %layer 2
-\node (l2_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (3,6.6) {$v_2$};
-\node (l2_1_c) [circle, align=left] at (3.9,6.8) {\ \ \ \ \circled{\large{\textbf{5}}}\\$\langle$ \hl{$16$} $,2\rangle$};
-\node (l2_2) [circle, draw, fill=black] at (9,6.6) {};
-\node (l2_2_c) [circle, align=left] at (8,6.8) {\ \ \ \circled{\large{\textbf{4}}}\\$\langle0,\inf\rangle$};
+\node (l2_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (3,6.4) {$v_2$};
+\node (l2_1_c) [circle, align=left] at (3.9,6.6) {\ \ \ \ \circled{\large{\textbf{5}}}\\$\langle$ \hl{$16$} $,2\rangle$};
+\node (l2_2) [circle, draw, fill=black] at (9,6.4) {};
+\node (l2_2_c) [circle, align=left] at (8,6.6) {\ \ \ \circled{\large{\textbf{4}}}\\$\langle$ \hl{$0$}$,\inf\rangle$};
 %layer 3
 \node (l3_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (6,4.8) {$v_3$};
 \node (l3_1_c) [circle, align=left] at (7,4.9) { \ \ \ \circled{\large{\textbf{5}}} \\ $\langle$ \hl{$20$}$,5\rangle$};
@@ -69,33 +69,33 @@
 \node (m) [] at (1.5,4.2) {Final Solution:};
 
 %layer 4
-\node (l4_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,3.5) {};
-\node (l4_1_c) [circle, align=left] at (7.9,3.7) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{6}}} \\ $\leftarrow$ stop forward pass};
-\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8,3) {$v_2$};
-\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8.5,3) {$v_3$};
-\node (m) [circle] at (7.8,3) {$\mathcal{M}=\Big\{ \ \ \ \ \ \ \ \Big\}$};
+\node (l4_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,3.1) {};
+\node (l4_1_c) [circle, align=left] at (7.9,3.3) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{6}}} \\ $\leftarrow$ stop forward pass};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8,2.6) {$v_2$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8.5,2.6) {$v_3$};
+\node (m) [circle] at (7.8,2.6) {$\mathcal{M}=\Big\{ \ \ \ \ \ \ \ \Big\}$};
 
 %layer 5
 \node (l5_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,2) {};
-\node (l5_1_c) [circle] at (7.1,2) {terminal};
+\node (l5_1_c) [circle] at (6.3,1.5) {terminal};
 \node (start_5) [circle, inner sep=0.0cm] at (5.4,1.5) {};
 \node (end_5) [circle,inner sep=0.0cm] at (5.4,3.7) {};
 
 \graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\small}]{
   (source1)
 -> [sloped, align=center,above, "T=0"] (l1_1) 
--> [sloped, align=center,above, "T=10"] (l2_1)
+-> [sloped, align=center,above, "T=10 + 0"] (l2_1)
 -> [sloped, align=center,above, "T=16"] (l3_1)
--> (l4_1)
+-> [sloped, align=center,above, "T=20"] (l4_1)
 -> (l5_1);
 
   (source2)
 -> [sloped, align=center,above, "T=0" ] (l1_2) 
--> [sloped, align=center,above, "T=5"](l2_1);
+-> [sloped, align=center,above, "T=5+0"](l2_1);
 
   (source3)
 -> [sloped, align=center,above, "T=0" ](l1_3) 
--> [sloped, align=center,above, "T=10"](l2_2)
+-> [sloped, align=center,above, "T=10+0"](l2_2)
 -> [sloped, align=center,above, "T=0"](l3_1);
 (start_1) -> [sloped, align=center,above, "\circled{\large{\textbf{1}}}forward pass" ] (end_1);
 (start_2) -> [sloped, align=center,above, "\circled{\large{\textbf{1}}}forward pass" ] (end_2);
