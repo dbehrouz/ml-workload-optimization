@@ -679,7 +679,7 @@ if __name__ == "__main__":
     else:
         raise Exception('invalid materializer: {}'.format(materializer_type))
 
-    storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type'))
+    storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
     workload = start_here_a_gentle_introduction()
 
@@ -691,7 +691,7 @@ if __name__ == "__main__":
         if os.path.exists(database_path):
             ee.load_history_from_disk(database_path)
 
-    executor = CollaborativeExecutor(ee, materializer)
+    executor = CollaborativeExecutor(ee, materializer=materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=1)

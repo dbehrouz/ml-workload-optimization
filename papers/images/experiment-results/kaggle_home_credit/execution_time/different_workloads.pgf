@@ -328,7 +328,7 @@
 \pgfpathlineto{\pgfqpoint{2.656660in}{1.466541in}}%
 \pgfpathlineto{\pgfqpoint{3.663154in}{1.956044in}}%
 \pgfpathlineto{\pgfqpoint{4.669647in}{2.036809in}}%
-\pgfpathlineto{\pgfqpoint{5.676141in}{2.100768in}}%
+\pgfpathlineto{\pgfqpoint{5.676141in}{2.100441in}}%
 \pgfpathlineto{\pgfqpoint{6.682634in}{2.132218in}}%
 \pgfpathlineto{\pgfqpoint{7.689128in}{2.155282in}}%
 \pgfpathlineto{\pgfqpoint{8.695621in}{2.242573in}}%
@@ -587,7 +587,7 @@
 \definecolor{textcolor}{rgb}{0.150000,0.150000,0.150000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=2.654561in,y=2.838883in,left,base]{\color{textcolor}\rmfamily\fontsize{26.400000}{31.680000}\selectfont DE}%
+\pgftext[x=2.654561in,y=2.838883in,left,base]{\color{textcolor}\rmfamily\fontsize{26.400000}{31.680000}\selectfont KG}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetbuttcap%
