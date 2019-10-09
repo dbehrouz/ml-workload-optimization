@@ -1,11 +1,11 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
-With the Experiment Graph constructed and materialized, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts in the Experiment Graph and warmstart model training operations.
-Every artifact of the incoming workload DAG has one of the three following states: (1) the artifact does not exist in the Experiment Graph, (2) the artifact exists in the Experiment Graph but is unmaterialized, and (3) the artifact is materialized.
-For the first two states, the client must execute the operations of the DAG to generate the artifact.
+After constructing the Experiment Graph and materializing its artifacts, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts of the Experiment Graph and warmstart model training operations.
+Every artifact of the incoming workload DAG is in one of the three following states: (1) the artifact does not exist in the Experiment Graph, (2) the artifact exists in the Experiment Graph but is unmaterialized, and (3) the artifact is materialized.
+For the first two states, the client must execute the operations of the workload DAG to compute the artifact.
 However, when the artifact is materialized, we can either load it from the Experiment Graph or let the client execute the operations to compute the artifact.
-Loading and computing an artifact incur costs.
-In this section, we first describe our reuse algorithm, which selects a subset of the materialized objects, that outputs a DAG with the lowest execution time, i.e., cost of loading and cost of computing all the artifacts of the workload DAG.
-Then, we discuss our warmstarting approach for model training operations.
+Both loading and computing an artifact incur costs.
+In this section, we first describe our reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., cost of loading and cost of computing all the artifacts of the workload DAG.
+Then, we discuss our model warmstarting approach.
 Due to the stochastic behavior of some model training operations, we cannot always directly reuse a materialized model artifact.
 Therefore, we warmstart the training operation of the model artifact, which leads to a decrease in training time.
 
@@ -13,26 +13,27 @@ Therefore, we warmstart the training operation of the model artifact, which lead
 \textbf{Preliminaries and Notations.} 
 We refer to the workload DAG as $WG$ and the Experiment Graph as $EG$.
 For every vertex, $v \in WG$, we define $cost_l(v)$ as the cost (in seconds) of loading $v$ from $EG$ and $cost_c(v)$ as the computation cost (also in seconds) of $v$ given its parent vertices in $WG$.
-If an artifact exist in $EG$ but is not materialized, then we set $cost_l(v)=\inf$.
+If an artifact exist in $EG$ but is not materialized, then we set $cost_l(v)=\infty$.
 For artifacts that do not exist in $EG$, $cost_l(v)$ and $cost_c(v)$ are undefined.
 Such artifacts have never appeared in any previous workloads; thus, EG has no prior information about them.
-Lastly, if an artifact is already computed inside $WG$, such as the source artifacts or pre-computed artifacts in interactive workloads, we assign $cost_c(v)=0$, this is because the artifact is already available in the client's memory.
+Lastly, if an artifact is already computed inside $WG$, such as the source artifacts or pre-computed artifacts in interactive workloads, we set $cost_c(v)=0$, this is because the artifact is already available in the client's memory.
 
 \textbf{Linear-time Algorithm.}
 Our reuse algorithm comprises two parts: forward-pass and backward-pass.
-In forward-pass, the algorithm selects the set of materialized vertices to load from Experiment Graph into the workload DAG.
-The backward-pass prunes any unnecessary materialized vertices before sending the optimized DAG to the client.
+In forward-pass, the algorithm selects the set of materialized vertices to load from the Experiment Graph into the workload DAG.
+The backward-pass prunes any unnecessary materialized vertices before transferring the optimized DAG to the client.
 
 Algorithm \ref{forward-pass} shows the details of forward-pass.
-For every vertex of $WG$, we compute its recreation cost, i.e., the cost of computing the vertex from the sources, and store it in the $recreation\_cost$ dictionary.
+For every vertex of $WG$, we define the recreation cost as the total cost of computing the vertex from the sources.
+We store the recreation costs of the vertices in the $recreation\_cost$ dictionary.
 In collaborative environments, the client always loads the source artifacts completely.
 Therefore, we set their recreation cost to 0 (Lines 1 and 2).
 Then, we visit every vertex in their topological order.
-If the client program has already computed a vertex inside $WG$, then we set its recreation cost to 0 (Lines 5 and 6).
+If the client has already computed a vertex inside $WG$, then we set its recreation cost to 0 (Lines 5 and 6).
 Otherwise, we compute the execution cost of a vertex as the sum of the compute cost of the vertex and the recreation cost of its parents (Lines 8 and 9).
-We then compare the load cost of the vertex with the execution cost and assign its recreation cost to the smaller of the two (Lines 10-14).
+We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
 When the load cost is smaller, the algorithm adds the vertex to the set of materialized vertices.
-Note that vertices that are not materialized have a load cost of infinity; therefore, the algorithm will never load an unmaterialized vertex.
+Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
 
 \begin{algorithm}[h]
 \KwData {$WG$: workload DAG, $EG$: Experiment Graph}
@@ -89,16 +90,16 @@ If a vertex is already computed inside the workload DAG, then the algorithm sets
 For materialized vertices, which have a smaller load cost than the execution cost, the algorithm sets the recreation cost to the load cost of the vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{5}}}).
 For example, for the materialized vertex with label $v_2$, the total execution cost is $2 + 5 + 10 = 17$, which is larger than its load cost of $16$.
 Once the traversal reaches a node that does not exist in EG, the forward-pass stops (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{6}}}).
-At this stage, forward-pass has selected the materialized vertices $v_2$ and $v_3$ for reuse..
-Then the algorithm starts backward-pass from the terminal vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{7}}}).
+At this stage, forward-pass has selected the materialized vertices $v_2$ and $v_3$ for reuse.
+Then, the algorithm starts backward-pass from the terminal vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{7}}}).
 Once the backward-pass visits a materialized vertex, it stops traversing its parents.
-The backward-pass removes any materialized vertex that it does not visit from the final solution (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
-For example, since $v_3$ is materialized, backward-pass stops visiting its parents; thus, removing $v_2$ from the final solution.
+The backward-pass removes any materialized vertices that it did not visit (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
+For example, since $v_3$ is materialized, backward-pass stops visiting its parents; thus, it removes $v_2$ from the final solution.
 
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
-\caption{Reuse Algorithm Example. Each vertex has the label $\langle C,L \rangle$, where $C$ is the compute cost and $L$ is the load cost. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
+\caption{Reuse Algorithm Example. Each vertex has the label $\langle cost_c(v),cost_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
 \label{fig-reuse-algorithm}
 \end{figure}
 
@@ -107,7 +108,7 @@ Both forward-pass and backward-pass traverse the workload DAG once, resulting in
 Therefore, our reuse algorithm has a worst-case complexity of $\mathcal{O}(|V|)$.
 However, the number of vertex visits in each pass is smaller than $|V|$ because of the early-stopping conditions in forward and backward passes.
 Forward-pass stops traversing a path when a vertex is not in EG and backward-pass stops traversing the parents of a vertex when the vertex is in the materialized set.
-Thus, the reuse algorithm generates the optimal execution plan with a small overhead.
+Thus, the reuse algorithm generates the optimized DAG with a small overhead.
 This is an important requirement of the collaborative environments.
 In a typical collaborative environment, many clients send workloads to the server for optimization.
 Furthermore, in interactive workloads, clients expect a response very fast.
@@ -122,7 +123,7 @@ Therefore, instead of reusing a model, we try to warmstart the model training op
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
 Warmstarting has shown to decrease the total training time \cite{baylor2017tfx}.
 
-Once we encounter a model in the workload DAG during the forward-pass of the reuse algorithm, we check if there are candidates for warmstarting in EG.
-A warmstarting candidate is a model that is trained on the same artifact as the model in the workload DAG.
-When there is more than one candidate for warmstarting, we select the model with the highest evaluation score.
+Once we encounter a model in the workload DAG in forward-pass, we check if there are candidates for warmstarting in EG.
+A warmstarting candidate is a model that is trained on the same artifact and is of the same as the model in the workload DAG.
+When there are more than one candidates for warmstarting, we select the model with the highest evaluation score.
 Finally, we initialize the model training operation with the selected model.
