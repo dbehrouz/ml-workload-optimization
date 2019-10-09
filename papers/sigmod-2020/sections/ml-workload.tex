@@ -2,10 +2,10 @@
 In this section, we provide an overview of our collaborative ML workload optimization system.
 Figure \ref{system-workflow} shows the high-level architecture of our system.
 Similar to collaborative environments, our system also comprises of a client and server component.
-The client is responsible for parsing the user workload into a DAG (Step 1) and prunes the workload DAG (Step 2).
+The client is responsible for parsing the user workload into a DAG (Step 1) and pruning the workload DAG (Step 2).
 The server receives the workload DAG and utilizes our reuse algorithm to optimize the DAG (Step 3) and sends it back to the client.
 Finally, the client executes the optimized DAG (Step 4) and prompts the server to update the Experiment Graph and store the artifacts of the executed workload DAG (Step 5).
-This architecture enables us to integrate into existing collaborative environments without requiring any changes to their workflow.
+This architecture enables us to integrate our optimizer into the existing collaborative environments without requiring any changes to their workflow.
 Similar to collaborative environments, the client and server can run within a single cloud environment where each client is an isolated container.
 In the rest of this section, we describe the process of parsing, pruning, generating workload DAGs, and executing the workloads.
 Then, we describe the process of constructing the Experiment Graph and how we utilize the Experiment Graph in our materialization and reuse algorithms. 
@@ -23,6 +23,7 @@ Finally, we show the integration process and the impact of our system on the use
 Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are common choices for data analysis and machine learning workloads.
 Upon invocation of the program, the parser reads the script and transforms it into a DAG.
 Listing \ref{listing-simple-workload} shows an example of a workload script.
+The goal of the workload is to process a dataset of item descriptions, prices, and whether or not the items were purchased and train a classification model to predict whether new items will be purchased or not.
 With only a slight modification of the import commands, we can load our parser modules.
 As a result, we can support both long-running python scripts and interactive Jupyter notebooks.
 \begin{lstlisting}[language=Python, caption=Example script,captionpos=b,label = {listing-simple-workload}]
@@ -52,12 +53,13 @@ print model # terminal vertex
 \textbf{Workload DAG.}
 In our DAG representation, vertices are the artifacts, i.e., raw or preprocessed data (represented by data frame objects) and machine learning models resulting from feature engineering and model training operations and edges are the operations in the workload.
 Each workload DAG has one or more vertices representing the raw datasets.
-We refer to such vertices as the sources.
+We refer to such vertices as sources.
 A workload DAG also contains one or more terminal vertices.
 Terminal vertices represent the output of the workload.
 For example, a terminal vertex is a trained ML model, a preprocessed dataset, or aggregated data for visualization.
 Requesting the result of a terminal vertex triggers the optimization and execution of the workload DAG.
 Figure \ref{fig-workload-dag} shows the workload DAG constructed from the code in Listing \ref{listing-simple-workload}.
+In the Figure, the highlighted vertex represents a terminal vertex.
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/example-graph}
@@ -70,10 +72,10 @@ Once the user requests the result of a terminal vertex, the client prunes the DA
 The task of the pruner is to identify all the unnecessary edges.
 There are two groups of unnecessary edges: edges that are not in the path from source to terminal and edges with their endpoint vertex already computed.
 The latter is very common in interactive workloads since every cell invocation in Jupyter notebooks computes some of the vertices.
-As a result, in future cell invocations, previously executed operations can be skipped.
-Note that the pruner does not remove the unnecessary edges form the DAG and only marks them as inactive.
+As a result, in the future cell invocations, previously executed operations can be skipped.
+Note that the pruner does not remove the unnecessary edges from the DAG and only marks them as inactive.
 For example, in Figure \ref{fig-workload-dag}, if $t\_subset$ is previously computed, the local pruner marks the edge between $train$ and $t\_subset$ as inactive.
-After pruning, the client sends the DAG to the server.
+After the pruning, the client sends the DAG to the server.
 To minimize the transfer cost, the client does not send the content of the computed artifact to the server.
 
 \textbf{Executor. }
@@ -114,9 +116,10 @@ Every vertex in EG has the attributes $frequency$, $size$, and $compute\_time$, 
 Every vertex in the experiment Graph carries the meta-data of the artifact it represents.
 For datasets, the meta-data includes the name, type, and size of each column.
 For ML models, the meta-data includes the name, type, hyperparameters, and the evaluation score of the model.
-The decision to store the underlying content of an artifact, i.e., Pandas data frame and model weights, is left to the updater component.
+To save storage space, EG does not contain the underlying content, i.e., Pandas data frame and model weights, of all the artifacts.
+The updater component decides whether to store the underlying content of an artifact.
 
-EG maintains the list of all the source vertices that it contains.
+EG maintains a list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
 Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
 %Note that we construct one EG per ML task.
@@ -190,7 +193,7 @@ In this section, we show how our collaborative workload optimizer improves the w
 We maintain an Experiment Graph for the Home Credit Default Risk competition.
 After users start publishing their workload scripts on the Kaggle platform, other users will read, re-run, or modify the existing scripts.
 The updater component of our system stores the artifacts with a high likelihood of reuse into EG.
-Our optimizer generates efficient workloads by querying EG for materialized artifacts and rewriting the workload DAG into a more optimized DAG.
+Our optimizer generates efficient workloads by querying EG for materialized artifacts and transforming the workload DAG into a more optimized DAG.
 In the use case, we highlighted 3 workloads that were copied and modified 7000 times.
 Optimizing the execution of these workloads saves 100s of hours of execution time.
 As a result, our collaborative optimizer reduces the required resources and operation cost of Kaggle.
