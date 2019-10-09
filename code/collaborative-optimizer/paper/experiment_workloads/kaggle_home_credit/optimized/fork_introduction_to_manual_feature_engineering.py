@@ -4,6 +4,9 @@
 
 This script is the optimized version of the workload 'fork_introduction_to_manual_feature_engineering'
 which utilizes our Experiment Graph for optimizing the workload
+
+Number of artifacts: 121
+Total artifact size: 21 GB
 """
 import warnings
 # matplotlib and seaborn for plotting
@@ -416,7 +419,7 @@ if __name__ == "__main__":
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

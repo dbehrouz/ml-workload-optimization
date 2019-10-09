@@ -4,6 +4,9 @@
 
 This script is the optimized version of the fork of workload 1 submitted by user cridata
 which utilizes our Experiment Graph for optimizing the workload.
+
+Number of artifacts: 280
+Total artifact size: 10 GB
 """
 import os
 import warnings
@@ -572,7 +575,7 @@ if __name__ == "__main__":
     workload = fork_cridata_start_here_a_gentle_introduction()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer(storage_budget=mat_budget)
+    sa_materializer = AllMaterializer()
 
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
 
@@ -582,7 +585,7 @@ if __name__ == "__main__":
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
 
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

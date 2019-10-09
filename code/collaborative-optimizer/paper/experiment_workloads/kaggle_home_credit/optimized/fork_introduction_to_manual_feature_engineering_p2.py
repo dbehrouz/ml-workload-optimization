@@ -339,6 +339,7 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
             print 'LGBMClassifier with AUC score: {}'.format(score)
 
         model(train, test)
+        # LGBMClassifier with AUC score: {'auc': 0.77630698005361221}
 
         return True
 
@@ -368,7 +369,7 @@ if __name__ == "__main__":
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering_p2/sa_16'
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

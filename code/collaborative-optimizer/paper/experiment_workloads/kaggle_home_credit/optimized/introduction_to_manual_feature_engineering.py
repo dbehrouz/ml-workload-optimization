@@ -4,6 +4,9 @@
 
 This script is the optimized version of the workload 'introduction_to_manual_feature_engineering'
 which utilizes our Experiment Graph for optimizing the workload
+
+Number of artifacts: 406
+Total artifact size: 25 GB
 """
 import os
 import warnings

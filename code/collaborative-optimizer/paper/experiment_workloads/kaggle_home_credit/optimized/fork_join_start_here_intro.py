@@ -637,12 +637,13 @@ if __name__ == "__main__":
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
+    StorageAwareMaterializer
 
     workload = fork_join_start_here_intro()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer(storage_budget=mat_budget)
+    sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
 
@@ -652,7 +653,7 @@ if __name__ == "__main__":
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
 
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

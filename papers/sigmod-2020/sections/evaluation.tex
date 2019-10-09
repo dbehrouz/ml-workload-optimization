@@ -5,27 +5,28 @@ We first describe the setup, including the hardware and the workloads we execute
 Then, we show the run time improvement of our optimizer.
 Then, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on execution cost and storage cost.
 \begin{table*}[t]
-\begin{tabular}{lp{0.75\textwidth}rr}
-\textbf{id} & \textbf{description}& \textbf{\# artifacts}& \textbf{total size}   \\
+\begin{tabular}{lp{0.84\textwidth}rr}
 \hline
-1 &  \parbox[c][][t]{0.75\textwidth}{\linespread{0.5}\selectfont Real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5GB \\[0.3cm]
+\textbf{$ID$} & \textbf{$Description$}& \textbf{$N$}& \textbf{$S$}   \\
+\hline
+1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5 \\[0.4cm]
 
-2 &   \parbox{0.75\textwidth}{\linespread{0.5}\selectfont Real script titled 'introduction-to-manual-feature-engineering'. It joins multiple tables to generate a dataset and trains gradient boosted tree models.} & 406 & 25 GB\\[0.3cm]
+2 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'introduction-to-manual-feature-engineering'. It joins multiple tables to generate a dataset and trains gradient boosted tree models.} & 406 & 25\\[0.4cm]
 
-3 &   \parbox{0.75\textwidth}{\linespread{0.5}\selectfont Real script titled 'introduction-to-manual-feature-engineering-p2'. It is similar to workload 2, but with larger datasets.} & 1000 & 80 GB\\[0.3cm]
+3 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'introduction-to-manual-feature-engineering-p2'. It is similar to workload 2, but with larger datasets.} & 146 & 83.5\\[0.15cm]
 
-4 & \parbox{0.75\textwidth}{\linespread{0.5}\selectfont A modified version workload 1 submitted by the Kaggle user: 'crldata'. It modifies the hyperparameters of the gradient boosted tree.} & 1000 & 14.5 GB\\[0.3cm]
+4 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'crldata'. It modifies the hyperparameters of the gradient boosted tree.} & 280 & 10\\[0.4cm]
 
-5 & \parbox{0.75\textwidth}{\linespread{0.5}\selectfont A modified version workload 1 submitted by the Kaggle user: 'taozhongxiao'. It runs random and grid search for gradient boosted tree model on dataset of workload 1.} & 1000 & 14.5 GB\\[0.3cm]
+5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'taozhongxiao'. It runs random and grid search for gradient boosted tree model on dataset of workload 1.} & 402 & 13.8\\[0.4cm]
 
-6 & \parbox{0.75\textwidth}{\linespread{0.5}\selectfont Custom script based on workload 2. It trains a gradient boosted tree on dataset of workload 2.} & 1000 & 14.5 GB\\[0.3cm]
+6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 2. It trains a gradient boosted tree on dataset of workload 2.} & 121 & 21\\[0.15cm]
 
-7 & \parbox{0.75\textwidth}{\linespread{0.5}\selectfont Custom script based on workload 3. It trains a gradient boosted tree on dataset of workload 3.} & 1000 & 14.5 GB\\[0.3cm]
+7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 3. It trains a gradient boosted tree on dataset of workload 3.} & 145 & 83\\[0.15cm]
 
-8 & \parbox{0.75\textwidth}{\linespread{0.5}\selectfont Custom script that joins the features of workload 1 and 2. Then, it trains a gradient boosted tree on the joined dataset.} & 1000 & 14.5 GB\\[0.3cm]
-
+8 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script that joins the features of workload 1 and 2. Then, it trains a gradient boosted tree on the joined dataset.} & 341 & 21.1\\
+\hline
 \end{tabular}
-\caption{Kaggle workloads description. \hl{only the first two rows have the correct artifacts number and size}}
+\caption{Kaggle workloads description. $N$ is number of the artifacts and $S$ is total size, in GB, of the artifacts of a workload.}
 \label{kaggle-workload}
 \end{table*}
 

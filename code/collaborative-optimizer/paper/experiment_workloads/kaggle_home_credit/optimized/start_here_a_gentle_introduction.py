@@ -4,6 +4,9 @@
 
 This script is the optimized version of the workload 'start_here_a_gentle_introduction'
 which utilizes our Experiment Graph for optimizing the workload
+
+Number of artifacts: 397
+Total artifact size: 14.5 GB
 """
 import os
 import sys
