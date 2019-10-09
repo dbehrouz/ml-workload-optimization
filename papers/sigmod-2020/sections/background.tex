@@ -6,7 +6,7 @@ Next, we discuss a use case based on a real collaborative environment.
 A typical collaborative environment consists of a client and server space.
 Users write a script to fetch datasets from the server, analyze the data, and train machine learning models.
 The client is responsible for executing the script.
-Although the client can be a single machine, however, users typically utilize Jupyter notebooks  \cite{Kluyver:2016aa} to write and execute their scripts in isolated containers \cite{merkel2014docker} within the server itself \cite{kagglewebsite, googlecolab, netflix-notebook}.
+Although the client can be a single machine, users typically utilize Jupyter notebooks  \cite{Kluyver:2016aa} to write and execute their scripts in isolated containers \cite{merkel2014docker} within the server itself \cite{kagglewebsite, googlecolab, netflix-notebook}.
 Users can publish the results and the scripts on the server for other users to see.
 Isolated execution environments enable collaborative environments to better allocate resources for running scripts.
 
@@ -37,12 +37,12 @@ The task is to train a classification model to predict whether a client can repa
 There are a total of 9 datasets, 8 for training and 1 for evaluation, with a total size of 2.5 GB.
 The goal of the submitted workloads is to produce machine learning models which maximize the area under the ROC curve, which measures how well a classifier performs.
 Three of the most popular submitted workloads are copied and edited by different users more than 7000 times\footnote{Notebook titles are: ''Start Here: A Gentle Introduction'' and ''Introduction to Manual Feature Engineering'' part 1 and part 2}.
-Together, the workloads produce 100s of intermediate dataset artifacts and several machine learning model artifacts with a total size \hl{of 130 GB}.
+The three workloads produce 100s of intermediate dataset artifacts and several machine learning model artifacts with a total size of 125 GB.
 The execution time of each workload is between 400 to 1000 seconds.
-Kaggle does not provide the total number of executions.
+Kaggle does not provide any information on the number of workload executions.
 However, the number of users who copied these workloads indicates the potentially large number of executions, i.e., at least 7000 times.
 
 Kaggle does not store the artifacts, nor does it offer any automatic reuse capabilities.
 Therefore, every time a user executes these workloads (or a modified version of them), Kaggle runs them from scratch.
-Our system, which stores the artifacts and reuses them later, can save 100s of hours of execution time only for the three workloads in this use case, which benefits Kaggle by reducing the amount of required resource and operation cost.
+Our system, which stores the artifacts and reuses them later, can save 100s of hours of execution time only for the three workloads in this use case, which benefits Kaggle by reducing the amount of required resources and operation cost.
 In the next sections, we show how we selectively store artifacts, given a storage budget, and how we quickly find the relevant artifacts for reuse.
