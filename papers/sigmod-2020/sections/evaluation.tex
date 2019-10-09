@@ -1,15 +1,15 @@
 \section{Evaluation} \label{sec-evaluation} 
-In this section, we evaluate the performance of our collaborative optimizer.
-We focus on investigating the effect of our optimizations on execution cost of workloads in a typical collaborative environments.
+In this section, we evaluate the performance of our collaborative optimizer system.
+We focus on investigating the effect of our optimizations on the execution cost of workloads in collaborative environments.
 We first describe the setup, including the hardware and the workloads we execute.
-Then, we show the run time improvement of our optimizer.
-Then, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on execution cost and storage cost.
+Then, we show the run-time improvement of our optimizer.
+Then, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on the execution and storage cost.
 \begin{table*}[t]
 \begin{tabular}{lp{0.84\textwidth}rr}
 \hline
 \textbf{$ID$} & \textbf{$Description$}& \textbf{$N$}& \textbf{$S$}   \\
 \hline
-1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5 \\[0.4cm]
+1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5\\[0.4cm]
 
 2 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'introduction-to-manual-feature-engineering'. It joins multiple tables to generate a dataset and trains gradient boosted tree models.} & 406 & 25\\[0.4cm]
 
@@ -17,27 +17,27 @@ Then, we investigate the effect of the individual contributions, i.e., materiali
 
 4 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'crldata'. It modifies the hyperparameters of the gradient boosted tree.} & 280 & 10\\[0.4cm]
 
-5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'taozhongxiao'. It runs random and grid search for gradient boosted tree model on dataset of workload 1.} & 402 & 13.8\\[0.4cm]
+5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'taozhongxiao'. It runs random and grid search for gradient boosted tree model on the dataset of workload 1.} & 402 & 13.8\\[0.4cm]
 
-6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 2. It trains a gradient boosted tree on dataset of workload 2.} & 121 & 21\\[0.15cm]
+6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 2. It trains a gradient boosted tree on the dataset of workload 2.} & 121 & 21\\[0.15cm]
 
-7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 3. It trains a gradient boosted tree on dataset of workload 3.} & 145 & 83\\[0.15cm]
+7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on workload 3. It trains a gradient boosted tree on the dataset of workload 3.} & 145 & 83\\[0.15cm]
 
 8 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script that joins the features of workload 1 and 2. Then, it trains a gradient boosted tree on the joined dataset.} & 341 & 21.1\\
 \hline
 \end{tabular}
-\caption{Kaggle workloads description. $N$ is number of the artifacts and $S$ is total size, in GB, of the artifacts of a workload.}
+\caption{Kaggle workloads description. $N$ is number of the artifacts and $S$ is total size of the artifacts in GB.}
 \label{kaggle-workload}
 \end{table*}
 
 \subsection{Setup}
 \hl{We execute all the experiments on a server running Linux xxx with 128 GB of RAM and xxx GB of SSD.
 We implement a prototype of our system in python 2.7 supporting both in-memory and disk-based Experiment Graph.
-In the prototype, we implement the Experiment Graph using python's networkX library.
+In the prototype, we implement the Experiment Graph using python's NetworkX library.
 Unless specified otherwise, we run every experiment 5 times and report the average results (error bar included).}
-To evaluate our proposed optimizations, we provide two different set of workloads.
+To evaluate our proposed optimizations, we provide two different groups of workloads.
 
-\textbf{OpenML workloads.} In the OpenML workloads, we retrieve all the scikit learn open ml pipelines for task 31, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{Dua:2017}\footnote{https://www.openml.org/t/31}.
+\textbf{OpenML workloads.} In the OpenML workloads, we retrieve all the scikit-learn pipelines for task 31\footnote{https://www.openml.org/t/31}, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{asuncion2007uci}.
 \todo[inline]{more details after i finish kaggle experiments}
 %Table \ref{tab-openml-pipelines} shows the id, components, and number of executions of the OpenML pipelines.\footnote{information about each pipeline is available at https://www.openml.org/f/id}
 %
@@ -58,23 +58,25 @@ To evaluate our proposed optimizations, we provide two different set of workload
 %\label{tab-openml-pipelines}
 %\end{table}
 
-\textbf{Kaggle workloads.} In the second set of workloads, we use the collaborative environment of the use case in Section \ref{sec-background}.
-In the use case, we introduced 3 popular scripts.
-In our experiments, we retrieve 2 more scripts from the Home Credit Default Risk competition in Kaggle and designed 3 scripts based on the existing ones.
-The competition has 9 datasets with a total size of 2.5 GB \footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
-Table \ref{kaggle-workload} shows details of the workloads we use in our experiments.
+\textbf{Kaggle workloads.} 
+In the second set of workloads, we recreate the collaborative environment of the use case in Section \ref{sec-background}.
+We introduced three workloads in the use case.
+We retrieve two more workloads from the Kaggle competition, Home Credit Default Risk.
+We also design 3 workloads based on the existing ones.
+Table \ref{kaggle-workload} shows details of the workloads we utilize in our experiments.
+The competition has 9 datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
 
 \subsection{Execution Time}
 \textbf{Kaggle Workloads.}
 We start by showing the impact of our collaborative optimizer on the use case of Section \ref{sec-background}.
-In the use case, we describe three workloads (workloads 1-3 of Table \ref{kaggle-workload}).
+In the use case, we describe three workloads (Workloads 1-3 of Table \ref{kaggle-workload}).
 Kaggle reports different users have copied and modified these workloads a total of 7000 times.
 Therefore, at the very least, users execute these workloads 7000 times.
-Figures \ref{exp-reuse-kaggle-same-workload} (a)-(c) show the result repeating the execution of each workload.
-For the first run, the Experiment Graph is empty, therefore both baseline our collaborative optimizer result in the same run-time.
-By materializing and reusing artifacts, our collaborative optimizer manages to reduce the run-time of the consecutive executions by an order of magnitude.
-Workload 1 executes an external visualization commands which plots bivariate kernel density estimate, which incurs a large overhead.
-Since our collaborative optimizer does not store the visualization information, it must execute the visualization operation; thus, resulting in a smaller run-time reduction.
+Figures \ref{exp-reuse-kaggle-same-workload} (a)-(c) show the result of repeating the execution of each workload.
+The Experiment Graph is empty before the first run; therefore, both the baseline and our collaborative optimizer have the same run-time.
+By materializing and reusing the artifacts, our collaborative optimizer reduces the run-time of the consecutive executions by one order of magnitude.
+Workload 1 executes an external visualization command that plots a bivariate kernel density estimate, which incurs a large overhead.
+Since our collaborative optimizer does not store the visualization information, it must re-execute the visualization command; thus, resulting in a smaller run-time reduction.
 \begin{figure}
 \begin{subfigure}[b]{0.33\linewidth}
 \centering
@@ -110,18 +112,17 @@ Since our collaborative optimizer does not store the visualization information, 
 }
 \caption{Execution of several workloads one by one}
 \end{subfigure}
-\caption{Execution of Kaggle workloads (materialization budget = 32 GB). KG represents current Kaggle's infrastructure (our baseline) and CO represent our collaborative optimizer.}
+\caption{Execution of Kaggle workloads (materialization budget = 32 GB). KG = Kaggle's infrastructure (our baseline), CO = Collaborative Optimizer.}
 \label{exp-reuse-kaggle-same-workload}
 \end{figure}
 
-Figure \ref{exp-reuse-kaggle-same-workload} (d) shows the cumulative run time executing the 8 workloads of Table \ref{kaggle-workload} one after another.
-This corresponds to a real scenario, where after some scripts of a collaborative environment gain popularity, i.e., workloads 1-3, other users modify and try to improve them, i.e., workloads 4-8.
-Even running every workload once decreases the cumulative run-time reduction by half.
-In a real collaborative environment, there are hundreds of more modified scripts and possibly thousands of repeated execution of these scripts, resulting in 1000s of hours of reduction in cumulative run-time.
-
+Figure \ref{exp-reuse-kaggle-same-workload} (d) shows the cumulative run-time of executing the 8 workloads of Table \ref{kaggle-workload} one after another.
+This corresponds to a real scenario, where after some scripts of a collaborative environment gain popularity, i.e., Workloads 1-3, other users modify and try to improve them, i.e., Workloads 4-8.
+The figure shows that even running every workload once decreases the cumulative run-time reduction by half.
+In a real collaborative environment, there are hundreds of more modified scripts and possibly thousands of repeated execution of these scripts, resulting in 1000s of hours of reduction in the cumulative run-time.
 
 \subsection{Materialization}
-In this experiment, we run the workloads of Table \ref{kaggle-workload} under different materialization rates.
+In this experiment, we run the workloads of Table \ref{kaggle-workload} under different materialization budgets.
 Figure \ref{exp-sa-vs-simple-size} shows the total run-time of all the workloads under different materialization budgets for the storage-aware and simple materialization algorithms.
 \todo[inline]{There seems to be a bug reporting the result.}
 \begin{figure}
@@ -165,25 +166,26 @@ Figure \ref{exp-sa-vs-simple-size} shows the total run-time of all the workloads
 }
 \caption{Budget = 64}
 \end{subfigure}
-\caption{Actual size of the stored artifact for storage aware and simple materialization under different budgets \todo[inline]{add total size and line for budget}}
+\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets \todo[inline]{add total size and a straight line for budget}}
 \label{exp-sa-vs-simple-size}
 \end{figure}
-Figure \ref{exp-sa-vs-simple-size}  shows the actual size of the stored artifacts under different budgets.
-For the simple materialization algorithm, the maximum size of the stored artifact never surpassed the budget.
-However, in the storage-aware algorithm, we observer that the actual size of the stored artifacts is 2 to 3 times more than the specified budget.
-This shows that the rate of the duplicated columns in the artifacts of machine learning workloads is generally high, and our storage-aware algorithm is able to materializes more artifacts by de-duplicating the columns before storing them.
+Figure \ref{exp-sa-vs-simple-size} shows the real size of the stored artifacts under different budgets.
+For the simple materialization algorithm, the maximum real size of the stored artifact never surpasses the budget.
+However, in the storage-aware algorithm, we observe that the real size of the stored artifacts is 2 to 3 times more than the specified budget.
+This shows that the rate of the duplicated columns in the artifacts of ML workloads is generally high.
+Therefore, our storage-aware materialization algorithm can materialize more artifacts by de-duplicating the columns before storing them.
 
 \textbf{Model Materialization. }
-Our materialization algorithm can quickly identify high-quality models, even if they appear in only 1 workload.
-In this experiment, we run a typical scenario for OpenML, where we run a series of workloads one by one.
-We always keep track of the best performing model.
-After encountering a model, all the consecutive workloads compare the quality of their model with the best performing model so far.
-If the workload performs better, the best performing model is updated.
-\todo[inline]{Since our algorithm materializes high-quality models the moment they appear in a new workload. I expect our collaborative optimizer executes the above scenario faster than baseline, since it always materializes the best performing model, but the baseline needs to re-execute the pipeline of the best performing model to recreate its result.}
+The goal of our materialization algorithm is to materialize high-quality models as soon as they appear in a new workload.
+In this experiment, we run a typical scenario, where users always compare the score of their models with the score of the best performing model in the collaborative environment.
+The OpenML platform assigns a time-stamp to every executed workload.
+In this experiment, we execute all the OpenML workloads one by one and keep track of the best performing workload.
+In every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
+\todo[inline]{Since our algorithm materializes high-quality models the moment they appear in a new workload. I expect our collaborative optimizer executes the above scenario faster than baseline since it always reuses the best performing model, but the baseline needs to re-execute the pipeline of the best performing model to recreate its result.}
 \subsection{Reuse and Warmstarting}
 In this section, we compare our reuse algorithm we 2 baselines.
 Baseline 1 loads every materialized artifact.
-Baseline 2 re-computes the materialized artifacts and do not load them from EG.
+Baseline 2 re-computes every materialized artifacts and do not load them from EG.
 \todo[inline]{Even for in-memory Experiment Graph, I expect our reuse perform better. Ideally, I'd like to also run the experiment when EG is stored on disk. I haven't implemented the on-disk Experiment Graph yet and may not be able to do it for SIGMOD.}
 
 \subsection{Discussion}
