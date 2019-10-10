@@ -13,7 +13,6 @@ class Reuse:
 
     @staticmethod
     def get_reuse(reuse_type):
-        reuse_type = reuse_type.upper()
         if reuse_type == AllMaterializedReuse.NAME:
             return AllMaterializedReuse()
         elif reuse_type == LinearTimeReuse.NAME:
@@ -106,7 +105,7 @@ class AllComputeReuse(Reuse):
     A naive reuse which recomputes every materialized vertex. Since by default we compute everything, this class
     does nothing just returns the list of all the vertices of workload dag which to be executed
     """
-    NAME = 'ALL_COMPUTE_REUSE'
+    NAME = 'all_compute'
 
     def __init__(self):
         Reuse.__init__(self)
@@ -121,7 +120,7 @@ class AllMaterializedReuse(Reuse):
     """
     A naive reuse which loads all the materialized vertices into the workload DAG
     """
-    NAME = 'ALL_MATERIALIZED_REUSE'
+    NAME = 'all_mat'
 
     def __init__(self):
         Reuse.__init__(self)
@@ -169,7 +168,7 @@ class LinearTimeReuse(Reuse):
     Our novel reuse method that addresses the load cost/recreation cost trade off when deciding what materialized nodes
     to load into the workload DAG.
     """
-    NAME = 'LINEAR_TIME_REUSE'
+    NAME = 'linear'
 
     def __init__(self):
         Reuse.__init__(self)
@@ -233,7 +232,7 @@ class LinearTimeReuse(Reuse):
                 else:
 
                     recreation_costs = execution_cost
-        if verbose:
+        if verbose == 1:
             print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
         return materialized_vertices, warmstarting_candidates
 
@@ -254,11 +253,11 @@ class LinearTimeReuse(Reuse):
                 if current in warmstarting_candidates:
                     final_warmstarting_cadidates.add(current)
 
-                    prev_node = next(prev_nodes_list)
+                for prev_node in prev_nodes_list:
                     if prev_node not in execution_set:
                         queue.append((prev_node, prevs(prev_node)))
 
-        if verbose:
+        if verbose == 1:
             print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
 
         return final_materialized_vertices, execution_set, final_warmstarting_cadidates

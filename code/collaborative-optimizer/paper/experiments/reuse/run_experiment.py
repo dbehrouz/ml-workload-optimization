@@ -22,6 +22,7 @@ from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
@@ -42,6 +43,7 @@ materializer_type = parser.get('materializer', 'storage_aware')
 EXPERIMENT_TIMESTAMP = datetime.now()
 
 mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
+reuse_type = parser.get('reuse_type', LinearTimeReuse.NAME)
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
@@ -58,7 +60,7 @@ if not os.path.exists(os.path.dirname(result_file)):
         if exc.errno != errno.EEXIST:
             raise
 
-ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=reuse_type)
 if materializer_type == 'storage_aware':
     materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'simple':
@@ -86,12 +88,11 @@ for workload in workloads:
 
     if not success:
         elapsed = 'Failed!'
-    graph = executor.execution_environment.experiment_graph
-    total_mat = graph.get_total_materialized_size()
-    total_size = graph.get_total_size()
+
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                                  EXPERIMENT, workload_name, materializer_type, mat_budget, total_mat,
-                                                  total_size, elapsed))
+            '{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                               EXPERIMENT, workload_name, materializer_type, reuse_type,
+                                               mat_budget,
+                                               elapsed))

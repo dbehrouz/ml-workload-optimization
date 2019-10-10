@@ -35,7 +35,6 @@ class introduction_to_manual_feature_engineering(Workload):
     def run(self, execution_environment, root_data, verbose=0):
         # Read in bureau
         bureau = execution_environment.load(root_data + '/kaggle_home_credit/bureau.csv')
-
         bureau.head().data(verbose=verbose)
         previous_loan_counts = bureau.groupby('SK_ID_CURR')['SK_ID_BUREAU'].count().rename(
             columns={'SK_ID_BUREAU': 'previous_loan_counts'})
@@ -631,7 +630,6 @@ if __name__ == "__main__":
     from experiment_graph.data_storage import DedupedStorageManager
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
     from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
     workload = introduction_to_manual_feature_engineering()
@@ -639,7 +637,7 @@ if __name__ == "__main__":
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager())
 
     root_data = ROOT + '/data'
     # database_path = \
