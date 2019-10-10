@@ -69,7 +69,6 @@ class CollaborativeScheduler:
 
 
 class HashBasedCollaborativeScheduler(CollaborativeScheduler):
-    NAME = 'HASH_BASED'
 
     def schedule(self, history, workload, v_id, verbose):
         start = datetime.now()
@@ -106,13 +105,12 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
     # TODO measure time of these
     def compute_execution_subgraph(self, history, workload, vertex, verbose):
 
-        materialized_vertices, execution_vertices, warmstarting_candidates, total_history_graph_reads = \
+        materialized_vertices, execution_vertices, warmstarting_candidates = \
             self.reuse().run(
                 vertex=vertex,
-                workload_dag=workload,
-                experiment_graph=history,
+                workload=workload,
+                history=history,
                 verbose=verbose)
-        self.history_reads += total_history_graph_reads
         for m in materialized_vertices:
             self.retrieve_from_history(workload, history, m)
 

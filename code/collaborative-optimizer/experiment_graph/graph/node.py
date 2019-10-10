@@ -33,6 +33,11 @@ class Node(object):
             del state['execution_environment']
         return state
 
+    def remove_content(self):
+        del self.underlying_data
+        self.underlying_data = None
+        self.computed = False
+
     def __setstate__(self, state):
         self.__dict__.update(state)
 

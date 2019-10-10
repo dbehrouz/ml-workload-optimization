@@ -18,8 +18,8 @@ class Reuse:
             return BottomUpReuse()
         elif reuse_type == FastBottomUpReuse.NAME:
             return FastBottomUpReuse()
-        elif reuse_type == TopDownReuse.NAME:
-            return TopDownReuse()
+        elif reuse_type == LinearTimeReuse.NAME:
+            return LinearTimeReuse()
         else:
             raise Exception('Undefined Reuse type: {}'.format(reuse_type))
 
@@ -69,9 +69,9 @@ class Reuse:
             # the node exists but it is not materialized
             return 1
 
-    def check_for_warmstarting(self, history, workload, model_candidates):
+    def check_for_warmstarting(self, history, workload, all_models):
         warmstarting_candidates = set()
-        for m in model_candidates:
+        for m in all_models:
             training_datasets = list(workload.predecessors(m))
             assert len(training_datasets) == 1
             training_dataset = training_datasets[0]
@@ -132,9 +132,9 @@ class BottomUpReuse(Reuse):
         warmstarting_candidates = set()
         execution_set = {terminal}
         if workload_subgraph.nodes[terminal]['data'].computed:
-            return materialized_set, execution_set, warmstarting_candidates, self.history_reads
+            return materialized_set, execution_set, warmstarting_candidates
         if self.is_mat(history, terminal):
-            return {terminal}, execution_set, warmstarting_candidates, self.history_reads
+            return {terminal}, execution_set, warmstarting_candidates
         if workload_subgraph.nodes[terminal]['type'] == 'SK_Model':
             model_candidates.add(terminal)
 
@@ -183,7 +183,7 @@ class FastBottomUpReuse(Reuse):
                                      history=experiment_graph.graph)
         warmstarting_candidates = self.check_for_warmstarting(experiment_graph.graph, workload_dag.graph,
                                                               model_candidates)
-        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
+        return materialized_vertices, execution_vertices, warmstarting_candidates
 
     def inplace_reverse_bfs(self, terminal, workload_subgraph, history):
         """
@@ -237,118 +237,91 @@ class LinearTimeReuse(Reuse):
         Reuse.__init__(self)
 
     def run(self, vertex, workload, history, verbose):
-        e_subgraph = workload.compute_execution_subgraph(vertex)
-        materialized_vertices, execution_vertices, model_candidates = self.forward_pass(terminal=vertex,
-                                                                                        workload_subgraph=e_subgraph,
-                                                                                        history=history.graph)
-        warmstarting_candidates = self.check_for_warmstarting(history.graph, e_subgraph, model_candidates)
-        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
+        print 'LINEAR TIME REUSE, {}'.format(vertex)
+        workload_subgraph = workload.compute_execution_subgraph(vertex)
+        materialized_vertices, all_models = self.forward_pass(workload_subgraph=workload_subgraph,
+                                                              e_graph=history.graph, verbose=verbose)
+        materialized_vertices, execution_vertices, all_models = self.backward_pass(
+            terminal=vertex,
+            workload_subgraph=workload_subgraph,
+            materialized_vertices=materialized_vertices,
+            warmstarting_candidates=all_models,
+            verbose=verbose)
 
-    def forward_pass(self, terminal, workload_subgraph, history):
+        warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, all_models)
+        if verbose == 1:
+            print 'materialized_vertices: {}'.format(materialized_vertices)
+            print 'warmstarting_candidates: {}'.format(warmstarting_candidates)
+        return materialized_vertices, execution_vertices, warmstarting_candidates
+
+    @staticmethod
+    def forward_pass(workload_subgraph, e_graph, verbose):
         """
         performs a conditional search from the root nodes of the subgraph
         unlike reverse_conditional_bfs, the workload subgraph must be previously computed and is guaranteed not to
         contain any nodes that has materialized data
-        :param terminal:
+        :param verbose: 
         :param workload_subgraph:
-        :param history:
+        :param e_graph:
         :return:
         """
-        roots = [n for n, d in workload_subgraph.in_degree() if d == 0]
-        # for n in nx.topological_sort(workload_subgraph):
+        materialized_vertices = set()
+        warmstarting_candidates = set()
+        recreation_costs = {node: -1 for node in workload_subgraph.nodes}
+        for n in nx.topological_sort(workload_subgraph):
+            if not e_graph.has_node(n):
+                # for sk models that are not in experiment graph, we add them to warmstarting candidate
+                if workload_subgraph[n]['type'] == 'SK_Model':
+                    warmstarting_candidates.add(n)
+                continue
 
-
-        def forward_bfs(source, candidates_so_far, models_so_far):
-            """
-            simple forward bfs starting from a source (root node)
-            :param candidates_so_far:
-            :param source:
-            :return:
-            """
-
-            materialized_in_this_path = set()
-            model_in_this_path = set()
-            status = self.in_history_and_mat(history, source)
-            if workload_subgraph.nodes[source]['type'] == 'SK_Model':
-                model_in_this_path.add(source)
-            if status == 2:
-                materialized_in_this_path.add(source)
-            elif status == 1:
-                pass
-            elif status == 0:
-                return materialized_in_this_path, model_in_this_path
+            if workload_subgraph.nodes[n]['data'].computed:
+                recreation_costs[n] = 0
             else:
-                raise Exception('invalid status from history read')
+                node = e_graph.nodes[n]
+                p_costs = sum([recreation_costs[source] for source, _ in e_graph.in_edges(n)])
+                execution_cost = node['compute_cost'] + p_costs
+                if not node['mat']:
 
-            successor = workload_subgraph.successors
-            queue = deque([(source, successor(source))])
-            visited = {source}
-            while queue:
-                current, next_nodes_list = queue[0]
-                try:
-                    next_node = next(next_nodes_list)
-                    if next_node not in model_in_this_path:
-                        if workload_subgraph.nodes[next_node]['type'] == 'SK_Model':
-                            model_candidates.add(next_node)
-                    if next_node not in visited:
-                        if next_node not in candidates_so_far:
-                            # if next_node is in materialized_candidates, this indicates that we have traversed down
-                            # this path when performing bfs for another root and we can stop here to save time
-                            status = self.in_history_and_mat(history, next_node)
-                            if status == 2:
-                                # The nodes is materialized
-                                # therefore, first add the node to the list and continue the search
-                                materialized_in_this_path.add(next_node)
-                                queue.append((next_node, successor(next_node)))
-                            elif status == 1:
-                                # The node is in history but it is not materialized
-                                # do not add the node to the candidates but continue the search
-                                queue.append((next_node, successor(next_node)))
-                            elif status == 0:
-                                # The node is not in history, do not continue down this path
-                                pass
-                            else:
-                                raise Exception('invalid status from history read')
-                except StopIteration:
-                    queue.popleft()
+                    recreation_costs[n] = execution_cost
+                    # for sk models that are in experiment graph but are not materialized, we add them to materialized
+                    # candidates to see if we can warmstart them with a model that is materialized
+                    # TODO is this valid?
+                    if workload_subgraph.nodes[n]['type'] == 'SK_Model':
+                        warmstarting_candidates.add(n)
+                elif node['load_cost'] < execution_cost:
 
-            return materialized_in_this_path, model_in_this_path
+                    recreation_costs[n] = node['load_cost']
+                    materialized_vertices.add(n)
+                else:
 
-        model_candidates = set()
-        materialized_candidates = set()
-        # for every root node traverse the graph and find the set of candidates
-        for r in roots:
-            materialized_vertices, model_vertices = forward_bfs(r, materialized_candidates, model_candidates)
-            materialized_candidates.union(materialized_vertices)
-            model_candidates.union(model_vertices)
+                    recreation_costs = execution_cost
+        if verbose:
+            print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
+        return materialized_vertices, warmstarting_candidates
 
-        if not materialized_candidates:
-            # no materialized candidates could be found
-            # return the nodes of the original workload graph
-            return set(), set(workload_subgraph.nodes()), self.history_reads
+    @staticmethod
+    def backward_pass(terminal, workload_subgraph, materialized_vertices, warmstarting_candidates, verbose):
 
-        # Now that we have all the candidate nodes that are materialized in history graph
-        # we can do a reverse bfs to construct the final execution path and the materialized nodees
-        # that should be returned to the optimizer
-        final_mat_candidates = set()
-        final_execution_candidates = {terminal}
-        if terminal in materialized_candidates:
-            return {terminal}, {terminal}, self.history_reads
-
+        execution_set = set()
         prevs = workload_subgraph.predecessors
+        final_materialized_vertices = set()
+        final_warmstarting_cadidates = set()
         queue = deque([(terminal, prevs(terminal))])
         while queue:
-            current, prev_nodes_list = queue[0]
-            try:
-                prev_node = next(prev_nodes_list)
-                if prev_node not in final_execution_candidates:
-                    final_execution_candidates.add(prev_node)
-                    if prev_node in materialized_candidates:
-                        final_mat_candidates.add(prev_node)
-                    else:
+            current, prev_nodes_list = queue.pop()
+            execution_set.add(current)
+            if current in materialized_vertices:
+                final_materialized_vertices.add(current)
+            elif not workload_subgraph.nodes[current]['data'].computed:
+                if current in warmstarting_candidates:
+                    final_warmstarting_cadidates.add(current)
+
+                    prev_node = next(prev_nodes_list)
+                    if prev_node not in execution_set:
                         queue.append((prev_node, prevs(prev_node)))
 
-            except StopIteration:
-                queue.popleft()
+        if verbose:
+            print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
 
-        return final_mat_candidates, final_execution_candidates, model_candidates
+        return final_materialized_vertices, execution_set, final_warmstarting_cadidates
