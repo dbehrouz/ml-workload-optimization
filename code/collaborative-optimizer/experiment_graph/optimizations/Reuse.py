@@ -2,6 +2,8 @@ import copy
 from abc import abstractmethod
 from collections import deque
 
+import networkx as nx
+
 
 class Reuse:
     NAME = 'BASE_REUSE'
@@ -228,21 +230,21 @@ class FastBottomUpReuse(Reuse):
         return materialized_set, execution_set, model_candidates
 
 
-class TopDownReuse(Reuse):
-    NAME = 'TOPDOWN'
+class LinearTimeReuse(Reuse):
+    NAME = 'LINEAR_TIME_REUSE'
 
     def __init__(self):
         Reuse.__init__(self)
 
     def run(self, vertex, workload, history, verbose):
         e_subgraph = workload.compute_execution_subgraph(vertex)
-        materialized_vertices, execution_vertices, model_candidates = self.forward_bfs(terminal=vertex,
-                                                                                       workload_subgraph=e_subgraph,
-                                                                                       history=history.graph)
+        materialized_vertices, execution_vertices, model_candidates = self.forward_pass(terminal=vertex,
+                                                                                        workload_subgraph=e_subgraph,
+                                                                                        history=history.graph)
         warmstarting_candidates = self.check_for_warmstarting(history.graph, e_subgraph, model_candidates)
         return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
 
-    def forward_bfs(self, terminal, workload_subgraph, history):
+    def forward_pass(self, terminal, workload_subgraph, history):
         """
         performs a conditional search from the root nodes of the subgraph
         unlike reverse_conditional_bfs, the workload subgraph must be previously computed and is guaranteed not to
@@ -253,6 +255,8 @@ class TopDownReuse(Reuse):
         :return:
         """
         roots = [n for n, d in workload_subgraph.in_degree() if d == 0]
+        # for n in nx.topological_sort(workload_subgraph):
+
 
         def forward_bfs(source, candidates_so_far, models_so_far):
             """

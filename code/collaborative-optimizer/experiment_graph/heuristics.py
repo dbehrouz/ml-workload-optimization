@@ -19,14 +19,19 @@ def compute_recreation_cost(graph):
     for n in nx.topological_sort(graph):
         if graph.nodes[n]['root']:
             recreation_costs[n] = 0
+            graph.nodes[n]['compute_cost'] = 0
         else:
             cost = 0.0
+            my_cost = 0.0
             for source, _, exec_time in graph.in_edges(n, data='execution_time'):
                 if recreation_costs[source] == -1:
                     raise Exception('The partial cost of the node {} should have been computed'.format(source))
                 else:
                     cost += recreation_costs[source] + exec_time
+                    my_cost += exec_time
             recreation_costs[n] = cost
+            # compute cost for reuse algorithm
+            graph.nodes[n]['compute_cost'] = my_cost
             total_weighted_cost += (graph.nodes[n]['meta_freq'] * cost)
 
     for n in graph.nodes(data=True):
