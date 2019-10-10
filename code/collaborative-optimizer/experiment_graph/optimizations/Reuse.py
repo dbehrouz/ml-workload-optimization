@@ -208,7 +208,7 @@ class LinearTimeReuse(Reuse):
         for n in nx.topological_sort(workload_subgraph):
             if not e_graph.has_node(n):
                 # for sk models that are not in experiment graph, we add them to warmstarting candidate
-                if workload_subgraph[n]['type'] == 'SK_Model':
+                if workload_subgraph.nodes[n]['type'] == 'SK_Model':
                     warmstarting_candidates.add(n)
                 continue
 
