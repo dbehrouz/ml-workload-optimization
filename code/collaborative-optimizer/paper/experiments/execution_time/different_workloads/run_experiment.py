@@ -12,7 +12,6 @@ import uuid
 from datetime import datetime
 
 
-
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:

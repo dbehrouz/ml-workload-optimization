@@ -214,15 +214,18 @@ class WorkloadDag(BaseGraph):
         prev_node = None
         for n in list(nx.topological_sort(self.graph)):
             node = self.graph.nodes[n]
-            if node['type'] == 'SK_Model':
-                node['score'] = node['data'].get_model_score()
-            if node['type'] == 'GroupBy':
-                node['size'] = prev_node['size']
-            elif node['type'] is not 'SuperNode':
-                node['size'] = node['data'].compute_size()
+            if node['data'].computed:
+                if node['type'] == 'SK_Model':
+                    node['score'] = node['data'].get_model_score()
+                if node['type'] == 'GroupBy':
+                    node['size'] = prev_node['size']
+                elif node['type'] is not 'SuperNode':
+                    node['size'] = node['data'].compute_size()
+                else:
+                    node['size'] = None
+                prev_node = node
             else:
                 node['size'] = None
-            prev_node = node
 
         self.post_processed = True
 

@@ -365,7 +365,6 @@ class Dataset(Node):
                 self.execution_environment.workload_dag,
                 self.id,
                 verbose)
-
             self.computed = True
         return self.get_materialized_data()
 
@@ -830,6 +829,7 @@ class Feature(Node):
         return self.get_materialized_data().dtype
 
     def data(self, verbose=0):
+        print 'calling data on {}'.format(self.id)
         self.update_freq()
         if not self.computed:
             self.execution_environment.scheduler.schedule(

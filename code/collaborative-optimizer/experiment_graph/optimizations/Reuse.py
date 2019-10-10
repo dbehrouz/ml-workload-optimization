@@ -260,7 +260,7 @@ class LinearTimeReuse(Reuse):
         performs a conditional search from the root nodes of the subgraph
         unlike reverse_conditional_bfs, the workload subgraph must be previously computed and is guaranteed not to
         contain any nodes that has materialized data
-        :param verbose: 
+        :param verbose:
         :param workload_subgraph:
         :param e_graph:
         :return:

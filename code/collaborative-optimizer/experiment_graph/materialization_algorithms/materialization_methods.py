@@ -117,8 +117,9 @@ class AllMaterializer(Materializer):
         super(AllMaterializer, self).__init__(0)
 
     def run(self, experiment_graph, workload_dag, verbose=0):
-        return [node_id for node_id, node_type in workload_dag.graph.nodes(data='type') if
-                node_type != 'SuperNode' and node_type != 'GroupBy']
+        return list(set([n for n, t in workload_dag.graph.nodes(data='type') if
+                         t != 'SuperNode' and t != 'GroupBy'] +
+                        [n for n, d in experiment_graph.graph.nodes(data='mat') if d]))
 
 
 class HeuristicsMaterializer(Materializer):
