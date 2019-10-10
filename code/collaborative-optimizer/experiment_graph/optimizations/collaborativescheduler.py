@@ -74,7 +74,8 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
         start = datetime.now()
         if not history.is_empty():
             reuse_optimization_time_start = datetime.now()
-            workload_subgraph = self.compute_execution_subgraph(history, workload, v_id, verbose=verbose)
+            workload_subgraph = self.compute_execution_subgraph(vertex=v_id, workload=workload,
+                                                                history=history, verbose=verbose)
             reuse_optimization = (datetime.now() - reuse_optimization_time_start).total_seconds()
         else:
             workload_subgraph = workload.compute_execution_subgraph(v_id)
@@ -103,7 +104,7 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
 
     # TODO measure number of reads in history graph
     # TODO measure time of these
-    def compute_execution_subgraph(self, history, workload, vertex, verbose):
+    def compute_execution_subgraph(self, vertex, workload, history, verbose):
 
         materialized_vertices, execution_vertices, warmstarting_candidates = \
             self.reuse().run(

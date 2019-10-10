@@ -11,17 +11,15 @@ import sys
 import uuid
 from datetime import datetime
 
-
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
     SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
 
 sys.path.append(SOURCE_CODE_ROOT)
-from paper.experiments.scenario import get_kaggle_baseline_scenario, get_kaggle_optimized_scenario, get_mock_scenario
+from paper.experiments.scenario import get_kaggle_baseline_scenario, get_kaggle_optimized_scenario
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
-from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
 
@@ -52,8 +50,9 @@ rep = int(parser.get('rep', 2))
 result_file = parser.get('result', ROOT + '/experiment_results/local/execution_time/mock/test.csv')
 profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
+
 def run(executor, workload):
-    if method == 'optimized':
+    if method == 'optimized' or method == 'mock_optimized':
         return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     elif method == 'baseline':
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
@@ -69,18 +68,19 @@ if not os.path.exists(os.path.dirname(result_file)):
             raise
 
 if method == 'optimized':
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager())
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
     executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=sa_materializer)
     workloads = get_kaggle_optimized_scenario()
 elif method == 'baseline':
     executor = BaselineExecutor()
     workloads = get_kaggle_baseline_scenario()
-elif method == 'mock':
-    executor = BaselineExecutor()
-    workloads = get_mock_scenario()
 else:
-    raise Exception('invalid method: {}'.format(method))
+    ee = ExecutionEnvironment(DedupedStorageManager())
+    sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
+    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=sa_materializer)
+    workloads = get_kaggle_optimized_scenario(package=method)
+
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()

@@ -65,7 +65,7 @@ if materializer_type == 'storage_aware':
 elif materializer_type == 'simple':
     materializer = HeuristicsMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'all':
-    materializer = AllMaterializer(storage_budget=mat_budget)
+    materializer = AllMaterializer()
 else:
     raise Exception('Invalid materializer type: {}'.format(materializer_type))
 

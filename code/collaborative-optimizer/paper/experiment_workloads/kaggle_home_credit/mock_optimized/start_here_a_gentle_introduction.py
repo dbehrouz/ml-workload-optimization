@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 # numpy and pandas for data manipulation
 import pandas as pd
-import seaborn as sns
 
 # Experiment Graph
 
@@ -175,8 +174,7 @@ if __name__ == "__main__":
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
     from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-        AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
 
     workload = start_here_a_gentle_introduction()
 

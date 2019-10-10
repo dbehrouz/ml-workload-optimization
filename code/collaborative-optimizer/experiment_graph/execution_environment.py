@@ -3,12 +3,13 @@ import copy
 
 import os
 
+
 from data_storage import SimpleStorageManager
 from experiment_graph.graph.graph_representations import WorkloadDag, ExperimentGraph
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 from experiment_graph.graph.node import *
-from experiment_graph.optimizations.Reuse import FastBottomUpReuse
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.optimizations.collaborativescheduler import HashBasedCollaborativeScheduler, \
     CollaborativeScheduler
 
@@ -20,7 +21,7 @@ class ExecutionEnvironment(object):
         return loc[loc.rfind('/') + 1:] + str(extra_params)
 
     def __init__(self, data_storage=SimpleStorageManager(), scheduler_type=HashBasedCollaborativeScheduler.NAME,
-                 reuse_type=FastBottomUpReuse.NAME):
+                 reuse_type=LinearTimeReuse.NAME):
         self.scheduler = CollaborativeScheduler.get_scheduler(scheduler_type, reuse_type)
         self.workload_dag = WorkloadDag()
         self.experiment_graph = ExperimentGraph(data_storage=data_storage)
