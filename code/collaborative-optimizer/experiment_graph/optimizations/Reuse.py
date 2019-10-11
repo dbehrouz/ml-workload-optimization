@@ -230,8 +230,7 @@ class LinearTimeReuse(Reuse):
                     recreation_costs[n] = node['load_cost']
                     materialized_vertices.add(n)
                 else:
-
-                    recreation_costs = execution_cost
+                    recreation_costs[n] = execution_cost
         if verbose == 1:
             print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
         return materialized_vertices, warmstarting_candidates
