@@ -16,33 +16,44 @@ class OpenMLBaselineWorkload(Workload):
         self.setup = setup
         self.pipeline = pipeline
         self.task_id = task_id
+        self.score = 0.0
 
     def run(self, root_data):
-        train_data = pd.read_csv(
-            root_data + '/openml/task_id={}/datasets/train.csv'.format(self.task_id), header='infer', index_col=False)
-        test_data = pd.read_csv(
-            root_data + '/openml/task_id={}/datasets/test.csv'.format(self.task_id), header='infer', index_col=False)
+        try:
+            train_data = pd.read_csv(
+                root_data + '/openml/task_id={}/datasets/train.csv'.format(self.task_id), header='infer',
+                index_col=False)
+            test_data = pd.read_csv(
+                root_data + '/openml/task_id={}/datasets/test.csv'.format(self.task_id), header='infer',
+                index_col=False)
 
-        y = train_data['class']
-        X = train_data.drop(['class'], axis=1)
+            y = train_data['class']
+            X = train_data.drop(['class'], axis=1)
 
-        test_y = test_data['class']
-        test_x = test_data.drop(['class'], axis=1)
+            test_y = test_data['class']
+            test_x = test_data.drop(['class'], axis=1)
 
-        edges = skpipeline_to_edge_list(pipeline=self.pipeline, setup=self.setup)
+            edges = skpipeline_to_edge_list(pipeline=self.pipeline, setup=self.setup)
 
-        for i in range(len(edges) - 1):
-            transformer = edges[i]
-            transformer.fit(X)
-            X = transformer.transform(X)
-            test_x = transformer.transform(test_x)
+            for i in range(len(edges) - 1):
+                transformer = edges[i]
+                transformer.fit(X)
+                X = transformer.transform(X)
+                test_x = transformer.transform(test_x)
 
-        model = edges[-1]
-        model.fit(X, y)
-        predictions = model.predict(test_x)
-        score = accuracy_score(test_y, predictions)
+            model = edges[-1]
+            model.fit(X, y)
+            predictions = model.predict(test_x)
+            self.score = accuracy_score(test_y, predictions)
+            return True
+        except:
+            print 'error for pipeline: {}, setup: {}'.format(self.pipeline, self.setup)
+            return False
 
-        print 'pipeline: {}, setup: {}, score: {0:.6f}'.format(self.setup.flow_id, self.setup.setup_id, score)
+        # print 'pipeline: {}, setup: {}, score: {0:.6f}'.format(self.setup.flow_id, self.setup.setup_id, score)
+
+    def get_score(self):
+        return self.score
 
 
 if __name__ == "__main__":
@@ -68,7 +79,7 @@ if __name__ == "__main__":
     limit = int(parser.get('limit', 20))
 
     OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
-    config.set_cache_directory(OPENML_DIR)
+    config.set_cache_directory(OPENML_DIR + '/cache')
     OPENML_DATASET = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
     setup_and_pipelines = get_setup_and_pipeline(OPENML_DATASET + '/all_runs.csv', limit)
 

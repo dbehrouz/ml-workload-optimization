@@ -9,6 +9,7 @@ pip2 install -U matplotlib --user
 pip2 install -U seaborn --user
 pip2 install -U pympler --user
 pip2.7 install -U lightgbm --user
+pip2 install -U 'openml==0.8.0' --user
 # copy scripts
 rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
 

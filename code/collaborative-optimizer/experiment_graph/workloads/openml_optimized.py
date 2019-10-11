@@ -1,9 +1,8 @@
 import warnings
 from datetime import datetime
 
-from openml import config
-from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.openml_helper.openml_connectors import *
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.workload import Workload
 
 warnings.filterwarnings("ignore")
@@ -15,6 +14,7 @@ class OpenMLOptimizedWorkload(Workload):
         self.setup = setup
         self.pipeline = pipeline
         self.task_id = task_id
+        self.score = 0
 
     def run(self, execution_environment, root_data, verbose=0):
         try:
@@ -42,12 +42,15 @@ class OpenMLOptimizedWorkload(Workload):
             score = model.score(test_x,
                                 test_y,
                                 score_type='accuracy').data(verbose=verbose)
-            print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
-
+            #print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
+            self.score = score['accuracy']
             return True
         except:
             print 'error for pipeline: {}, setup: {}'.format(self.pipeline, self.setup)
             return False
+
+    def get_score(self):
+        return self.score
 
 
 if __name__ == "__main__":
@@ -84,11 +87,11 @@ if __name__ == "__main__":
     else:
         raise Exception('invalid materializer: {}'.format(materializer_type))
 
-    limit = int(parser.get('limit', 20))
+    limit = int(parser.get('limit', 10))
     storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
-    OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
-    config.set_cache_directory(OPENML_DIR)
+    OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml'
+    config.set_cache_directory(OPENML_DIR + '/cache')
     OPENML_DATASET = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
     setup_and_pipelines = get_setup_and_pipeline(OPENML_DATASET + '/all_runs.csv', limit)
 
@@ -103,15 +106,14 @@ if __name__ == "__main__":
     total = 0.0
 
     for setup, pipeline in setup_and_pipelines:
-        if setup.flow_id == 5909:
-            execution_start = datetime.now()
-            workload = OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
-            executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
-
-            total += (datetime.now() - execution_start).total_seconds()
-            executor.local_process()
-            executor.global_process()
-            executor.cleanup()
+        execution_start = datetime.now()
+        workload = OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
+        executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
+        print workload.get_score()
+        total += (datetime.now() - execution_start).total_seconds()
+        executor.local_process()
+        executor.global_process()
+        executor.cleanup()
 
     if parser.get('update_graph', 'No').lower() == 'yes':
         executor.store_experiment_graph(database_path, overwrite=True)

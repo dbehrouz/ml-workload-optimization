@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from openml import tasks, datasets, runs, flows, setups
+from openml import tasks, datasets, runs, flows, setups, config
 
 OPENML_ROOT_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/data/openml'
 EXCLUDE_FLOWS = [5981, 5987, 5983, 5981, 6223]
@@ -23,17 +23,17 @@ def download_dataset(openml_dir, task_id):
     train_indices, test_indices = task.get_train_test_split_indices()
     train = pd.DataFrame(data=data[train_indices], columns=columns)
     test = pd.DataFrame(data=data[test_indices], columns=columns)
-    result_path = openml_dir + '/task_id=' + str(task.dataset_id) + '/datasets'
+    result_dir = openml_dir + '/task_id=' + str(task.dataset_id) + '/datasets/'
 
-    if not os.path.exists(os.path.dirname(result_path)):
+    if not os.path.exists(result_dir):
         try:
-            os.makedirs(os.path.dirname(result_path))
+            os.makedirs(result_dir)
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
 
-    train.to_csv(result_path + '/train.csv', index=False)
-    test.to_csv(result_path + '/test.csv', index=False)
+    train.to_csv(result_dir + '/train.csv', index=False)
+    test.to_csv(result_dir + '/test.csv', index=False)
 
 
 def get_scikitlearn_flows(openml_dir, file_name='scikitlearn-flows.txt'):
@@ -88,6 +88,7 @@ def parse_value(value):
         return actual
     except:
         return value
+
 
 def skpipeline_to_edge_list(pipeline, setup):
     def get_fully_qualified_name(o):
@@ -225,6 +226,7 @@ if __name__ == "__main__":
     openml_task = int(parser.get('task', 31))
     ROOT_DATA_DIRECTORY = ROOT + '/data'
     openml_dir = ROOT_DATA_DIRECTORY + '/openml'
+    config.set_cache_directory(openml_dir + '/cache')
     download_dataset(openml_dir=openml_dir, task_id=openml_task)
     flow_ids = get_scikitlearn_flows(openml_dir=openml_dir)
     get_runs(openml_dir=openml_dir, flow_ids=flow_ids, task_id=openml_task)

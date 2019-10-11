@@ -11,6 +11,8 @@ import sys
 import uuid
 from datetime import datetime
 
+from Reuse import LinearTimeReuse
+
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -46,7 +48,6 @@ mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 
-rep = int(parser.get('rep', 2))
 
 result_file = parser.get('result', ROOT + '/experiment_results/local/materialization/mock/test.csv')
 profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
@@ -58,7 +59,7 @@ if not os.path.exists(os.path.dirname(result_file)):
         if exc.errno != errno.EEXIST:
             raise
 
-ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 if materializer_type == 'storage_aware':
     materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'simple':
