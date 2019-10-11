@@ -1,18 +1,20 @@
+import errno
+import os
+
 import numpy as np
 import pandas as pd
-from openml import tasks, datasets, runs, flows, setups, config
-
-from execution_environment import ExecutionEnvironment
+from openml import tasks, datasets, runs, flows, setups
 
 OPENML_ROOT_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/data/openml'
+EXCLUDE_FLOWS = [5981, 5987, 5983, 5981, 6223]
 
 
-def download_dataset(task_id, root_path, overwrite=False):
+def download_dataset(openml_dir, task_id):
     """
     for ease of use, we always store the datasets locally
     we store the datasets with the same openml id so it is easier to distinguish
-    :param overwrite: if the existing data should be rewritten
-    :param root_path: root path to store the dataset as pandas csv frame
+
+    :param openml_dir: root openml directory
     :param task_id: open ml id of the dataset
     """
     task = tasks.get_task(task_id=task_id)
@@ -21,15 +23,51 @@ def download_dataset(task_id, root_path, overwrite=False):
     train_indices, test_indices = task.get_train_test_split_indices()
     train = pd.DataFrame(data=data[train_indices], columns=columns)
     test = pd.DataFrame(data=data[test_indices], columns=columns)
-    result_path = root_path + '/task_id=' + str(task.dataset_id)
-    if os.path.exists(result_path) and not overwrite:
-        raise Exception('Directory already exists and overwrite is not allowed')
+    result_path = openml_dir + '/task_id=' + str(task.dataset_id) + '/datasets'
 
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
+    if not os.path.exists(os.path.dirname(result_path)):
+        try:
+            os.makedirs(os.path.dirname(result_path))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
 
     train.to_csv(result_path + '/train.csv', index=False)
     test.to_csv(result_path + '/test.csv', index=False)
+
+
+def get_scikitlearn_flows(openml_dir, file_name='scikitlearn-flows.txt'):
+    path = openml_dir + '/' + file_name
+    if os.path.exists(path):
+        with open(path, 'r') as in_file:
+            return [int(flow_id) for flow_id in in_file.readlines()]
+    flow_list = pd.DataFrame.from_dict(flows.list_flows(), orient='index')
+    allowed = flow_list[flow_list.full_name.str.startswith('sklearn.pipeline')].id
+    allowed = [f for f in allowed if f not in EXCLUDE_FLOWS]
+    with open(openml_dir + '/' + file_name, 'w') as output:
+        for a in allowed:
+            output.write('{}\n'.format(a))
+    return list(allowed)
+
+
+def get_runs(openml_dir, flow_ids, task_id):
+    path = openml_dir + '/task_id={}'.format(task_id) + '/all_runs.csv'
+    if os.path.exists(path):
+        return pd.read_csv(path, index_col=False)
+
+    n = len(flow_ids) / 100
+    run_dict = {}
+    for i in range(n):
+        run_dict.update(runs.list_runs(size=10000, task=[task_id], flow=flow_ids[(i * 100):(i + 1) * 100]))
+    all_runs_pd = pd.DataFrame.from_dict(run_dict, orient='index')
+    if not os.path.exists(os.path.dirname(path)):
+        try:
+            os.makedirs(os.path.dirname(path))
+        except OSError as exc:  # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+    all_runs_pd.to_csv(path, index=False)
+    return all_runs_pd
 
 
 def parse_value(value):
@@ -50,33 +88,6 @@ def parse_value(value):
         return actual
     except:
         return value
-
-
-def flow_to_edge_list(flow, setup):
-    edges = []
-    for componentKey, componentValue in flow.components.items():
-        prefix = componentKey
-        fullName = componentValue.class_name
-        componentParams = dict()
-        for paramKey, paramValue in setup.parameters.items():
-            if paramValue.full_name.startswith(fullName):
-                # Openml saves the type information in a weird way so we have to write a special piece of code
-                if paramValue.parameter_name == 'dtype':
-                    componentParams[str(paramValue.parameter_name)] = np.float64
-                    # typeValue = self.parseValue(paramValue.value)['value']
-                    # if (typeValue == 'np.float64'):
-                    #    componentParams[str(paramValue.parameter_name)] = np.float64
-                    # else:
-                    #    componentParams[str(paramValue.parameter_name)] = typeValue
-                elif paramValue.parameter_name == 'random_state':
-                    componentParams[str(paramValue.parameter_name)] = 14766
-                else:
-                    componentParams[str(paramValue.parameter_name)] = parse_value(paramValue.value)
-        edges.append((prefix, fullName, componentParams))
-        # comp = Component(prefix, fullName, componentParams)
-        # experimentObject.components.append(comp)
-    return edges
-
 
 def skpipeline_to_edge_list(pipeline, setup):
     def get_fully_qualified_name(o):
@@ -182,22 +193,38 @@ def run_to_workload(run_id, execution_environment):
         print ('ERROR AT FLOW:{} and RUN: {}'.format(flow.flow_id, run_id))
 
 
-import os
+def get_setup_and_pipeline(runs_file, limit=1000):
+    runs_df = pd.read_csv(runs_file, index_col=False)[0:limit]
+    setup_flow = []
+    for index, row in runs_df.iterrows():
+        flow = repair(flows.get_flow(row['flow_id']))
+        if flow == 'ERROR':
+            print 'flow {} is not repairable'.format(row['flow_id'])
+        else:
+            pipeline = flows.flow_to_sklearn(flow)
+            setup = setups.get_setup(row['setup_id'])
+            setup_flow.append((setup, pipeline))
 
-config.cache_directory = os.path.expanduser(OPENML_ROOT_DIRECTORY + '/cache')
-flow_list = pd.DataFrame.from_dict(flows.list_flows(), orient='index')
-allowed = flow_list[flow_list.full_name.str.startswith('sklearn.pipeline')].id
-n = len(allowed) / 100
-run_list = []
-for i in range(n):
-    run_list.extend(runs.list_runs(size=10000, task=[31], flow=allowed[(i * 100):(i + 1) * 100]).keys())
-#
-execution_environment = ExecutionEnvironment('dedup')
-for r in run_list[:100]:
-    run_to_workload(r, execution_environment)
-# run_to_workload(2081539, execution_environment)
+    return setup_flow
 
-import matplotlib.pyplot as plt
 
-execution_environment.workload_dag.plot_graph(plt, vertex_freq=True, edge_oper=True, edge_time=True)
-plt.show()
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1:
+        SOURCE_CODE_ROOT = sys.argv[1]
+    else:
+        SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
+                           '-optimizer/ '
+    sys.path.append(SOURCE_CODE_ROOT)
+    from paper.experiment_helper import Parser
+
+    parser = Parser(sys.argv)
+    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    ROOT = parser.get('root', DEFAULT_ROOT)
+    openml_task = int(parser.get('task', 31))
+    ROOT_DATA_DIRECTORY = ROOT + '/data'
+    openml_dir = ROOT_DATA_DIRECTORY + '/openml'
+    download_dataset(openml_dir=openml_dir, task_id=openml_task)
+    flow_ids = get_scikitlearn_flows(openml_dir=openml_dir)
+    get_runs(openml_dir=openml_dir, flow_ids=flow_ids, task_id=openml_task)

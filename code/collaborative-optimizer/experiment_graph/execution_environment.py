@@ -3,7 +3,6 @@ import copy
 
 import os
 
-
 from data_storage import SimpleStorageManager
 from experiment_graph.graph.graph_representations import WorkloadDag, ExperimentGraph
 # Reserved word for representing super graph.
@@ -135,10 +134,10 @@ class ExecutionEnvironment(object):
 
         root_hash = self.construct_readable_root_hash(loc, extra_params)
         if self.workload_dag.has_node(root_hash):
-            print 'loading root node {} from workload graph'.format(root_hash)
+            # print 'loading root node {} from workload graph'.format(root_hash)
             return self.workload_dag.get_node(root_hash)['data']
         elif self.experiment_graph.has_node(root_hash):
-            print 'loading root node {} from history graph'.format(root_hash)
+            # print 'loading root node {} from history graph'.format(root_hash)
             root = copy.deepcopy(self.experiment_graph.graph.nodes[root_hash])
             root['data'].execution_environment = self
             root['data'].underlying_data = self.experiment_graph.retrieve_data(root_hash)

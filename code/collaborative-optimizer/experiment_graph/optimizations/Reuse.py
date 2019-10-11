@@ -175,16 +175,16 @@ class LinearTimeReuse(Reuse):
 
     def run(self, vertex, workload, history, verbose):
         workload_subgraph = workload.compute_execution_subgraph(vertex)
-        materialized_vertices, all_models = self.forward_pass(workload_subgraph=workload_subgraph,
-                                                              e_graph=history.graph, verbose=verbose)
-        materialized_vertices, execution_vertices, all_models = self.backward_pass(
+        materialized_vertices, to_warmstart = self.forward_pass(workload_subgraph=workload_subgraph,
+                                                                e_graph=history.graph, verbose=verbose)
+        materialized_vertices, execution_vertices, to_warmstart = self.backward_pass(
             terminal=vertex,
             workload_subgraph=workload_subgraph,
             materialized_vertices=materialized_vertices,
-            warmstarting_candidates=all_models,
+            to_warmstart=to_warmstart,
             verbose=verbose)
 
-        warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, all_models)
+        warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, to_warmstart)
         if verbose == 1:
             print 'materialized_vertices: {}'.format(materialized_vertices)
             print 'warmstarting_candidates: {}'.format(warmstarting_candidates)
@@ -202,13 +202,13 @@ class LinearTimeReuse(Reuse):
         :return:
         """
         materialized_vertices = set()
-        warmstarting_candidates = set()
+        to_warmstart = set()
         recreation_costs = {node: -1 for node in workload_subgraph.nodes}
         for n in nx.topological_sort(workload_subgraph):
             if not e_graph.has_node(n):
                 # for sk models that are not in experiment graph, we add them to warmstarting candidate
                 if workload_subgraph.nodes[n]['type'] == 'SK_Model':
-                    warmstarting_candidates.add(n)
+                    to_warmstart.add(n)
                 continue
 
             if workload_subgraph.nodes[n]['data'].computed:
@@ -224,7 +224,7 @@ class LinearTimeReuse(Reuse):
                     # candidates to see if we can warmstart them with a model that is materialized
                     # TODO is this valid?
                     if workload_subgraph.nodes[n]['type'] == 'SK_Model':
-                        warmstarting_candidates.add(n)
+                        to_warmstart.add(n)
                 elif node['load_cost'] < execution_cost:
 
                     recreation_costs[n] = node['load_cost']
@@ -232,16 +232,16 @@ class LinearTimeReuse(Reuse):
                 else:
                     recreation_costs[n] = execution_cost
         if verbose == 1:
-            print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
-        return materialized_vertices, warmstarting_candidates
+            print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart)
+        return materialized_vertices, to_warmstart
 
     @staticmethod
-    def backward_pass(terminal, workload_subgraph, materialized_vertices, warmstarting_candidates, verbose):
+    def backward_pass(terminal, workload_subgraph, materialized_vertices, to_warmstart, verbose):
 
         execution_set = set()
         prevs = workload_subgraph.predecessors
         final_materialized_vertices = set()
-        final_warmstarting_cadidates = set()
+        final_to_warmstart = set()
         queue = deque([(terminal, prevs(terminal))])
         while queue:
             current, prev_nodes_list = queue.pop()
@@ -249,14 +249,14 @@ class LinearTimeReuse(Reuse):
             if current in materialized_vertices:
                 final_materialized_vertices.add(current)
             elif not workload_subgraph.nodes[current]['data'].computed:
-                if current in warmstarting_candidates:
-                    final_warmstarting_cadidates.add(current)
+                if current in to_warmstart:
+                    final_to_warmstart.add(current)
 
                 for prev_node in prev_nodes_list:
                     if prev_node not in execution_set:
                         queue.append((prev_node, prevs(prev_node)))
 
         if verbose == 1:
-            print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
+            print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart)
 
-        return final_materialized_vertices, execution_set, final_warmstarting_cadidates
+        return final_materialized_vertices, execution_set, final_to_warmstart
