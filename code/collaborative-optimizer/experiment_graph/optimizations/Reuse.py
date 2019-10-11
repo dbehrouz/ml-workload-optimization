@@ -260,3 +260,74 @@ class LinearTimeReuse(Reuse):
             print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart)
 
         return final_materialized_vertices, execution_set, final_to_warmstart
+
+
+class BottomUpReuse(Reuse):
+    """
+    This is a better baseline which only returns the materialized node that are needed and prunes the rest.
+    Our Linear time should still perform better than this because in the linear time reuse, if a vertex has higher
+    load cost, we choose to recompute it. However, in Bottom Up we always return the materialized vertex.
+    Bottom Up is faster than AllMaterialized, because in Bottom Up we only return the materialized node which are needed.
+    Essentially, bottom up reuse is very similar to the the backward-pass of the reuse algorithm which
+    stops traversing the vertex of a materialized node.
+    """
+    NAME = 'bottomup'
+
+    def __init__(self):
+        Reuse.__init__(self)
+
+    def run(self, vertex, workload, history, verbose):
+        e_subgraph = workload.compute_execution_subgraph(vertex)
+        materialized_vertices, execution_vertices, model_candidates = self.reverse_bfs(terminal=vertex,
+                                                                                       workload_subgraph=e_subgraph,
+                                                                                       history=history.graph)
+        warmstarting_candidates = self.check_for_warmstarting(history.graph, e_subgraph, model_candidates)
+        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
+
+    def reverse_bfs(self, terminal, workload_subgraph, history):
+        """
+        perform a reverse bfs on workload stop searching further if the node exist in history
+        the search doesn't continue on parents of a node which exists in the history
+        :param terminal:
+        :param workload_subgraph:
+        :param history:
+        :return:
+        """
+
+        materialized_set = set()
+        model_candidates = set()
+        warmstarting_candidates = set()
+        execution_set = {terminal}
+        if workload_subgraph.nodes[terminal]['data'].computed:
+            return materialized_set, execution_set, warmstarting_candidates
+        if self.is_mat(history, terminal):
+            return {terminal}, execution_set, warmstarting_candidates
+        if workload_subgraph.nodes[terminal]['type'] == 'SK_Model':
+            model_candidates.add(terminal)
+
+        prevs = workload_subgraph.predecessors
+
+        queue = deque([(terminal, prevs(terminal))])
+        while queue:
+            current, prev_nodes_list = queue[0]
+            try:
+
+                prev_node = next(prev_nodes_list)
+                if prev_node not in execution_set:
+                    # The next node should always be added to the execution set even if it is materialized in the
+                    # history which results as the first node in the execution path
+                    execution_set.add(prev_node)
+                    workload_node = workload_subgraph.nodes[prev_node]
+
+                    if workload_node['data'].computed:
+                        pass
+                    elif self.is_mat(history, prev_node):
+                        materialized_set.add(prev_node)
+                    else:
+                        if workload_node['type'] == 'SK_Model':
+                            model_candidates.add(prev_node)
+                        queue.append((prev_node, prevs(prev_node)))
+
+            except StopIteration:
+                queue.popleft()
+        return materialized_set, execution_set, model_candidates
