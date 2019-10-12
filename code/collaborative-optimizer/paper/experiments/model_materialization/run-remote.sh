@@ -2,7 +2,7 @@
 
 file_name=$1
 
-current_date=$(date +'%Y-%m-%d')
+current_date=$(date +'%Y-%m-%d/%H-%M')
 experiment='openml'
 root='/home/behrouz/collaborative-optimization'
 result_path=${root}'/experiment_results/remote/model_materialization/openml/'${file_name}'/'${current_date}'.csv'

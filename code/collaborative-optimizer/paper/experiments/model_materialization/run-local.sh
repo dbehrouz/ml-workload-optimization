@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-current_date=$(date +'%Y-%m-%d')
+current_date=$(date +'%Y-%m-%d/%H-%M')
 experiment='openml'
 root='/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 result_path=${root}'/experiment_results/local/model_materialization/openml/'${current_date}'.csv'

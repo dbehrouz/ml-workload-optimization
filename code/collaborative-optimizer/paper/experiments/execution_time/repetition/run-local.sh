@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-current_date=$(date +'%Y-%m-%d')
+current_date=$(date +'%Y-%m-%d/%H-%M')
 experiment='kaggle_home_credit'
 root='/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 result_path=${root}'/experiment_results/local/execution_time/repetition/kaggle_home_credit/'${current_date}'.csv'
