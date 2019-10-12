@@ -11,8 +11,6 @@ import sys
 import uuid
 from datetime import datetime
 
-from Reuse import LinearTimeReuse
-
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -28,6 +26,7 @@ from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
