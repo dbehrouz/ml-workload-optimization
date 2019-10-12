@@ -11,4 +11,4 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/execution_time/different_workloads/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=32.0' 'method=optimized'
+'mat_budget=5.0' 'method=optimized'

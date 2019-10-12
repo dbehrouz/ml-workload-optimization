@@ -1,3 +1,4 @@
+import cPickle as pickle
 import errno
 import os
 
@@ -6,6 +7,7 @@ import pandas as pd
 from openml import tasks, datasets, runs, flows, setups, config
 
 OPENML_ROOT_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/data/openml'
+FLOW_DICTIONARY = 'flows.pickle'
 EXCLUDE_FLOWS = [5981, 5987, 5983, 5981, 6223]
 
 
@@ -194,17 +196,31 @@ def run_to_workload(run_id, execution_environment):
         print ('ERROR AT FLOW:{} and RUN: {}'.format(flow.flow_id, run_id))
 
 
-def get_setup_and_pipeline(runs_file, limit=1000):
+def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
+    flows_path = openml_dir + '/' + FLOW_DICTIONARY
+    if os.path.exists(flows_path):
+        with open(flows_path, 'rb') as g_input:
+            flow_dict = pickle.load(g_input)
+    else:
+        flow_dict = {}
     runs_df = pd.read_csv(runs_file, index_col=False)[0:limit]
     setup_flow = []
     for index, row in runs_df.iterrows():
-        flow = repair(flows.get_flow(row['flow_id']))
+        if row['flow_id'] in flow_dict:
+            flow = flow_dict[row['flow_id']]
+        else:
+            flow = repair(flows.get_flow(row['flow_id']))
+            flow_dict[row['flow_id']] = flow
+
         if flow == 'ERROR':
             print 'flow {} is not repairable'.format(row['flow_id'])
         else:
             pipeline = flows.flow_to_sklearn(flow)
             setup = setups.get_setup(row['setup_id'])
             setup_flow.append((setup, pipeline))
+
+    with open(flows_path, 'wb') as output:
+        pickle.dump(flow_dict, output, pickle.HIGHEST_PROTOCOL)
 
     return setup_flow
 

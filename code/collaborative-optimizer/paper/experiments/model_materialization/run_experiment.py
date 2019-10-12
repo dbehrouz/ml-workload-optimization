@@ -65,7 +65,6 @@ limit = int(parser.get('limit', 20))
 openml_task = int(parser.get('task', 31))
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 config.set_cache_directory(OPENML_DIR + '/cache')
-OPENML_DATASET = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
 
 result_file = parser.get('result', ROOT + '/experiment_results/local/model_materialization/openml/test.csv')
 profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
@@ -80,8 +79,9 @@ if not os.path.exists(os.path.dirname(result_file)):
 method = parser.get('method', 'optimized')
 
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
-OPENML_DATASET = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
-setup_and_pipelines = get_setup_and_pipeline(OPENML_DATASET + '/all_runs.csv', limit)
+OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
+setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OPENML_TASK + '/all_runs.csv',
+                                             limit=limit)
 
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
@@ -111,25 +111,32 @@ def run(executor, workload):
 
 best_workload = None
 best_score = -1
+best_setup = -1
+best_pipeline = -1
 for setup, pipeline in setup_and_pipelines:
 
     workload = get_workload(method, setup, pipeline)
     start = datetime.now()
     # print '{}-Start of {} with pipeline {}, execution'.format(start, workload_name)
     success = run(executor, workload)
-    # success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY)
+    end_current = datetime.now()
+    run_time_current = (end_current - start).total_seconds()
     current_score = workload.get_score()
     if best_score == -1:
         best_score = current_score
-    print 'current score: {}'.format(current_score)
-    print 'best score: {}'.format(best_score)
+        best_setup = setup.setup_id
+        best_pipeline = setup.flow_id
     if best_workload is not None:
-        success = run(executor, workload)
+        start_best_workload = datetime.now()
+        success = run(executor, best_workload)
+        run_time_best = (datetime.now() - start_best_workload).total_seconds()
         if current_score > best_score:
-            print 'changing the baseline workload'
             best_score = current_score
             best_workload = workload
+            best_setup = setup.setup_id
+            best_pipeline = setup.flow_id
     else:
+        run_time_best = run_time_current
         best_workload = workload
         best_score = current_score
     end = datetime.now()
@@ -148,6 +155,7 @@ for setup, pipeline in setup_and_pipelines:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                                  EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                                  elapsed, current_score, best_score))
+            '{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                                              EXPERIMENT, setup.flow_id, setup.setup_id, method,
+                                                              current_score, run_time_current, best_pipeline,
+                                                              best_setup, best_score, run_time_best, elapsed))

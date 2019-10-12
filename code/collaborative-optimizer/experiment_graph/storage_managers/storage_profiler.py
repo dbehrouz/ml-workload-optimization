@@ -15,7 +15,7 @@ import json
 
 
 def get_profile(profile_location):
-    print open(profile_location, 'rb').read()
+    #print open(profile_location, 'rb').read()
     return json.loads(open(profile_location, 'rb').read())
 
 
