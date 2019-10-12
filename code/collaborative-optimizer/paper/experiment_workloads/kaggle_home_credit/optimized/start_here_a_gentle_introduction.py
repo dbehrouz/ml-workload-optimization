@@ -658,10 +658,11 @@ if __name__ == "__main__":
                            '-optimizer/ '
     sys.path.append(SOURCE_CODE_ROOT)
     from paper.experiment_helper import Parser
-    from experiment_graph.data_storage import DedupedStorageManager, StorageManagerFactory
+    from experiment_graph.data_storage import StorageManagerFactory
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
+    from experiment_graph.storage_managers import storage_profiler
+
     from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
         StorageAwareMaterializer, HeuristicsMaterializer
 
@@ -671,7 +672,7 @@ if __name__ == "__main__":
     ROOT = parser.get('root', DEFAULT_ROOT)
     ROOT_DATA_DIRECTORY = ROOT + '/data'
     mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-    materializer_type = parser.get('materializer', 'all')
+    materializer_type = parser.get('materializer', 'storage_aware')
     storage_type = parser.get('storage_type', 'dedup')
     if materializer_type == 'storage_aware':
         materializer = StorageAwareMaterializer(storage_budget=mat_budget)
@@ -683,10 +684,10 @@ if __name__ == "__main__":
         raise Exception('invalid materializer: {}'.format(materializer_type))
 
     storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
-
+    profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
     workload = start_here_a_gentle_introduction()
 
-    ee = ExecutionEnvironment(storage_manager, reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(storage_manager)
     ROOT_DATA_DIRECTORY = ROOT + '/data'
 
     if parser.has('experiment_graph'):

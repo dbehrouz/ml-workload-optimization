@@ -136,6 +136,8 @@ class DedupedStorageManager(StorageManager):
             elif self.column_count[ch] > 1:
                 self.column_count[ch] -= 1
 
+        del self.key_value[key]
+
     def store_dataseries(self, column_hash, data_series):
         if column_hash in self.column_store.keys():
             self.column_count[column_hash] += 1

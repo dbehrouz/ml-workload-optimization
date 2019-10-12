@@ -3,9 +3,9 @@ import networkx as nx
 
 def compute_load_costs(graph, cost_profile):
     for n, d in graph.nodes(data=True):
-        if 'load_cost' not in d:
+        if 'profile_load_cost' not in d:
             if d['type'] != 'SuperNode' and d['type'] != 'GroupBy':
-                d['load_cost'] = d['size'] * cost_profile[d['type']]
+                d['profile_load_cost'] = d['size'] * cost_profile[d['type']]
 
 
 def compute_recreation_cost(graph):
@@ -59,39 +59,43 @@ def compute_vertex_potential(graph):
                 potentials[node[0]] = node[1]['score']
         else:
             potentials[node[0]] = 0.0
-
-    # TODO so far the only edges going out of a model are the feature importance operation and score operation which has
-    # two levels
-    for m in ml_models:
-        for _, out in graph.out_edges(m):
-            potentials[out] = potentials[m]
-            for _, outout in graph.out_edges(out):
-                potentials[outout] = potentials[m]
     total_score = 0.0  # for keeping track of the sum of score to compute the score for out of reach nodes
-    for n in reversed(list(nx.topological_sort(graph))):
-        current_score = potentials[n]
-        if current_score > 0:
-            # The node is a ml model, direct evaluation node or a direct test node
-            total_score += current_score
-        else:
-            best_potential = -1
-            terminal = True
-            for _, destination in graph.out_edges(n):
-                terminal = False
-                neighbor_potential = potentials[destination]
-                if neighbor_potential >= best_potential:
-                    best_potential = neighbor_potential
-            if best_potential == -1 and not terminal:
-                raise Exception('something went wrong, the node {} has no neighbors and is not a terminal node')
-            elif best_potential == -1:
-                potentials[n] = 0
+    if len(ml_models) > 0:
+        # TODO so far the only edges going out of a model are the feature importance operation and score operation
+        #  which has two levels
+        for m in ml_models:
+            for _, out in graph.out_edges(m):
+                potentials[out] = potentials[m]
+                for _, outout in graph.out_edges(out):
+                    potentials[outout] = potentials[m]
+        for n in reversed(list(nx.topological_sort(graph))):
+            current_score = potentials[n]
+            if current_score > 0:
+                # The node is a ml model, direct evaluation node or a direct test node
+                total_score += current_score
             else:
-                potentials[n] = best_potential
-                total_score += best_potential
-
-    for n in graph.nodes(data=True):
-        n[1]['potential'] = potentials[n[0]]
-        n[1]['n_potential'] = potentials[n[0]] / total_score
+                best_potential = -1
+                terminal = True
+                for _, destination in graph.out_edges(n):
+                    terminal = False
+                    neighbor_potential = potentials[destination]
+                    if neighbor_potential >= best_potential:
+                        best_potential = neighbor_potential
+                if best_potential == -1 and not terminal:
+                    raise Exception('something went wrong, the node {} has no neighbors and is not a terminal node')
+                elif best_potential == -1:
+                    potentials[n] = 0
+                else:
+                    potentials[n] = best_potential
+                    total_score += best_potential
+    if total_score > 0:
+        for n in graph.nodes(data=True):
+            n[1]['potential'] = potentials[n[0]]
+            n[1]['n_potential'] = potentials[n[0]] / total_score
+    else:
+        for n in graph.nodes(data=True):
+            n[1]['potential'] = 0
+            n[1]['n_potential'] = 0
 
 
 def cost(graph, source, destination):

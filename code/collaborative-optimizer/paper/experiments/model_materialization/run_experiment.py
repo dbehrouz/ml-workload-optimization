@@ -19,6 +19,10 @@ else:
     SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
                        '-optimizer/ '
 sys.path.append(SOURCE_CODE_ROOT)
+# Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
+if '/home/zeuchste/git/scikit-learn' in sys.path:
+    sys.path.remove('/home/zeuchste/git/scikit-learn')
+
 from paper.experiment_helper import Parser
 from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageManager
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
@@ -106,7 +110,7 @@ def run(executor, workload):
 
 
 best_workload = None
-best_score = 0.0
+best_score = -1
 for setup, pipeline in setup_and_pipelines:
 
     workload = get_workload(method, setup, pipeline)
@@ -115,6 +119,8 @@ for setup, pipeline in setup_and_pipelines:
     success = run(executor, workload)
     # success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY)
     current_score = workload.get_score()
+    if best_score == -1:
+        best_score = current_score
     print 'current score: {}'.format(current_score)
     print 'best score: {}'.format(best_score)
     if best_workload is not None:
@@ -142,6 +148,6 @@ for setup, pipeline in setup_and_pipelines:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                            EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                            elapsed))
+            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                                  EXPERIMENT, setup.flow_id, setup.setup_id, method,
+                                                  elapsed, current_score, best_score))

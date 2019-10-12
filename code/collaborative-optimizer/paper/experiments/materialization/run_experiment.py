@@ -19,6 +19,10 @@ else:
     SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
 
 sys.path.append(SOURCE_CODE_ROOT)
+
+# Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
+if '/home/zeuchste/git/scikit-learn' in sys.path:
+    sys.path.remove('/home/zeuchste/git/scikit-learn')
 from paper.experiments.scenario import get_kaggle_optimized_scenario
 from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.data_storage import DedupedStorageManager

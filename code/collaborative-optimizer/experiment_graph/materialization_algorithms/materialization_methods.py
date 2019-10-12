@@ -80,8 +80,7 @@ class Materializer(object):
             if node_id in should_materialize:
                 if not attributes['mat']:
                     artifact = workload_dag.graph.nodes[node_id]['data']
-                    experiment_graph.materialize(node_id=node_id,
-                                                 artifact=artifact)
+                    experiment_graph.materialize(node_id=node_id, artifact=artifact)
             else:
                 if attributes['mat']:
                     print 'unmaterialize node {}'.format(node_id)
@@ -117,8 +116,8 @@ class AllMaterializer(Materializer):
         super(AllMaterializer, self).__init__(0)
 
     def run(self, experiment_graph, workload_dag, verbose=0):
-        return list(set([n for n, t in workload_dag.graph.nodes(data='type') if
-                         t != 'SuperNode' and t != 'GroupBy'] +
+        return list(set([n for n, d in workload_dag.graph.nodes(data=True) if
+                         d['type'] != 'SuperNode' and d['type'] != 'GroupBy' and d['data'].computed] +
                         [n for n, d in experiment_graph.graph.nodes(data='mat') if d]))
 
 

@@ -455,13 +455,13 @@ class ExperimentGraph(BaseGraph):
                 assert isinstance(artifact, Dataset)
                 # or node['type'] == 'Feature':
                 self.data_storage.put(node_id, artifact.underlying_data)
-                artifact.underlying_data.pandas_df = None
+                # artifact.underlying_data.pandas_df = None
                 node['data'] = copy.copy(artifact)
 
             elif node['type'] == 'Feature':
                 assert isinstance(artifact, Feature)
                 self.data_storage.put(node_id, artifact.underlying_data)
-                artifact.underlying_data.pandas_series = None
+                # artifact.underlying_data.pandas_series = None
                 node['data'] = copy.copy(artifact)
             else:
                 node['data'] = copy.copy(artifact)
@@ -490,6 +490,7 @@ class ExperimentGraph(BaseGraph):
             # Only artifacts which are computed should be updated
             if node_attributes['data'].computed:
                 self.add_node_to_experiment_graph(node_id, node_attributes)
+                self.compute_load_cost(node_id, node_attributes['data'])
 
             # Supernodes by are never computed, we add them when all the incoming nodes should be computed
             elif node_attributes['type'] == 'SuperNode':
@@ -507,6 +508,7 @@ class ExperimentGraph(BaseGraph):
             if data['executed']:
                 if s in self.graph.nodes and d in self.graph.nodes:
                     self.graph.add_edge(s, d, **data)
+
         # self.graph.add_edges_from(workload.graph.edges(data=True))
 
     def add_node_to_experiment_graph(self, node_id, node_attributes):
@@ -521,3 +523,23 @@ class ExperimentGraph(BaseGraph):
             self.graph.add_node(node_id, **eg_attributes)
         else:
             self.graph.nodes[node_id]['meta_freq'] += 1
+
+    def compute_load_cost(self, node_id, artifact):
+        """
+        Since using a profile to estimate the load cost gives us not accurate result, we actually add a node
+        compute its load cost and then remove it from the graph
+        :param workload:
+        :return:
+        """
+
+        if not self.graph.has_node(node_id):
+            raise Exception('Every vertex should be in Experiment Graph by now !!!')
+
+        if 'load_cost' not in self.graph.nodes[node_id]:
+            self.materialize(node_id, artifact)
+            start = datetime.now()
+            dummy = self.retrieve_data(node_id)
+            load_time = ((datetime.now() - start).microseconds / 1000.0)
+            self.unmaterialize(node_id)
+            del dummy
+            self.graph.nodes[node_id]['load_cost'] = load_time

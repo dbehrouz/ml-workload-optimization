@@ -8,7 +8,6 @@ which utilizes our Experiment Graph for optimizing the workload.
 Number of artifacts: 280
 Total artifact size: 10 GB
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
@@ -569,15 +568,14 @@ if __name__ == "__main__":
     from experiment_graph.data_storage import DedupedStorageManager
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
     workload = fork_cridata_start_here_a_gentle_introduction()
 
-    mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer()
+    mat_budget = 5.0 * 1024.0 * 1024.0
+    sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager())
 
     root_data = ROOT + '/data'
     # database_path = \

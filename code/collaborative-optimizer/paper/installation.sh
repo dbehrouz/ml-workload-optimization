@@ -2,7 +2,7 @@
 
 # install packages
 pip2 install -U pandas --user
-pip2 install -U scikit-learn --user
+pip2 install -U "scikit-learn==0.20.2" --user
 pip2 install -U networkx --user
 pip2 install -U kaggle --user
 pip2 install -U matplotlib --user
