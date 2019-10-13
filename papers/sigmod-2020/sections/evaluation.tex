@@ -181,7 +181,28 @@ In this experiment, we run a typical scenario, where users always compare the sc
 The OpenML platform assigns a time-stamp to every executed workload.
 In this experiment, we execute all the OpenML workloads one by one and keep track of the best performing workload.
 In every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
-\todo[inline]{Since our algorithm materializes high-quality models the moment they appear in a new workload. I expect our collaborative optimizer executes the above scenario faster than baseline since it always reuses the best performing model, but the baseline needs to re-execute the pipeline of the best performing model to recreate its result.}
+
+
+\begin{figure}
+\begin{subfigure}[b]{\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{../images/experiment-results/openml/model_materialization/cumulative-runtime.pgf}%
+}
+\caption{Execution of OpenML pipelines}
+\end{subfigure}
+\begin{subfigure}[b]{\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{../images/experiment-results/openml/model_materialization/bestpipeline-overhead.pgf}%
+}
+
+\caption{Overhead of re-running the best pipeline}
+\end{subfigure}
+\caption{Model materialization}
+\label{exp-model-materialization}
+\end{figure}
+
 \subsection{Reuse and Warmstarting}
 In this section, we compare our reuse algorithm we 2 baselines.
 Baseline 1 loads every materialized artifact.

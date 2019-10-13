@@ -98,5 +98,4 @@ for workload in workloads:
         the_file.write(
             '{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
                                                EXPERIMENT, workload_name, materializer_type, reuse_type,
-                                               mat_budget,
-                                               elapsed))
+                                               mat_budget, elapsed))

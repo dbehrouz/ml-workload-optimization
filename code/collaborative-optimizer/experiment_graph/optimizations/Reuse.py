@@ -17,6 +17,10 @@ class Reuse:
             return AllMaterializedReuse()
         elif reuse_type == LinearTimeReuse.NAME:
             return LinearTimeReuse()
+        elif reuse_type == AllComputeReuse.NAME:
+            return AllComputeReuse()
+        elif reuse_type == BottomUpReuse.NAME:
+            return BottomUpReuse()
         else:
             raise Exception('Undefined Reuse type: {}'.format(reuse_type))
 
@@ -149,7 +153,7 @@ class AllMaterializedReuse(Reuse):
             execution_set.add(n)
             if not e_graph.has_node(n):
                 # for sk models that are not in experiment graph, we add them to warmstarting candidate
-                if workload_subgraph[n]['type'] == 'SK_Model':
+                if workload_subgraph.nodes[n]['type'] == 'SK_Model':
                     warmstarting_candidates.add(n)
                 continue
             elif e_graph.nodes[n]['mat']:
