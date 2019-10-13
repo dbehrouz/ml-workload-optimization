@@ -25,18 +25,16 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=32.0' 'method=optimized' 'materializer=storage_aware' 'reuse_type=all_compute' 'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=32.0' 'method=optimized' 'materializer=simple' 'reuse_type=all_compute'  'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=32.0' 'method=optimized' 'materializer=storage_aware' 'reuse_type=bottomup' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=32.0' 'method=optimized' 'materializer=simple' 'reuse_type=bottomup'  'profile='${root}'/data/profiles/cloud-41-dedup'
 
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=storage_aware' 'reuse_type=all_compute' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/reuse/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=simple' 'reuse_type=all_compute'  'profile='${root}'/data/profiles/cloud-41-dedup'

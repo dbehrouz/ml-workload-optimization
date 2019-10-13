@@ -74,6 +74,10 @@ class Reuse:
         warmstarting_candidates = set()
         for m in all_models:
             training_datasets = list(workload.predecessors(m))
+            # TODO there seems to be a bug here, I have to add this for now
+            #  we should fix it later
+            if len(training_datasets) != 1:
+                continue
             assert len(training_datasets) == 1
             training_dataset = training_datasets[0]
             if self.in_history_and_mat(history, training_dataset):
