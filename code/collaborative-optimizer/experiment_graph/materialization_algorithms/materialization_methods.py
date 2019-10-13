@@ -33,7 +33,7 @@ class Materializer(object):
             else:
                 # only compute the utility for the vertices which are already
                 # materialized or are in the workload graph
-                if node[1]['mat'] or node[0] in w_dag.nodes():
+                if node[1]['mat'] or (w_dag.has_node(node[0]) and w_dag.nodes[node[0]]['data'].computed):
                     node_info = NodeInfo(node[0], node[1]['n_recreation_cost'],
                                          node[1]['n_potential'],
                                          node[1]['size'])

@@ -7,11 +7,11 @@ result_path=${root}'/experiment_results/local/materialization/kaggle_home_credit
 
 python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=5.0' 'method=optimized' 'materializer=simple'
+'mat_budget=5.0' 'method=optimized' 'materializer=simple' 'reuse_type=all_compute'
 
 python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=5.0' 'method=optimized' 'materializer=storage_aware'
+'mat_budget=5.0' 'method=optimized' 'materializer=storage_aware' 'reuse_type=all_compute'
 #
 #python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 #${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \

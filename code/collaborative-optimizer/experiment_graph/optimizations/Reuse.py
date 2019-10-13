@@ -286,7 +286,7 @@ class BottomUpReuse(Reuse):
                                                                                        workload_subgraph=e_subgraph,
                                                                                        history=history.graph)
         warmstarting_candidates = self.check_for_warmstarting(history.graph, e_subgraph, model_candidates)
-        return materialized_vertices, execution_vertices, warmstarting_candidates, self.history_reads
+        return materialized_vertices, execution_vertices, warmstarting_candidates
 
     def reverse_bfs(self, terminal, workload_subgraph, history):
         """

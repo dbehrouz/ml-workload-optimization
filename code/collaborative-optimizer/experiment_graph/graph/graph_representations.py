@@ -508,6 +508,8 @@ class ExperimentGraph(BaseGraph):
             if data['executed']:
                 if s in self.graph.nodes and d in self.graph.nodes:
                     self.graph.add_edge(s, d, **data)
+        import gc
+        gc.collect()
 
         # self.graph.add_edges_from(workload.graph.edges(data=True))
 

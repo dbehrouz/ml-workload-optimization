@@ -126,22 +126,21 @@ In this experiment, we run the workloads of Table \ref{kaggle-workload} under di
 Figure \ref{exp-sa-vs-simple-size} shows the total run-time of all the workloads under different materialization budgets for the storage-aware and simple materialization algorithms.
 \todo[inline]{There seems to be a bug reporting the result.}
 \begin{figure}
+\begin{subfigure}[b]{\linewidth}
 \centering
 %\includegraphics[width=\linewidth]{../images/experiment-results/kaggle_home_credit/execution_time/repetition/start_here_a_gentle_introduction}
  \resizebox{0.5\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/run-time.pgf}%
 }
-\caption{Total run time of all the workloads with different budgets (SA = storage-aware materialization, SM = simple materialization)}
+\caption{Total run time of all the workloads with different budgets}
 \label{exp-runtime-vs-mat-budget}
-\end{figure}
-
-\begin{figure}
+\end{subfigure}
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/size-8.pgf}%
 }
-\caption{Budget = 8}
+\caption{Budget = 8 GB}
 \end{subfigure}%
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -149,7 +148,7 @@ Figure \ref{exp-sa-vs-simple-size} shows the total run-time of all the workloads
 \input{../images/experiment-results/kaggle_home_credit/materialization/size-16.pgf}%
 }
 
-\caption{Budget = 16}
+\caption{Budget = 16 GB}
 \end{subfigure}
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -157,16 +156,16 @@ Figure \ref{exp-sa-vs-simple-size} shows the total run-time of all the workloads
 \input{../images/experiment-results/kaggle_home_credit/materialization/size-32.pgf}%
 }
 
-\caption{Budget = 32}
+\caption{Budget = 32 GB}
 \end{subfigure}%
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/size-64.pgf}%
 }
-\caption{Budget = 64}
+\caption{Budget = 64 GB}
 \end{subfigure}
-\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets \todo[inline]{add total size and a straight line for budget}}
+\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets (SA = storage-aware materialization, SM = simple materialization)  \todo[inline]{add total size and a straight line for budget}}
 \label{exp-sa-vs-simple-size}
 \end{figure}
 Figure \ref{exp-sa-vs-simple-size} shows the real size of the stored artifacts under different budgets.
