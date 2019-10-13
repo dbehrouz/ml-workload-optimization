@@ -79,10 +79,11 @@ workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
-    print '{}-Start of {} workload execution'.format(start, workload_name)
+    print '{} Start-workload: {}, reuse_type: {}, mat_type: {}'.format(start, workload_name, reuse_type,
+                                                                       materializer_type)
     success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     end = datetime.now()
-    print '{}-End of {} workload execution'.format(end, workload_name)
+    print '{} End-workload: {}, reuse_type: {}: mat_type: {}'.format(end, workload_name, reuse_type, materializer_type)
 
     elapsed = (end - start).total_seconds()
 

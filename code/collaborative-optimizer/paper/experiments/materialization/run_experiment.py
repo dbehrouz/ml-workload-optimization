@@ -51,7 +51,6 @@ mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 
-
 result_file = parser.get('result', ROOT + '/experiment_results/local/materialization/mock/test.csv')
 profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
@@ -77,10 +76,12 @@ workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
-    print '{}-Start of {} workload execution'.format(start, workload_name)
+    print '{} Start-workload: {}, mat_type: {}, budget: {}'.format(start, workload_name, materializer_type,
+                                                                   mat_budget)
     success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     end = datetime.now()
-    print '{}-End of {} workload execution'.format(end, workload_name)
+    print '{} End-workload: {}, mat_type: {}, budget: {}'.format(end, workload_name, materializer_type,
+                                                                 mat_budget)
 
     elapsed = (end - start).total_seconds()
 
