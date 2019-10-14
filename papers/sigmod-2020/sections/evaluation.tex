@@ -180,25 +180,25 @@ In this experiment, we run a typical scenario, where users always compare the sc
 The OpenML platform assigns a time-stamp to every executed workload.
 In this experiment, we execute all the OpenML workloads one by one and keep track of the best performing workload.
 In every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
-
+Figure \ref{exp-model-materialization} shows the result.
+\todo[inline]{plot another figure, showing after how many repeated execution of the best pipeline did our system materializes it. It should be after 1 Unless the best pipeline has a very high run time.}
 
 \begin{figure}
-\begin{subfigure}[b]{\linewidth}
+\begin{subfigure}[b]{0.5\linewidth}
 \centering
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/openml/model_materialization/cumulative-runtime.pgf}%
 }
-\caption{Execution of OpenML pipelines}
-\end{subfigure}
-\begin{subfigure}[b]{\linewidth}
+\caption{Combined run-time}
+\end{subfigure}%
+\begin{subfigure}[b]{0.5\linewidth}
 \centering
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/openml/model_materialization/bestpipeline-overhead.pgf}%
 }
-
-\caption{Overhead of re-running the best pipeline}
+\caption{Best pipeline run-time}
 \end{subfigure}
-\caption{Model materialization}
+\caption{Effect of model materialization for OpenML workloads (CO = Collaborative Optimizer, OML = OpenML Default}
 \label{exp-model-materialization}
 \end{figure}
 
@@ -220,7 +220,7 @@ In this section, we compare our reuse algorithm we 2 baselines.
 
 \caption{Storage-aware}
 \end{subfigure}
-\caption{Comparison of our linear reuse algorithm with two baselines under different materialization schemes (LN = linear, ALL\_C=all compute, ALL\_M = all materialized).}
+\caption{Comparison of our linear reuse algorithm with two baselines under different materialization schemes (LN = linear, ALL\_C = all compute, ALL\_M = all materialized).}
 \end{figure}
 
 \subsection{Discussion}
