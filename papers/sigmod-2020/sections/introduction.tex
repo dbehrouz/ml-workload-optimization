@@ -2,33 +2,33 @@
 % Opening
 Machine learning (ML) plays an important role in business, industry, and academia. 
 Developing effective ML applications requires knowledge in statistics, big data, and ML systems as well as domain expertise.
-Therefore, ML application development is rarely an individual effort and requires collaborations between different ML users.
+Therefore, ML application development is rarely an individual effort and requires collaborations between different users.
 To this end, recent efforts attempt to enable easy collaboration between ML users.
 Platforms such as AzureML \cite{team2016azureml}, Kaggle \cite{kagglewebsite}, and Google Colabratory \cite{googlecolab} provide a collaborative environment where users share their scripts and results in Jupyter notebooks \cite{Kluyver:2016aa}.
 Other platforms such as OpenML \cite{vanschoren2014openml} and ModelDB \cite{vartak2016m} enable collaboration by storing ML pipelines, hyperparameters, models, and evaluation results in databases, commonly referred to as experiment databases \cite{Vanschoren2012}.
 
 % P
 The collaborative platforms typically act as execution platforms for ML workloads, i.e., ML scripts.
-Some platforms also store ML artifacts.
-ML artifacts refer to raw or intermediate datasets or ML models.
-By automatically exploiting the stored ML artifacts, the collaborative platforms can improve the execution of future workloads by skipping redundant operations and by warmstarting the model training operations using the stored models.
+Some platforms also store artifacts.
+Artifacts refer to raw or intermediate datasets or ML models.
+By automatically exploiting the stored artifacts, the collaborative platforms can improve the execution of future workloads by skipping redundant operations and by warmstarting the model training operations using the stored models.
 However, the existing collaborative platforms lack automatic management of the stored artifacts and require the users to manually search through the artifacts and incorporate them into their workloads.
-In the current collaborative environments, we identify two challenges which prohibit the platforms from automatically utilizing the existing ML artifacts.
-First, the quantity and size of the generated artifacts are large, which renders their storage not feasible.
-Second, machine learning workloads have a complex structure, thus, automatically finding artifacts for reuse and warmstarting is not trivial.
+In the current collaborative environments, we identify two challenges that prohibit the platforms from automatically utilizing the existing artifacts.
+First, the quantity and size of the generated artifacts are large, which renders their storage unfeasible.
+Second, machine learning workloads have a complex structure; thus, automatically finding artifacts for reuse and warmstarting is challenging.
 
 % S
-We propose a solution which addresses these two challenges.
-Our solution only stores the ML artifacts with a high likelihood of reappearing in the future workloads.
-Furthermore, our solution organizes the ML artifacts and offers a fast reuse algorithm.
+We propose a solution to address these two challenges.
+Our solution only stores the artifacts with a high likelihood of reappearing in the future workloads.
+Furthermore, our solution organizes the ML artifacts and offers a linear time reuse algorithm.
 
-We model an ML workload with a directed acyclic graph (DAG), where vertices represent the ML artifacts and edges represent the operations in the workload.
+We model an ML workload with a directed acyclic graph (DAG), where vertices represent the artifacts and edges represent the operations in the workload.
 %Each ML artifact is uniquely identified using the sequence of operations that generated it.
-An ML artifact comprises of two components: meta-data and underlying content.
+An artifact comprises of two components: meta-data and underlying content.
 Meta-data refers to the column names of a dataframe, hyperparameters of a model, and evaluation score of a model on a testing dataset.
 Underlying content refers to the actual data inside a dataframe or the weight vector of a machine learning model.
 We refer to the union of all the workload DAGs as the \textit{Experiment Graph}, which is available to all the users in the collaborative environment.
-The Experiment Graph is itself a DAG which contains all the vertices (ML artifacts) and edges (operations) of the past workload graphs.
+The Experiment Graph is itself a DAG which contains all the vertices (artifacts) and edges (operations) of the past workload graphs.
 The size of the artifact meta-data is small.
 Thus, Experiment Graph stores the meta-data of all the artifacts.
 However, there are two scenarios where storing the underlying data in the Experiment Graph is not suitable, i.e., storage capacity is limited and recomputing an artifact is faster than storing/retrieving the artifact.
@@ -36,17 +36,17 @@ We propose two novel algorithms for materializing the underlying data of the art
 Our materialization algorithms utilize several metrics such as the size, recreation cost, access frequency, operation run-time, and the score of the machine learning models to decide what artifacts to store.
 
 To optimize the execution of incoming ML workloads, we propose a linear time reuse algorithm that decides when to load an artifact from the Experiment Graph and when to recompute the artifact locally.
-Our reuse algorithm receives the DAG representation of an ML workload and generates an optimal execution plan which minimizes the total execution cost, i.e., the sum of the retrieval and the computation costs.
-However, for some ML model artifacts, due to the stochasticity of the training operations, we cannot always directly reuse an existing model from the Experiment Graph.
+Our reuse algorithm receives the DAG representation of an ML workload and generates an optimal execution plan that minimizes the total execution cost, i.e., the sum of the retrieval and the computation costs.
+However, for some ML model artifacts, due to the stochasticity of the training operations and differences in hyperparameters, we cannot always reuse an existing model from the Experiment Graph.
 Instead, we warmstart the training operation of the workload DAG with a model artifact from the Experiment Graph.
 Model warmstarting increases the convergence rate resulting in faster execution time of the model training operations.
 
 In summary, we make the following contributions:
 \begin{itemize}
-\item We propose a system for optimizing the execution of machine learning workloads in collaborative environments.
+\item We propose a component for optimizing the execution of machine learning workloads in collaborative environments.
 \item We present Experiment Graph, a graph representation of the artifacts and operations of the ML workloads.
-\item We propose algorithms for materializing the artifacts in the Experiment Graph under limited storage capacity.
-\item We propose efficient reuse algorithm for generating optimal execution plan of the incoming ML workloads.
+\item We propose algorithms for materializing the artifacts based on their likelihood of future reuse under limited storage capacity.
+\item We propose a linear time reuse algorithm for generating optimal execution plans for the incoming ML workloads.
 \end{itemize}
 
 The rest of this paper is organized as follows.
@@ -54,4 +54,4 @@ In Section \ref{sec-background}, we provide some background information and show
 We introduce our proposed collaborative workload optimizer in Section \ref{sec-ml-workloads}.
 In Sections \ref{sec-materialization} and \ref{sec-reuse-and-warmstarting}, we introduce the artifacts materialization algorithms, reuse strategy, and the warmstarting technique. 
 In Section \ref{sec-evaluation}, we show the result of our evaluations.
-In Section \ref{sec-background}, we discuss the related work and finally, we conclude this work in Section \ref{sec-conclusion}.
+In Section \ref{sec-related-work}, we discuss the related work and finally, we conclude this work in Section \ref{sec-conclusion}.
