@@ -3,7 +3,6 @@ Depending on the number of executed workloads, the generated artifacts may requi
 For example, the three workloads in the use case of Section \ref{sec-background} generate up to 125 GB of artifacts.
 Moreover, depending on the storage and retrieval costs of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact from scratch.
 In this section, we introduce two algorithms for materializing the artifacts with a high likelihood of future reuse while ensuring the storage does not surpass the recomputation cost.
-\todo[inline]{Are we really addressing the storage/recomputation trade-off? In the materialization algorithm, we only examine whether the re-computation of a node (from scratch) is more costly than storing and retrieving the node. In our reuse algorithm, we address the problem: given a set of materialized artifacts, which one to retrieve from EG and which ones to recompute locally. }
 The first algorithm utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
 The second algorithm extends the first algorithm and considers the duplication rate among the artifacts.
 Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact (for example, the drop and projection operations).

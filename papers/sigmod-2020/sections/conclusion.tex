@@ -1,31 +1,24 @@
 \section{Conclusions} \label{sec-conclusion}
 We present a system for optimizing machine learning workloads in collaborative environments.
-Collaborative environments enables users to execute and publish their ML scripts.
-Other users tend to exploit the published scripts to improve their own solutions.
-As a result, users re-execute the existing scripts and/or modify parts of them before execution.
-This results in redundant data processing and model training operations.
 We propose a graph representation of the artifacts of ML workloads, which we refer to as the Experiment Graph.
 Using the Experiment Graph, we offer materialization and reuse algorithms.
 We propose two materialization algorithms.
-The first algorithm stores artifacts of the graph that have a high likelihood of reappearing in future workloads.
-The second algorithm is storage-aware and takes deduplication information of the artifacts into account.
+The first algorithm stores artifacts of the graph based on their likelihood of reappearing in future workloads.
+The second algorithm is storage-aware, i.e., it takes deduplication information of the artifacts into account.
 Given the set of materialized artifacts, for a new workload, our reuse algorithm finds the optimal execution plan in linear time.
 
-We show that our collaborative optimizer improves the execution time of ML workloads by more than an order of magnitude for repeated executions and by 50\% for modified workloads.
-In a real collaborative environment, where users re-execute and modify thousands of workloads, this amounts to hundreds to thousands of hours execution time saved.
-We also show that our storage-aware materialization algorithm stores upto X times the number of artifacts more than the simple materialization algorithm.
+We show that our collaborative optimizer improves the execution time of ML workloads by more than one order of magnitude for repeated executions and by 50\% for modified workloads.
+In a real collaborative environment, where users re-execute and modify thousands of workloads, this amounts to hundreds to thousands of hours of execution time saved.
+There is considerable overlap in intermediate datasets of ML workload.
+As a result, our storage-aware materialization algorithm stores up to 8 times more artifacts than the simple materialization algorithm.
 Lastly, our reuse algorithm finds the optimal execution plan and outperforms two baselines, i.e., loading all materialized vertices and recomputing all the vertices.
 
 \textbf{Future work.}
-Many data transformation in ML workloads are commutative, i.e., if we change the order the result is the same.
-For example, the operations standard scaling and column dropping will result in the same data no matter their order.
-However, currently we do not take this information into account in our Experiment Graph.
-In future work, we plan to extend our reuse algorithm to consider such cases.
-This problems becomes even more challenging when there are chains of operations which are order-independent.
+Many data transformation in ML workloads are commutative, i.e., changing the order does not have an impact on the final result.
+Currently, we reuse artifacts from EG only when they have the same preceding operations (in the same order) and ignore the commutative property of the operations.
+IIn future work, we plan to exploit such transformations and define the concept of DAG equality in the presence of commutative operations.
+Furthermore, EG contains valuable information about the meta-data and hyperparameters of the data preprocessing, feature engineering, and model training operations.
+In future work, we plan to utilize this information to perform automatic ML pipeline construction and hyperparameter tuning \cite{Feurer15, thornton2013auto}.
+Thus, fully or partially automating the process of designing ML pipelines.
 
-Hyperparamter tuning and automatic machine learning (AutoML) are recent sub-fields of machine learning which are concerned with automatically tuning the hyperparameters of a model or automatically designing complete machine learning pipelines.
-To perform well, AutoML spends a large amount of time generating different configuration and evaluating each configuration.
-The Experiment Graph contains valuable information about the meta-data of the data preprocessing, feature engineering, and model training operations.
-In future work, we plan to utilize the Experiment Graph and use the all the executed machine learning workloads to help AutoML provide a solution faster.
-This enables us to quickly help users designing their machine learning pipeline.
 
