@@ -45,18 +45,8 @@ DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization
 ROOT = parser.get('root', DEFAULT_ROOT)
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
-mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-
-materializer_type = parser.get('materializer', 'storage_aware')
-storage_type = parser.get('storage_type', 'dedup')
-if materializer_type == 'storage_aware':
-    materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-elif materializer_type == 'simple':
-    materializer = HeuristicsMaterializer(storage_budget=mat_budget)
-elif materializer_type == 'all':
-    materializer = AllMaterializer()
-else:
-    raise Exception('invalid materializer: {}'.format(materializer_type))
+mat_budget = float(parser.get('mat_budget', '0.0')) * 1024.0 * 1024.0
+materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
 storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
@@ -155,7 +145,8 @@ for setup, pipeline in setup_and_pipelines:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                                              EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                                              current_score, run_time_current, best_pipeline,
-                                                              best_setup, best_score, run_time_best, elapsed))
+            '{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                                                 EXPERIMENT, setup.flow_id, setup.setup_id, method,
+                                                                 mat_budget, current_score, run_time_current,
+                                                                 best_pipeline, best_setup, best_score, run_time_best,
+                                                                 elapsed))
