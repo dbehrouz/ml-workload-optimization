@@ -45,13 +45,13 @@ DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization
 ROOT = parser.get('root', DEFAULT_ROOT)
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
-mat_budget = float(parser.get('mat_budget', '0.0')) * 1024.0 * 1024.0
+mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
 materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
 storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
 EXPERIMENT = parser.get('experiment', 'openml')
-limit = int(parser.get('limit', 20))
+limit = int(parser.get('limit', 2000))
 openml_task = int(parser.get('task', 31))
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 config.set_cache_directory(OPENML_DIR + '/cache')
