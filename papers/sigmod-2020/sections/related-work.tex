@@ -26,7 +26,7 @@ These systems have three fundamental differences when compared to our system.
 First, the workload DAGs are typically small as these system work with machine learning pipelines of a few operations.
 Therefore, these systems do not need to tackle the problem of searching for reuse opportunities in a large graph.
 However, Helix offers a reuse procedure with a polynomial time-complexity which can potentially perform well on larger DAGs.
-\hl{However, our reuse procedure for finding the optimal execution plan has a linear time-complexity.}
+However, our reuse procedure for finding the optimal execution plan has a linear time-complexity.
 Second, the materialization decisions in this system only utilize run-time and size and do not take into account the model quality.
 Third, our system operates in a collaborative and multi-tenant environment.
 Whereas, the scope of optimization in these systems, except for Mistique, is limited to a single session.

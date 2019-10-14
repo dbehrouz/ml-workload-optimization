@@ -3,6 +3,26 @@
 """Execution Time Experiment
 
 Run a list of workloads in sequence and report the execution time for each one
+These are the flow ids with number of setups that end up being executed:
+{5804: 18,
+ 5909: 9,
+ 5910: 1,
+ 5913: 1,
+ 5914: 1,
+ 5995: 1,
+ 6268: 3,
+ 6269: 1,
+ 6334: 1,
+ 6840: 341,
+ 6946: 2,
+ 6952: 31,
+ 6954: 7,
+ 6958: 1,
+ 6969: 1503,
+ 6970: 79,
+ 5804: 18
+}
+ Complete list of setups are the experiment result files
 
 """
 import errno

@@ -519,7 +519,7 @@
 \definecolor{textcolor}{rgb}{0.150000,0.150000,0.150000}%
 \pgfsetstrokecolor{textcolor}%
 \pgfsetfillcolor{textcolor}%
-\pgftext[x=2.262305in,y=3.744111in,left,base]{\color{textcolor}\rmfamily\fontsize{38.000000}{45.600000}\selectfont SM}%
+\pgftext[x=2.262305in,y=3.744111in,left,base]{\color{textcolor}\rmfamily\fontsize{38.000000}{45.600000}\selectfont HM}%
 \end{pgfscope}%
 \begin{pgfscope}%
 \pgfsetbuttcap%
