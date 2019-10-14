@@ -115,13 +115,15 @@ Furthermore, in interactive workloads, clients expect a response very fast.
 Therefore, If the reuse algorithm incurs a large overhead, the server does not respond in time or becomes unresponsive.
 
 \subsection{Warmstarting}
-Many model training operations include random processes, where a random seed parameter controls the random behavior.
-For example, in random forests, to decide when to split a tree node, features are randomly permuted.
-Thus, two training operations on the same dataset with the same hyperparameters may result in different models if the random seeds are different.
+Many model training operations include different hyperparameters, which impact the training process.
+Two training operations on the same dataset with different hyperparameters may result in completely different models.
 In such scenarios, we cannot reuse a materialized model in EG instead of a model artifact in the workload DAG.
 Therefore, instead of reusing a model, we try to warmstart the model training operations using the models in EG.
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
-Warmstarting has shown to decrease the total training time \cite{baylor2017tfx}.
+Warmstarting has shown to decrease the total training time in some scenarios \cite{baylor2017tfx}.
+Note that in many scenarios, there is no guarantee that warmstarting works.
+Therefore, we only warmstart a model training operation, when users explicitly indicate they would like the system to warmstart their training operation if possible.
+The default behavior of our system is not to warmstart model training operations.
 
 Once we encounter a model in the workload DAG in forward-pass, we check if there are candidates for warmstarting in EG.
 A warmstarting candidate is a model that is trained on the same artifact and is of the same as the model in the workload DAG.
