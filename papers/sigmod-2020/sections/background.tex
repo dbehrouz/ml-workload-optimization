@@ -3,6 +3,7 @@ In this section, we first define the required terms referring to different entit
 Next, we discuss a use case based on a real collaborative environment.
 
 \subsection{Collaborative Environment for Data Science}
+\todo[inline]{If we have space I will include a figure}
 A typical collaborative environment consists of a client and server space.
 Users write a script to fetch datasets from the server, analyze the data, and train machine learning models.
 The client is responsible for executing the script.
@@ -10,32 +11,17 @@ Although the client can be a single machine, users typically utilize Jupyter not
 Users can publish the results and the scripts on the server for other users to see.
 Isolated execution environments enable collaborative environments to better allocate resources for running scripts.
 
-%\subsection{Preliminaries and Definitions}
-%\textbf{ML Task.} 
-%In a collaborative environment, an ML task specifies the requirements and the goal of the machine learning solutions.
-%An ML task contains the following: (1) The type of the machine learning model, i.e., classification, regression, or clustering, (2) one or more training and test datasets, and (3) an evaluation function which assigns a score to the user-provided solution.
-%For example, in an online advertising company, the ML task for the data scientists is to train Click-Through-Rate prediction models given one or multiple datasets containing users and ads features which minimize the logarithmic loss on a test dataset.
-%
-%\textbf{Data and Operations.}
-%We support three types of data: (1) A \textit{Dataset} which has one or more columns of data and is analogous to dataframe objects, such as Pandas dataframe \cite{mckinney-proc-scipy-2010}), (2) an \textit{Aggregate} which contains a single value or list of values, and (3) a \textit{Model} which represents a machine learning model.
-%The type of data depends on the operations which generate them.
-%\textit{Data preprocessing and feature engineering operations}, which include simple data transformation and aggregation, feature selection, and feature extraction operations, generate either a Dataset (e.g., map, filter, or one-hot encoding operations)  or an Aggregate (e.g., reduce operation).
-%\textit{Model training operations} generate a Model.
-%A Model is used either in other feature engineering operations, e.g., PCA model for dimensionality reduction, or to perform predictions on a test dataset.
-% 
-%\textbf{ML Workload.}
-%An ML workload is a script or a machine learning pipeline which performs several data preprocessing, feature engineering, and model training operations. 
-%Collaborative platforms execute a workload in either a long-running process or an interactive environment using Jupyter notebooks \cite{Kluyver:2016aa}.
-
 \subsection{Use Case}\label{subsec-motivational-example}
-Kaggle is a collaborative environment that enables users and organizations to publish datasets and organize machine learning competitions by defining a task where all the users can participate and submit workloads for solving the task \cite{kagglewebsite}.
-Kaggle utilizes docker containers, which are called kernels, to execute user workloads.
+Kaggle is a collaborative environment that enables users and organizations to publish datasets and organize machine learning competitions.
+In every competition, the organizer defines a task.
+Users submit their solutions to the task as ML scripts.
+Such a collaborative environment utilizes docker containers, called kernels, to execute user workloads.
 If the workload produces machine learning model artifacts, the users can choose to submit them and attain a score of how good their model performs on a test dataset.
 
 For our use case, we select the competition \textit{Home Credit Default Risk}\footnote{https://www.kaggle.com/c/home-credit-default-risk/}.
 The task is to train a classification model to predict whether a client can repay their loans.
 There are a total of 9 datasets, 8 for training and 1 for evaluation, with a total size of 2.5 GB.
-The goal of the submitted workloads is to produce machine learning models which maximize the area under the ROC curve, which measures how well a classifier performs.
+The goal of the submitted workloads is to train a machine learning model that maximizes the area under the ROC curve, which measures how well a classifier works.
 Three of the most popular submitted workloads are copied and edited by different users more than 7000 times\footnote{Notebook titles are: ''Start Here: A Gentle Introduction'' and ''Introduction to Manual Feature Engineering'' part 1 and part 2}.
 The three workloads produce 100s of intermediate dataset artifacts and several machine learning model artifacts with a total size of 125 GB.
 The execution time of each workload is between 400 to 1000 seconds.
@@ -44,5 +30,5 @@ However, the number of users who copied these workloads indicates the potentiall
 
 Kaggle does not store the artifacts, nor does it offer any automatic reuse capabilities.
 Therefore, every time a user executes these workloads (or a modified version of them), Kaggle runs them from scratch.
-Our system, which stores the artifacts and reuses them later, can save 100s of hours of execution time only for the three workloads in this use case, which benefits Kaggle by reducing the amount of required resources and operation cost.
+Our system, which stores the artifacts and reuses them later, can save 100s of hours of execution time only for the three workloads in this use case, which benefits such a collaborative environment by reducing the amount of required resource and operation cost.
 In the next sections, we show how we selectively store artifacts, given a storage budget, and how we quickly find the relevant artifacts for reuse.
