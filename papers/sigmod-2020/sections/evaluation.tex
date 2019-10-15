@@ -1,9 +1,10 @@
 \section{Evaluation} \label{sec-evaluation} 
+\todo[inline]{most of the figures need a bit of post-processing to get the font size on the same scale and improve their quality}
 In this section, we evaluate the performance of our collaborative optimizer system.
-We focus on investigating the effect of our optimizations on the execution cost of workloads in collaborative environments.
-We first describe the setup, including the hardware and the workloads we execute.
+We focus on investigating the effect of our materialization and reuse algorithms on the execution cost of workloads in collaborative environments.
+We first describe the setup, i.e., the hardware specification and the experiment workloads.
 Then, we show the run-time improvement of our optimizer.
-Finally, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on the execution and storage cost.
+Finally, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on the run-time and storage cost.
 \begin{table*}[t]
 \begin{tabular}{lp{0.84\textwidth}rr}
 \hline
@@ -35,7 +36,8 @@ We execute all the experiments on a server running Linux Ubuntu with 128 GB of R
 We implement a prototype of our system in python 2.7.12.
 In the prototype, we implement EG using python's NetworkX 2.2 \cite{hagberg2008exploring}.
 Unless specified otherwise, we run every experiment 3 times and report the average results.
-We evaluate our proposed optimizations on two different sets of workloads.
+We evaluate our proposed optimizations on two different sets of workloads\footnote{workload and experiment scripts will be made available in the camera ready version}.
+\todo[inline]{What's the best way of letting the reviewers know we will make the code available? check footnote 3}
 
 \textbf{Kaggle workloads.} 
 In the first set of workloads, we recreate the collaborative environment of the use case in Section \ref{sec-background}.
@@ -153,7 +155,7 @@ As a result, the storage-aware achieves a much smaller total run-time when compa
 \end{figure}
 
 Figure \ref{exp-sa-vs-simple-size}(a) shows the total run-time of all the workloads under different budgets for both materialization algorithms.
-Even with a materialization budget of 8 GB, the storage-aware performs similar to the scenario where all the artifacts are materialized.
+Even with a materialization budget of 8 GB, the storage-aware performs similar to the scenario where all the artifacts are materialized (represented by ALL in the figure).
 On the contrary, under a small materialization budget ($\leq 16$), the heuristics-based materialization performs 50\% worse than the other scenarios.
 This is mainly because most of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 5 GB.
 Most of these artifacts differ with each other in only a few columns.
@@ -162,10 +164,10 @@ Recomputing these artifacts is costly, which results in a larger total run-time 
 
 \begin{figure}
 \centering
- \resizebox{0.5\columnwidth}{!}{%
+ \resizebox{0.7\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/run-time.pgf}%
 }
-\caption{Total run time of the workloads with different materialization algorithms and budgets \todo[inline]{plot the run time when all the artifacts are materialized as a baseline.}}
+\caption{Total run time of the workloads with different materialization algorithms and budgets}
 \label{run-time-vs-mat}
 \end{figure}
 

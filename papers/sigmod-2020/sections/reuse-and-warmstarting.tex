@@ -122,10 +122,11 @@ Therefore, instead of reusing a model, we try to warmstart the model training op
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
 Warmstarting has shown to decrease the total training time in some scenarios \cite{baylor2017tfx}.
 Note that in many scenarios, there is no guarantee that warmstarting works.
-Therefore, we only warmstart a model training operation, when users explicitly indicate they would like the system to warmstart their training operation if possible.
+Therefore, we only warmstart a model training operation, when users explicitly requests it.
 The default behavior of our system is not to warmstart model training operations.
 
+The process of warmstarting is as follows.
 Once we encounter a model in the workload DAG in forward-pass, we check if there are candidates for warmstarting in EG.
-A warmstarting candidate is a model that is trained on the same artifact and is of the same as the model in the workload DAG.
-When there are more than one candidates for warmstarting, we select the model with the highest evaluation score.
+A warmstarting candidate is a model that is trained on the same artifact and is of the same type as the model in the workload DAG.
+When there is more than one candidate for warmstarting, we select the model with the highest evaluation score.
 Finally, we initialize the model training operation with the selected model.
