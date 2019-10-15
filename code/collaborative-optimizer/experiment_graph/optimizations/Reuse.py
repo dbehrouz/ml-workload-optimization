@@ -92,8 +92,9 @@ class Reuse:
                     if history_node['type'] == 'SK_Model':
                         if not history_training_edge['warm_startable']:
                             continue
-                        elif history_training_edge['no_random_state_model'] == \
-                                workload_training_edge['no_random_state_model']:
+                        # the condition for warmstarting is that the models are of the same type
+                        elif history_training_edge['args']['model'].__class__.__name__ == \
+                                workload_training_edge['args']['model'].__class__.__name__:
                             results.add((history_training_edge['args']['model'], history_node['score']))
                 if results:
                     best_model = -1

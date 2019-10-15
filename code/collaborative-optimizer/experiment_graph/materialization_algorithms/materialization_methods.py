@@ -28,7 +28,7 @@ class Materializer(object):
                 rho = 0
                 # node[1]['data'].clear_content()
             elif node[1]['load_cost'] > node[1]['recreation_cost']:
-                print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
+                #print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
                 rho = 0
             else:
                 # only compute the utility for the vertices which are already
@@ -83,7 +83,7 @@ class Materializer(object):
                     experiment_graph.materialize(node_id=node_id, artifact=artifact)
             else:
                 if attributes['mat']:
-                    print 'unmaterialize node {}'.format(node_id)
+                    #print 'unmaterialize node {}'.format(node_id)
                     experiment_graph.unmaterialize(node_id)
 
     @abstractmethod
@@ -173,7 +173,7 @@ class StorageAwareMaterializer(Materializer):
 
             materialization_candidates, rhos = self.select_nodes_to_materialize(rhos, remaining_budget,
                                                                                 materialization_candidates)
-            print 'current size: {}'.format(experiment_graph.get_size_of(materialization_candidates))
+            #print 'current size: {}'.format(experiment_graph.get_size_of(materialization_candidates))
             # if node new node is materialized, end the process
             if start_list == materialization_candidates:
                 break

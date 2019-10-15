@@ -1393,7 +1393,6 @@ class SuperNode(Node):
     def p_fit_sk_model_with_labels(self, model, custom_args, warm_start=False):
         start = datetime.now()
         if warm_start:
-            print 'training a model with warmstarting'
             model.warm_start = True
         if custom_args is None:
             model.fit(self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data())

@@ -9,12 +9,13 @@ warnings.filterwarnings("ignore")
 
 
 class OpenMLOptimizedWorkload(Workload):
-    def __init__(self, setup, pipeline, task_id):
+    def __init__(self, setup, pipeline, task_id, should_warmstart=False):
         Workload.__init__(self)
         self.setup = setup
         self.pipeline = pipeline
         self.task_id = task_id
         self.score = 0
+        self.should_warmstart = should_warmstart
 
     def run(self, execution_environment, root_data, verbose=0):
         try:
@@ -37,12 +38,12 @@ class OpenMLOptimizedWorkload(Workload):
                 test_x = model.transform(test_x)
 
             # TODO is it OK to assume all the openml pipelines end with a scikit learn model?
-            model = x.fit_sk_model_with_labels(edges[-1], y, should_warmstart=True)
+            model = x.fit_sk_model_with_labels(edges[-1], y, should_warmstart=self.should_warmstart)
 
             score = model.score(test_x,
                                 test_y,
                                 score_type='accuracy').data(verbose=verbose)
-            #print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
+            # print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
             self.score = score['accuracy']
             return True
         except:
