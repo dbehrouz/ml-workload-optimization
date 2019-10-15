@@ -45,8 +45,8 @@ We introduced three workloads in the use case.
 We retrieve two more workloads from the same Kaggle competition.
 We also design three workloads based on the existing ones.
 Table \ref{kaggle-workload} shows details of the workloads we utilize in our experiments.
-The competition has nine datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
-The total size of the artifacts after executing all the workloads is around 130 GB.
+The use case has nine datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
+The combined size of the artifacts after executing all the workloads is around 130 GB.
 Unless specified otherwise, we set the materialization budget to 32 GB.
 For all the experiments, we execute the workloads in order (from 1 to 8) and report the results.
 
@@ -55,18 +55,18 @@ OpenML refers to ML pipelines as flows and the hyperparameter configurations as 
 The execution of a flow with a specific setup on a task is called a run.
 We extracted the first 2000 runs for task 31, which results in 16 unique flows. 
 The dataset is small, and the total size of the artifacts after executing the 2000 runs is 1,5 GB.
+For all the experiments, we execute the 2000 runs in order and report the result.
 
 \subsection{Execution Time}
-\textbf{Kaggle Workloads.}
 In this experiment, we evaluate the impact of our collaborative optimizer on the use case of Section \ref{sec-background}.
 In the use case, we describe three workloads (Workloads 1-3 of Table \ref{kaggle-workload}).
 Kaggle reports users have copied and modified these workloads a total of 7000 times.
 Therefore, at the very least, users execute these workloads 7000 times.
 Figures \ref{exp-reuse-kaggle-same-workload}(a)-(c) show the result of repeating the execution of each workload.
-Before the first run, EG is empty; therefore, both the baseline and our collaborative optimizer have the same run-time.
-By materializing and reusing the artifacts, our collaborative optimizer reduces the run-time of the consecutive executions by one order of magnitude for workloads 2 and 3.
-Workload 1 executes an external visualization command that plots a bivariate kernel density estimate, which incurs a large overhead.
-Since our collaborative optimizer does not store the visualization information, it must re-execute the visualization command; thus, resulting in a smaller run-time reduction.
+Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) have similar run-times.
+By materializing and reusing the artifacts, CO reduces the run-time of the consecutive executions by one order of magnitude for workloads 2 and 3.
+Workload 1 executes an external visualization command that computes a bivariate kernel density estimate, which incurs a large overhead.
+Since our collaborative optimizer does not materialize such external information, it must re-execute the visualization command; thus, resulting in a smaller run-time reduction.
 \begin{figure}
 \begin{subfigure}[b]{0.33\linewidth}
 \centering
@@ -91,7 +91,6 @@ Since our collaborative optimizer does not store the visualization information, 
 \end{subfigure}
 \begin{subfigure}[b]{\linewidth}
 \centering
-%\includegraphics[width=\linewidth]{../images/experiment-results/kaggle_home_credit/execution_time/different_workloads}
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/execution_time/different_workloads.pgf}%
 }
@@ -102,22 +101,27 @@ Since our collaborative optimizer does not store the visualization information, 
 \end{figure}
 
 Figure \ref{exp-reuse-kaggle-same-workload}(d) shows the cumulative run-time of executing the workloads of Table \ref{kaggle-workload} in sequence.
-This corresponds to a real scenario, where after some scripts in a collaborative environment gain popularity, e.g., Workloads 1-3, other users modify and try to improve them, e.g, Workloads 4-8.
+This corresponds to a real scenario, where after some scripts in a collaborative environment gain popularity, i.e., Workloads 1-3, other users modify and improve the scripts, i.e., Workloads 4-8.
 The experiment shows that optimize even a single execution of each workload decreases the cumulative run-time by half.
 In a real collaborative environment, there are hundreds of more modified scripts and possibly thousands of repeated execution of such scripts, resulting in 1000s of hours of reduction in the cumulative run-time.
 
 \subsection{Materialization}
-In this set of experiments, we show the impact of our materialization algorithms on the total size of the stored artifacts and total run-time of the workloads.
-We run the workloads of Table \ref{kaggle-workload} under different materialization budgets using both our heuristics-based and storage-aware materialization algorithms.
+In this set of experiments, we show the impact of our materialization algorithms on the total size of the stored artifacts and total run-time of the workloads
 
-Figures \ref{exp-sa-vs-simple-size}(a)-(d) show the real size of the stored artifacts under different materialization budgets.
-For the heuristics-based algorithm, the maximum real size is always capped at the budget.
-However, in the storage-aware algorithm, we observe that the real size of the stored artifacts can reach up to 8 times the budget.
-With a materialization budget of 8 GB, the storage-aware algorithm materializes almost half of the artifacts.
-When the materialization budget is more than 8 GB, storage-aware materialized nearly all the artifacts.
+\textbf{Effect of Materialization on Run-time.}
+Typically, in a real collaborative environment, deciding on a reasonable materialization budget requires knowledge of the expected size of the artifacts, number of the users in a collaborative environment, and rate of incoming workloads.
+In this experiment, we show that even with a small budget, our materialization algorithms, particularly our storage-aware algorithm, store a large portion of the artifacts that reappear in future workloads.
+We run the workloads of Table \ref{kaggle-workload} under different materialization budgets using both our heuristics-based and storage-aware materialization algorithms.
+Figures \ref{exp-sa-vs-simple-size}(a)-(d) show the real size of the stored artifacts under different materialization budgets for the heuristics-based (HM) and storage-aware (SA) algorithms.
+Furthermore, to show the total size of the materialized artifacts, we also implement an all materializer (represented by ALL in the figure).
+The all-materializer stores every artifact of the workloads in EG.
+In HM, the maximum real size is always equal to the budget.
+However, in SA, we observe that the real size of the stored artifacts reaches up to 8 times the budget.
+With a materialization budget of 8 GB, SA materializes almost half of the artifacts.
+When the materialization budget is more than 8 GB, SA materializes nearly all the artifacts.
 This indicates that there is considerable overlap between the artifacts of ML workloads.
 By deduplicating the artifacts, our storage-aware materialization algorithm can materialize more artifacts.
-As a result, the storage-aware achieves a much smaller total run-time when compared with the heuristics-based materialization.
+As a result, the storage-aware results in a smaller total run-time when compared with the heuristics-based materialization.
 
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}
@@ -150,16 +154,17 @@ As a result, the storage-aware achieves a much smaller total run-time when compa
 }
 \caption{Budget = 64 GB}
 \end{subfigure}
-\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets (SA = storage-aware materialization, HM = heuristics-based materialization)  \todo[inline]{add lines for total size and budget. Need to properly explain the sudden rise at workload 7 for SA budget = 16}}
+\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets (SA = storage-aware materialization, HM = heuristics-based materialization)  \todo[inline]{Need to properly explain the sudden rise at workload 7 for SA budget = 16}}
 \label{exp-sa-vs-simple-size}
 \end{figure}
 
-Figure \ref{exp-sa-vs-simple-size}(a) shows the total run-time of all the workloads under different budgets for both materialization algorithms.
-Even with a materialization budget of 8 GB, the storage-aware performs similar to the scenario where all the artifacts are materialized (represented by ALL in the figure).
-On the contrary, under a small materialization budget ($\leq 16$), the heuristics-based materialization performs 50\% worse than the other scenarios.
-This is mainly because most of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 5 GB.
+Figure \ref{run-time-vs-mat} shows the total run-time of all the workloads under different budgets for heuristics-based and storage-aware algorithms.
+We also plot the total run-time for the all-materializer.
+Even with a materialization budget of 8 GB, SA performs similar to the scenario where all the artifacts are materialized.
+On the contrary, under a small materialization budget ($\leq 16$), the HM performs 50\% worse than the other scenarios.
+This is mainly because many of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 5 GB.
 Most of these artifacts differ with each other in only a few columns.
-However, the heuristics-based algorithm does not exploit this similarity and chooses not to materialize any of the large artifacts.
+However, the HM is unable to exploit this similarity and chooses not to materialize any of the large artifacts.
 Recomputing these artifacts is costly, which results in a larger total run-time for heuristics-based materialization under a smaller budget.
 
 \begin{figure}
@@ -174,18 +179,17 @@ Recomputing these artifacts is costly, which results in a larger total run-time 
 \textbf{Model Materialization. }
 One goal of our materialization algorithms is to materialize high-quality models as soon as they appear in a new workload.
 In this experiment, we run a typical scenario, where users compare the score of their models with the score of the best performing model in the collaborative environment.
-In this experiment, we execute all the OpenML workloads one by one and keep track of the best performing workload.
+We execute all the OpenML workloads one by one and keep track of the best performing workload.
 In every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
-Figure \ref{exp-model-materialization} shows the result.
 \todo[inline]{Will re-run this experiment with different $\alpha$ values (Utility function in Section \ref{subsec-ml-based-materialization}}
-
 Figure \ref{exp-model-materialization}(a) shows the total run-time of executing all the OpenML workloads and comparing the model of each workload with the best performing model so far.
 In the baseline (OML), for every workload, we have to rerun the pipeline of the best performing model.
 As a result, OML has a much higher total run-time when compared with our collaborative optimizer (CO).
-Figure \ref{exp-model-materialization}(b) shows why there is such a large difference between OML and CO.
-In CO, when we encounter a model that performs better than all the existing models, the materialization algorithm immediately stores the pipeline and the model.
-As a result, we reuse the model from EG, which incurs a small overhead.
-The total overhead of rerunning the pipeline with the best model for all the 2000 OpenML workloads is around 65 seconds, while OML incurs an overhead of around 2000 seconds to re-execute the pipelines.
+Figure \ref{exp-model-materialization}(b) explains the reason for such a large difference between OML and CO.
+When CO encounters a model that performs better than all the existing models, the materialization algorithm immediately stores the pipeline and the model.
+As a result, we reuse the model from EG instead of re-running all the operations.
+In Figure \ref{exp-model-materialization}(b), we observe that reusing the best pipeline for all the 2000 OpenML workloads has an overhead of 65 seconds.
+In comparison, re-executing the best pipeline for OML has an overhead of 2000 seconds.
 
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}
@@ -207,17 +211,18 @@ The total overhead of rerunning the pipeline with the best model for all the 200
 \end{figure}
 
 \subsection{Reuse}
-In this experiment, we evaluate our reuse and warmstarting algorithms. 
+In this experiment, we evaluate the performance of our reuse algorithm.
 We compare our linear time reuse algorithm (LN) with two baselines.
-In the first baseline (ALL\_M), all materialized artifacts are reused.
-In the second baseline (ALL\_C), all the materialized artifacts are recomputed.
-The performance of ALL\_C is very similar to when there is no Experiment Graph.
+In the first baseline (ALL\_M), we reuse every materialized artifact.
+In the second baseline (ALL\_C), we recompute every materialized artifact.
+The performance of ALL\_C is similar to when there is no Experiment Graph.
 Thus, ALL\_C finishes the execution of all the Kaggle workloads in around 2000.
 ALL\_M has a similar performance to LN until workload 7.
 In workload 7, there are multiple large artifacts which have a larger load cost than compute cost.
-Thus, our reuse algorithm ignores these materialized artifacts and chooses to recompute them.
+As a result, our reuse algorithm chooses to recompute these artifacts; thus, resulting in a smaller cumulative run-time when compared with ALL\_M.
 In this experiment, EG is inside the memory of the machine; thus, load times are generally low.
 In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a larger margin due to the very large load cost of some of the materialized artifacts.
+\todo[inline]{If we have enough, I will run the same experiment for on-disk.}
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -234,12 +239,13 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 
 \caption{Storage-aware}
 \end{subfigure}
-\caption{Comparison of our linear reuse algorithm with two baselines under different materialization schemes (LN = linear, ALL\_C = all compute, ALL\_M = all materialized). \todo[inline]{Same experiment for on-disk. This, I will only do if I have time.}}
+\caption{Comparison of our linear reuse algorithm with two baselines under different materialization schemes (LN = linear, ALL\_C = all compute, ALL\_M = all materialized).}
 \end{figure}
 
-\textbf{Warmstarting.}
+\subsection{Warmstarting}
+\todo[inline]{Experiment is in progress}
 In this experiment, we evaluate the effect of our warmstarting method.
 We execute all the OpenML workloads with and without warmstarting.
 Figure xxx shows the cumulative run-time of the OpenML workloads.
-\todo[inline]{Still need to finish the experiment}
+
 \subsection{Discussion}
