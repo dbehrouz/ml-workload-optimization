@@ -4,17 +4,15 @@ Every artifact of the incoming workload DAG is in one of the three following sta
 For the first two states, the client must execute the operations of the workload DAG to compute the artifact.
 However, when the artifact is materialized, we can either load it from the Experiment Graph or let the client execute the operations to compute the artifact.
 Both loading and computing an artifact incur costs.
-In this section, we first describe our reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., cost of loading and cost of computing all the artifacts of the workload DAG.
-Then, we discuss our model warmstarting approach.
-Due to the stochastic behavior of some model training operations, we cannot always directly reuse a materialized model artifact.
-Therefore, we warmstart the training operation of the model artifact, which leads to a decrease in training time.
+In this section, we first describe our reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., the sum of loading and computing cost of all the artifacts of the workload DAG.
+Then, we discuss our model warmstarting approach for model training operations with different hyperparameters.
 
 \subsection{Reuse Algorithm} 
 \textbf{Preliminaries and Notations.} 
-We refer to the workload DAG as $WG$ and the Experiment Graph as $EG$.
+We refer to the workload DAG as $WG$.
 For every vertex, $v \in WG$, we define $cost_l(v)$ as the cost (in seconds) of loading $v$ from $EG$ and $cost_c(v)$ as the computation cost (also in seconds) of $v$ given its parent vertices in $WG$.
 If an artifact exist in $EG$ but is not materialized, then we set $cost_l(v)=\infty$.
-For artifacts that do not exist in $EG$, $cost_l(v)$ and $cost_c(v)$ are undefined.
+For artifacts that do not exist in $EG$, $cost_l(v)$ and $cost_c(v)$ are also set to $\infty$.
 Such artifacts have never appeared in any previous workloads; thus, EG has no prior information about them.
 Lastly, if an artifact is already computed inside $WG$, such as the source artifacts or pre-computed artifacts in interactive workloads, we set $cost_c(v)=0$, this is because the artifact is already available in the client's memory.
 
@@ -32,16 +30,16 @@ Then, we visit every vertex in their topological order.
 If the client has already computed a vertex inside $WG$, then we set its recreation cost to 0 (Lines 5 and 6).
 Otherwise, we compute the execution cost of a vertex as the sum of the compute cost of the vertex and the recreation cost of its parents (Lines 8 and 9).
 We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
-When the load cost is smaller, the algorithm adds the vertex to the set of materialized vertices.
+When the load cost is smaller, the algorithm adds the vertex to the set of reuse vertices.
 Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
 
 \begin{algorithm}[h]
 \KwData {$WG$: workload DAG, $EG$: Experiment Graph}
-\KwResult {$\mathcal{M}$: Set of materialized vertices}
+\KwResult {$\mathcal{R}$: Set of vertices for reuse}
 \For {$s \in sources(WG)$}{
 	$recreation\_cost[s] \coloneqq 0$\;
 }
-$\mathcal{M} \coloneqq \emptyset$\;
+$\mathcal{R} \coloneqq \emptyset$\;
 \For {$v \leftarrow topological\_order(WG)$}{
 	\eIf{$v$ computed in $WG$}{
 		$recreation\_cost[v] \coloneqq 0$\; 		
@@ -50,34 +48,35 @@ $\mathcal{M} \coloneqq \emptyset$\;
 		$execution\_cost \coloneqq cost_c(v) + p\_costs$\;
 		\eIf {$ cost_l(v) < execution\_cost$}{
 			$recreation\_cost[v] \coloneqq cost_l(v)$\;
-			$\mathcal{M} \coloneqq \mathcal{M} \cup v$\;
+			$\mathcal{R} \coloneqq \mathcal{R} \cup v$\;
 		}{
-			$recreation\_cost[v] \coloneqq recreation\_cost$\;
+			$recreation\_cost[v] \coloneqq execution\_cost$\;
 		}
 	}
 }
-return $\mathcal{M}$\;
+return $\mathcal{R}$\;
 \caption{Forward-pass}\label{forward-pass}
 \end{algorithm}
-After forward-pass, we must prune the set of materialized artifacts to remove any artifact that is not part of the execution path.
+After forward-pass, we must prune the set of reuse vertices to remove any artifact that is not part of the execution path.
+A vertex $v \in \mathcal{R}$ is not part of the execution path if there exists at least another vertex $v' \in \mathcal{R}$ in every outgoing path starting at $v$.
 Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
 In backward-pass, we visit every vertex of $WG$ starting from the terminal vertices.
-For every vertex, if it belongs to the materialized vertex set, we add it to the final solution set and stop traversing its parents (Lines 4 and 5).
+For every vertex, if it belongs to the reuse set, we add it to the final solution set and stop traversing its parents (Lines 4 and 5).
 Otherwise, we continue traversing the parents of the vertex (Line 7).
 
 \begin{algorithm}[h]
-\KwData {$\mathcal{M}$: Materialized vertices, $WG$: workload DAG}
-\KwResult {$\mathcal{M}_p$: Pruned set of materialized vertices}
-$\mathcal{M}_p \coloneqq \emptyset$\;
+\KwData {$\mathcal{R}$: Current reuse set, $WG$: workload DAG}
+\KwResult {$\mathcal{R}_p$: Pruned reuse set}
+$\mathcal{R}_p \coloneqq \emptyset$\;
 $v\_queue \coloneqq terminals(WG)$\;
 \While{$v \leftarrow v\_queue.next()$}{
-	\eIf{$v \in \mathcal{M}$}{
-			$\mathcal{M}_p \coloneqq \mathcal{M}_p \cup v$\;
+	\eIf{$v \in \mathcal{R}$}{
+			$\mathcal{R}_p \coloneqq \mathcal{R}_p \cup v$\;
 	}{
 		$v\_queue.add(parents(v))$\;
 	}
 }
-return $\mathcal{M}_p$\;
+return $\mathcal{R}_p$\;
 \caption{Backward-pass}\label{backward-pass}
 \end{algorithm}
 
@@ -107,7 +106,9 @@ For example, since $v_3$ is materialized, backward-pass stops visiting its paren
 Both forward-pass and backward-pass traverse the workload DAG once, resulting in $2*|V|$ vertex visits, where $V$ is the set of vertices in the workload DAG.
 Therefore, our reuse algorithm has a worst-case complexity of $\mathcal{O}(|V|)$.
 However, the number of vertex visits in each pass is smaller than $|V|$ because of the early-stopping conditions in forward and backward passes.
-Forward-pass stops traversing a path when a vertex is not in EG and backward-pass stops traversing the parents of a vertex when the vertex is in the materialized set.
+Backward-pass stops traversing the parents of a vertex when the vertex is in the reuse set; therefore, it does not need to visit all the vertices until it reaches the source.
+Furthermore, in our implementation of forward-pass, we also include an early-stopping condition.
+The early-stopping condition instructs forward-pass to stop traversing down a path when it encounters a vertex that is not in EG.
 Thus, the reuse algorithm generates the optimized DAG with a small overhead.
 This is an important requirement of the collaborative environments.
 In a typical collaborative environment, many clients send workloads to the server for optimization.
