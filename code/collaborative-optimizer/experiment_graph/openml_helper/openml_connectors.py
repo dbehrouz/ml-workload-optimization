@@ -8,6 +8,7 @@ from openml import tasks, datasets, runs, flows, setups, config
 
 OPENML_ROOT_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/data/openml'
 FLOW_DICTIONARY = 'flows.pickle'
+SETUP_DICTIONARY = 'setups.pickle'
 EXCLUDE_FLOWS = [5981, 5987, 5983, 5981, 6223]
 
 
@@ -198,11 +199,18 @@ def run_to_workload(run_id, execution_environment):
 
 def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
     flows_path = openml_dir + '/' + FLOW_DICTIONARY
+    setups_path = openml_dir + '/' + SETUP_DICTIONARY
+
     if os.path.exists(flows_path):
         with open(flows_path, 'rb') as g_input:
             flow_dict = pickle.load(g_input)
     else:
         flow_dict = {}
+    if os.path.exists(setups_path):
+        with open(setups_path, 'rb') as g_input:
+            setup_dict = pickle.load(g_input)
+    else:
+        setup_dict = {}
     runs_df = pd.read_csv(runs_file, index_col=False)[0:limit]
     setup_flow = []
     for index, row in runs_df.iterrows():
@@ -215,12 +223,20 @@ def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
         if flow == 'ERROR':
             print 'flow {} is not repairable'.format(row['flow_id'])
         else:
+
             pipeline = flows.flow_to_sklearn(flow)
-            setup = setups.get_setup(row['setup_id'])
+            if row['setup_id'] in setup_dict:
+                setup = setup_dict[row['setup_id']]
+            else:
+                setup = setups.get_setup(row['setup_id'])
+                setup_dict[row['setup_id']] = setup
             setup_flow.append((setup, pipeline))
 
     with open(flows_path, 'wb') as output:
         pickle.dump(flow_dict, output, pickle.HIGHEST_PROTOCOL)
+
+    with open(setups_path, 'wb') as output:
+        pickle.dump(setup_dict, output, pickle.HIGHEST_PROTOCOL)
 
     return setup_flow
 

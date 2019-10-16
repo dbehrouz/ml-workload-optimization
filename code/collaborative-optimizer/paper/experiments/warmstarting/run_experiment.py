@@ -70,7 +70,7 @@ materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
 EXPERIMENT = parser.get('experiment', 'openml')
-limit = int(parser.get('limit', 2000))
+limit = int(parser.get('limit', 200))
 openml_task = int(parser.get('task', 31))
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 config.set_cache_directory(OPENML_DIR + '/cache')
@@ -86,6 +86,9 @@ if not os.path.exists(os.path.dirname(result_file)):
             raise
 
 method = parser.get('method', 'optimized')
+should_warmstart = bool(int(parser.get('warmstart', 1)))
+
+print 'running experiment {} with warmstarting: {}'.format(method, should_warmstart)
 
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
@@ -104,7 +107,7 @@ else:
 
 def get_workload(method, setup, pipeline):
     if method == 'optimized':
-        return OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task, should_warmstart=True)
+        return OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task, should_warmstart=should_warmstart)
     else:
         return OpenMLBaselineWorkload(setup, pipeline, task_id=openml_task)
 
@@ -118,6 +121,7 @@ def run(executor, workload):
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
+i = 0
 for setup, pipeline in setup_and_pipelines:
     workload = get_workload(method, setup, pipeline)
     start = datetime.now()
@@ -129,7 +133,9 @@ for setup, pipeline in setup_and_pipelines:
     executor.local_process()
     executor.global_process()
     executor.cleanup()
-
+    i += 1
+    if i % 50 == 0:
+        print 'run {} out of {} completed'.format(i, limit)
     if not success:
         elapsed = 'Failed!'
 
