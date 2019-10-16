@@ -142,6 +142,6 @@ for setup, pipeline in setup_and_pipelines:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+            '{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
                                                   EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                                  mat_budget, current_score, elapsed))
+                                                  should_warmstart, mat_budget, current_score, elapsed))
