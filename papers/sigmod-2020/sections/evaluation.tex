@@ -10,21 +10,21 @@ Finally, we investigate the effect of the individual contributions, i.e., materi
 \hline
 \textbf{$ID$} & \textbf{$Description$}& \textbf{$N$}& \textbf{$S$}   \\
 \hline
-1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5\\[0.4cm]
+1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real script titled 'start-here-a-gentle-introduction'. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models.} & 397 & 14.5\\[0.4cm]
 
-2 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'introduction-to-manual-feature-engineering'. It joins multiple datasets, preprocesses the datasets, and then, trains gradient boosted tree models.} & 406 & 25\\[0.4cm]
+2 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real script titled 'introduction-to-manual-feature-engineering'. It joins multiple datasets, preprocesses the datasets to generate features, and trains gradient boosted tree models on the generated features.} & 406 & 25\\[0.4cm]
 
-3 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Real script titled 'introduction-to-manual-feature-engineering-p2'. It is similar to workload 2, but the resulting preprocessed datasets are larger.} & 146 & 83.5\\[0.15cm]
+3 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real script titled 'introduction-to-manual-feature-engineering-p2'. It is similar to Workload 2, with the resulting preprocessed datasets having more features.} & 146 & 83.5\\[0.15cm]
 
-4 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version workload 1 submitted by the Kaggle user: 'crldata'. It modifies the hyperparameters of the gradient boosted tree.} & 280 & 10\\[0.4cm]
+4 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version of Workload 1 submitted by the Kaggle user "crldata". It trains a gradient boosted tree with a different set of hyperparameters.} & 280 & 10\\[0.4cm]
 
-5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version of workload 1 submitted by the Kaggle user: 'taozhongxiao'. It runs random and grid search for gradient boosted tree model on the dataset of workload 1.} & 402 & 13.8\\[0.4cm]
+5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A modified version of Workload 1 submitted by the Kaggle user "taozhongxiao". It performs random and grid search for gradient boosted tree model using generated features of Workload 1.} & 402 & 13.8\\[0.4cm]
 
-6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on Workloads 2 and 4. It trains a gradient boosted tree on the dataset of workload 2.} & 121 & 21\\[0.15cm]
+6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script based on Workloads 2 and 4. It trains a gradient boosted tree on the generated features of Workload 2.} & 121 & 21\\[0.15cm]
 
-7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script based on Workload 3 and 4. It trains a gradient boosted tree on the dataset of workload 3.} & 145 & 83\\[0.15cm]
+7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script based on Workload 3 and 4. It trains a gradient boosted tree on the generated features of Workload 3.} & 145 & 83\\[0.15cm]
 
-8 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small Custom script that joins the features of Workloads 1 and 2. Then, similar to Workload 4, it trains a gradient boosted tree on the joined dataset.} & 341 & 21.1\\
+8 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script that joins the features of Workloads 1 and 2. Then, similar to Workload 4, it trains a gradient boosted tree on the joined dataset.} & 341 & 21.1\\
 \hline
 \end{tabular}
 \caption{Description of Kaggle workloads. $N$ is number of the artifacts and $S$ is the total size of the artifacts in GB.}
@@ -100,7 +100,7 @@ Since our collaborative optimizer does not materialize such external information
 }
 \caption{Execution of Kaggle workloads in sequence}
 \end{subfigure}
-\caption{Execution of Kaggle workloads (materialization budget = 32 GB). KG = Kaggle's infrastructure (our baseline), CO = Collaborative Optimizer.}
+\caption{Execution of Kaggle workloads (materialization budget = 16 GB). KG = Kaggle's infrastructure (our baseline), CO = Collaborative Optimizer.}
 \label{exp-reuse-kaggle-same-workload}
 \end{figure}
 
@@ -112,22 +112,23 @@ The experiment shows that optimizing even a single execution of each workload ha
 In a real collaborative environment, there are hundreds of more modified scripts and possibly thousands of repeated execution of such scripts, resulting in 1000s of hours of reduction in the cumulative run-time.
 
 \subsection{Materialization}
-In this set of experiments, we show the impact of our materialization algorithms on the total size of the stored artifacts and total run-time of the workloads
+In this set of experiments, we investigate the impact of our materialization algorithms on storage and run-time.
 
-\textbf{Effect of Materialization on Storage and Run-time.}
+\textbf{Effect of Materialization on Storage.}
 Typically, in a real collaborative environment, deciding on a reasonable materialization budget requires knowledge of the expected size of the artifacts, number of the users in a collaborative environment, and rate of incoming workloads.
 In this experiment, we show that even with a small budget, our materialization algorithms, particularly our storage-aware algorithm, store a large portion of the artifacts that reappear in future workloads.
+We hypothesize that there is considerable overlap between columns of different dataset artifacts in ML workloads.
+Therefore, the actual total size of the artifacts our storage-aware algorithm materializes is larger than the specified budget.
 We run the workloads of Table \ref{kaggle-workload} under different materialization budgets using both our heuristics-based and storage-aware materialization algorithms.
 Figures \ref{exp-sa-vs-simple-size}(a)-(d) show the real size of the stored artifacts under different materialization budgets for the heuristics-based (HM) and storage-aware (SA) algorithms.
 Furthermore, to show the total size of the materialized artifacts, we also implement an all materializer (represented by ALL in the figure).
-The all-materializer stores every artifact of the workloads in EG.
+The all-materializer materializes every artifact in EG.
 In HM, the maximum real size is always equal to the budget.
 However, in SA, we observe that the real size of the stored artifacts reaches up to 8 times the budget.
-With a materialization budget of 8 GB, SA materializes almost half of the artifacts.
+With a materialization budget of 8 GB, SA materializes almost half of the total artifacts.
 When the materialization budget is more than 8 GB, SA materializes nearly all the artifacts.
 This indicates that there is considerable overlap between the artifacts of ML workloads.
-By deduplicating the artifacts, our storage-aware materialization algorithm can materialize more artifacts.
-As a result, the storage-aware results in a smaller total run-time when compared with the heuristics-based materialization.
+By deduplicating the artifacts, our storage-aware materialization can materialize more artifacts.
 
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}
@@ -160,10 +161,11 @@ As a result, the storage-aware results in a smaller total run-time when compared
 }
 \caption{Budget = 64 GB}
 \end{subfigure}
-\caption{Real size of the stored artifact for storage aware and simple materialization under different budgets (SA = storage-aware materialization, HM = heuristics-based materialization)  \todo[inline]{Need to properly explain the sudden rise at workload 7 for SA budget = 16}}
+\caption{Real size of the stored artifact for storage-aware and heuristics-based materializations under different budgets (SA = storage-aware, HM = heuristics-based)  \todo[inline]{Need to properly explain the sudden rise at workload 7 for SA budget = 16, also in budget 8, SA drops from 2 to 3.}}
 \label{exp-sa-vs-simple-size}
 \end{figure}
 
+\textbf{Effect of Materialization on Run-time.}
 Figure \ref{run-time-vs-mat} shows the total run-time of all the workloads under different budgets for heuristics-based and storage-aware algorithms.
 We also plot the total run-time for the all-materializer.
 Even with a materialization budget of 8 GB, SA performs similar to the scenario where all the artifacts are materialized.
@@ -171,7 +173,7 @@ On the contrary, under a small materialization budget ($\leq 16$), the HM perfor
 This is mainly because many of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 5 GB.
 Most of these artifacts differ with each other in only a few columns.
 However, the HM is unable to exploit this similarity and chooses not to materialize any of the large artifacts.
-Recomputing these artifacts is costly, which results in a larger total run-time for heuristics-based materialization under a smaller budget.
+Recomputing these artifacts is costly, which results in a larger total run-time for HM under a smaller budget.
 
 \begin{figure}
 \centering
@@ -221,6 +223,7 @@ In this experiment, we evaluate the performance of our reuse algorithm.
 We compare our linear time reuse algorithm (LN) with two baselines.
 In the first baseline (ALL\_M), we reuse every materialized artifact.
 In the second baseline (ALL\_C), we recompute every materialized artifact.
+Figure \ref{reuse-experiment} shows the total run-time of the Kaggle workloads with different reuse approaches.
 The performance of ALL\_C is similar to when there is no Experiment Graph.
 Thus, ALL\_C finishes the execution of all the Kaggle workloads in around 2000.
 ALL\_M has a similar performance to LN until workload 7.
@@ -234,7 +237,7 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/reuse/simple-mat.pgf}%
 }
-\caption{Simple}
+\caption{Heuristics-based}
 \end{subfigure}%
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -245,6 +248,7 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 \caption{Storage-aware}
 \end{subfigure}
 \caption{Comparison of our linear reuse algorithm with two baselines under different materialization schemes (LN = linear, ALL\_C = all compute, ALL\_M = all materialized).}
+\label{reuse-experiment}
 \end{figure}
 
 \subsection{Warmstarting}
@@ -278,5 +282,3 @@ Whereas, warmstarting decreases the total run time drastically.
 \caption{Effect of warmstarting on total run time}
 \label{exp-model-warmstarting}
 \end{figure}
-
-\subsection{Discussion}

@@ -22,7 +22,6 @@ sys.path.append(SOURCE_CODE_ROOT)
 from paper.experiment_helper import ExperimentWorkloadFactory
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
-from experiment_graph.optimizations.Reuse import FastBottomUpReuse
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
 
