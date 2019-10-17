@@ -122,6 +122,73 @@ class AllMaterializer(Materializer):
                         [n for n, d in experiment_graph.graph.nodes(data='mat') if d]))
 
 
+class TopNModelMaterializer(Materializer):
+    def __init__(self, n=1, alpha=0.5):
+        super(TopNModelMaterializer, self).__init__(storage_budget=0, alpha=alpha)
+        self.n = n
+
+    def run(self, experiment_graph, workload_dag, verbose):
+        graph = experiment_graph.graph
+        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
+        root_size = 0.0
+        to_mat = []
+        for n in graph.nodes(data=True):
+            if n[1]['root']:
+                root_size += n[1]['size']
+                to_mat.append(n[0])
+        i = 0
+
+        # current_model_mat = []
+        # for n, d in graph.nodes(data=True):
+        #     if d['type'] == 'SK_Model' and d['score'] > 0:
+        #         if d['mat']:
+        #             current_model_mat.append((n, d['score']))
+
+        while i < self.n:
+            top = rhos.pop(0)
+            if experiment_graph.graph.nodes[top.node_id]['type'] == 'SK_Model' and \
+                    experiment_graph.graph.nodes[top.node_id]['score'] > 0:
+                to_mat.append(top.node_id)
+                i += 1
+                print 'mat  -> node[{}] score: {}, size: {}, utility: {}'. \
+                    format(top.node_id, experiment_graph.graph.nodes[top.node_id]['score'], top.size, top.utility_value)
+
+        return to_mat
+
+
+class OracleBestModelMaterializer(Materializer):
+    def __init__(self):
+        super(OracleBestModelMaterializer, self).__init__(0)
+
+    def run(self, experiment_graph, workload_dag, verbose):
+        graph = experiment_graph.graph
+        root_size = 0.0
+        to_mat = []
+        for n in graph.nodes(data=True):
+            if n[1]['root']:
+                root_size += n[1]['size']
+                to_mat.append(n[0])
+
+        best_model_score = 0
+        best_model_id = ''
+
+        current_model_mat = []
+        for n, d in graph.nodes(data=True):
+            if d['type'] == 'SK_Model' and d['score'] > 0:
+                if d['mat']:
+                    current_model_mat.append((n, d['score']))
+                if best_model_score < d['score']:
+                    best_model_score = d['score']
+                    best_model_id = n
+        assert len(current_model_mat) <= 1
+
+        if len(current_model_mat) == 1 and current_model_mat[0][1] >= best_model_score:
+            to_mat.append(current_model_mat[0][0])
+        else:
+            to_mat.append(best_model_id)
+        return to_mat
+
+
 class HeuristicsMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose=0):
@@ -249,11 +316,11 @@ class NodeInfo(object):
         self.normalized_cost = normalized_cost
         self.normalized_potential = normalized_potential
         self.size = size
-        self.utility_value = self.compute_rho()
         self.alpha = alpha
+        self.utility_value = self.compute_rho()
 
     def compute_rho(self):
-        return (self.alpha * self.normalized_potential + (1 - self.alpha) * self.normalized_cost) / self.size
+        return self.alpha * self.normalized_potential + (1 - self.alpha) * self.normalized_cost
 
     def __lt__(self, other):
         return self.utility_value < other.utility_value

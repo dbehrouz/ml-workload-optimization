@@ -45,15 +45,14 @@ if '/home/zeuchste/git/scikit-learn' in sys.path:
 
 from paper.experiment_helper import Parser
 from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageManager
-from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
+from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    TopNModelMaterializer
+    TopNModelMaterializer, OracleBestModelMaterializer
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
 from experiment_graph.workloads.openml_optimized import OpenMLOptimizedWorkload
-from experiment_graph.workloads.openml_baseline import OpenMLBaselineWorkload
 
 e_id = uuid.uuid4().hex.upper()[0:8]
 EXPERIMENT_TIMESTAMP = datetime.now()
@@ -76,7 +75,7 @@ openml_task = int(parser.get('task', 31))
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 config.set_cache_directory(OPENML_DIR + '/cache')
 
-result_file = parser.get('result', ROOT + '/experiment_results/local/model_materialization/openml/test.csv')
+result_file = parser.get('result', ROOT + '/experiment_results/local/alpha_impact/openml/test.csv')
 profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
 if not os.path.exists(os.path.dirname(result_file)):
@@ -93,21 +92,19 @@ OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
 setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OPENML_TASK + '/all_runs.csv',
                                              limit=limit)
 
-if method == 'optimized':
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
-    materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
-elif method == 'baseline':
-    executor = BaselineExecutor()
+mat_type = parser.get('mat_type', 'best_n')
+alpha = float(parser.get('alpha', '0.5'))
+
+if mat_type == 'best_n':
+    materializer = TopNModelMaterializer(n=1, alpha=alpha)
 else:
-    raise Exception('invalid method name: {}'.format(method))
+    materializer = OracleBestModelMaterializer()
+ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
 
 
-def get_workload(method, setup, pipeline):
-    if method == 'optimized':
-        return OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
-    else:
-        return OpenMLBaselineWorkload(setup, pipeline, task_id=openml_task)
+def get_workload(setup, pipeline):
+    return OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
 
 
 def run(executor, workload):
@@ -119,13 +116,24 @@ def run(executor, workload):
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
 
 
+def is_best_model_materialized(executor):
+    graph = executor.execution_environment.experiment_graph.graph
+    best = (0, {}, 'id')
+    for n, d in graph.nodes(data=True):
+        if d['type'] == 'SK_Model' and d['score'] > 0:
+            if best[0] < d['score']:
+                best = (d['score'], d, n)
+    return graph.nodes[best[2]]['mat']
+
+
 best_workload = None
 best_score = -1
 best_setup = -1
 best_pipeline = -1
+print 'experiment with materializer: {}, alpha: {}'.format(mat_type, alpha)
 for setup, pipeline in setup_and_pipelines:
 
-    workload = get_workload(method, setup, pipeline)
+    workload = get_workload(setup, pipeline)
     start = datetime.now()
     # print '{}-Start of {} with pipeline {}, execution'.format(start, workload_name)
     success = run(executor, workload)
@@ -156,6 +164,7 @@ for setup, pipeline in setup_and_pipelines:
     executor.local_process()
     executor.global_process()
     executor.cleanup()
+    mat_status = 1 if is_best_model_materialized(executor) else 0
 
     if not success:
         elapsed = 'Failed!'
@@ -165,8 +174,7 @@ for setup, pipeline in setup_and_pipelines:
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(
-            '{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                                                 EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                                                 mat_budget, current_score, run_time_current,
-                                                                 best_pipeline, best_setup, best_score, run_time_best,
-                                                                 elapsed))
+            '{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
+                                                  EXPERIMENT, setup.flow_id, setup.setup_id, mat_type,
+                                                  alpha, mat_status,
+                                                  elapsed))

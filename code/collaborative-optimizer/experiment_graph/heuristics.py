@@ -32,11 +32,16 @@ def compute_recreation_cost(graph):
             recreation_costs[n] = cost
             # compute cost for reuse algorithm
             graph.nodes[n]['compute_cost'] = my_cost
-            total_weighted_cost += (graph.nodes[n]['meta_freq'] * cost)
+            if graph.nodes[n]['size'] is not None:
+                total_weighted_cost += (graph.nodes[n]['meta_freq'] * cost) / graph.nodes[n]['size']
 
     for n in graph.nodes(data=True):
         n[1]['recreation_cost'] = recreation_costs[n[0]]
-        n[1]['n_recreation_cost'] = (n[1]['meta_freq'] * n[1]['recreation_cost']) / total_weighted_cost
+        if n[1]['size'] is not None:
+            n[1]['n_recreation_cost'] = ((n[1]['meta_freq'] * n[1]['recreation_cost']) / n[1][
+                'size']) / total_weighted_cost
+        else:
+            n[1]['n_recreation_cost'] = 0
 
 
 def compute_vertex_potential(graph):
