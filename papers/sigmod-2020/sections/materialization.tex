@@ -111,8 +111,8 @@ $v \coloneqq PQ.pop()$\tcp*{vertex with max $utility$}
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
 For every non-materialized vertex, we compute the utility value of the vertex (Lines 4-7).
 Then, we start materializing the vertices, sorted by their utilities, until the storage budget is exhausted (Lines 8-12).
-The utility function $\mathcal{U}(v) $ is the linear combination of the potential and recreation cost of a vertex.
-To define the utility function, we first define the recreation cost of a vertex as the following:  
+The utility function $\mathcal{U}(v)$ is combines the potential, recreation cost, and size of a vertex.
+To define the utility function, we first define the cost of a vertex as the following:  
 \[
 cost(v) \coloneqq \sum\limits_{v' \in G_v} v'.t
 \]
@@ -120,30 +120,26 @@ where $G_v \subset G$ is the compute graph of $v$, i.e., the set of all vertices
 The compute graph of a vertex always starts at one or more source vertices of the Experiment Graph and ends at the vertex itself.
 We also define $cost_l(v)$ as the cost (in seconds) of  loading the vertex $v$ from the Experiment Graph. 
 The $cost_l$ function depends on the size of the vertex and where the Experiment Graph resides (i.e., in memory, on disk, or in a remote location).
-Furthermore, we compute the normalized cost as:
-\[cost'(v) = \dfrac{v.f  \times cost(v) }{\sum\limits_{v' \in G} v'.f \times cost(v')}\],
-and normalized potential as:
-\[p'(v) = \dfrac{p(v) }{\sum\limits_{v' \in G} p(v')}\]
-We now define the utility function is defined as: 
+Now, we define the weighted cost-size ratio as:
+\[cost_{ws}(v) = \frac{v.f  \times cost(v)}{v.s}\]
+The weighted cost-size ratio has the unit $\tfrac{s}/{Kb}$ and indicates how much time do we spend on computing 1 Kb of an artifact.
+In our utility function, we prioritize artifacts with larger $cost_{ws}$, since recomputing them is more costly.
+We now define the utility function as the linear combination: 
 \[
 \mathcal{U}(v) \coloneqq  	
 		\begin{cases}
 		0, & \text{if }  cost_l(v) \ge cost(v)  \\ 
-		\dfrac{\alpha p'(v) + (1-\alpha)cost'(v)}{v.s}, & \text{otherwise}.
+		\dfrac{\alpha p'(v) + (1-\alpha)cost'_{ws}(v)}, & \text{otherwise}
 		\end{cases}
-\]
+\],
+where $p'(v)$ and $cost'_{ws}$ are normalized values of $p(v)$ and $cost_{ws}$ (i.e., the values are between 0 and 1).
 If $cost_l(v) \ge cost(v)$, then recomputing the vertex is always more efficient than loading it from the Experiment Graph.
 Therefore, we never materialize such vertices.
 Taking the load cost into account enables us to adapt the materialization algorithm to different system architecture types (i.e., single node vs distributed) and storage unit types (i.e., memory or disk).
-$0 \leq \alpha \leq 1$ is the quality ratio constant.
-For example, when $\alpha > 0.5$, we assign more importance to model quality than computation cost.
-Therefore, we still materialize vertices with high potential even though they incur a large recreation cost.
-Note that we take the frequency of the vertices into account only when we compute the normalized cost ($cost'(v)$) and not the normalized potential.
-We reason that if a workload generates a high-quality model, subsequent users will use this workload as a baseline for comparison.
-Therefore, the artifacts of workloads generating high-quality models have a high likelihood of future reuse.
-Lastly, the utility of a vertex is proportional to the inverse of its size.
-This penalizes very space-consuming artifacts.
-Therefore, in the presence of equal potentials and recreation costs, our algorithm selects smaller vertices for materialization.
+$0 \leq \alpha \leq 1$ indicates the importance of potential.
+For example, when $\alpha > 0.5$, we assign more importance to model quality than weighted cost-size.
+Therefore, we still materialize vertices with high potential even though they have a small weighted cost-size ratio.
+In collaborative environments, where users are working toward building high-quality models and data exploration is not the main goal, a larger $\alpha$ encourages faster materialization of high-quality models.
 
 \textbf{Run-time and Complexity.}
 We compute the recreation cost and potential of the nodes incrementally using one pass over the Experiment Graph.
