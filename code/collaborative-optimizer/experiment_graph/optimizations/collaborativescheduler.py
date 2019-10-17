@@ -24,6 +24,10 @@ class CollaborativeScheduler:
         self.times = {}
         self.history_reads = 0
         self.reuse_type = reuse_type
+        self.num_of_operations = []
+
+    def get_num_of_operations(self):
+        return self.num_of_operations
 
     @abstractmethod
     def schedule(self, history, workload, v_id, verbose):
@@ -101,6 +105,7 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
         #     if len(final_schedule) > 0:
         #         print path
         self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
+        self.num_of_operations.append(len(final_schedule))
 
     # TODO measure number of reads in history graph
     # TODO measure time of these

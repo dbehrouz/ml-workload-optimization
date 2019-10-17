@@ -68,6 +68,14 @@ class Executor:
         """
         pass
 
+    @abstractmethod
+    def num_of_executed_operations(self):
+        """
+
+        :return:
+        """
+        pass
+
 
 class CollaborativeExecutor(Executor):
     DEFAULT_PROFILE = {"Agg": 0.08959999999999999, "SK_Model": 0.0002258063871079322, "Evaluation": 0.02909090909090909,
@@ -142,6 +150,9 @@ class CollaborativeExecutor(Executor):
         self.execution_environment.new_workload()
         return True
 
+    def num_of_executed_operations(self):
+        return self.execution_environment.scheduler.get_num_of_operations()
+
     def store_experiment_graph(self, database_path, overwrite=False):
         self.execution_environment.save_history(database_path, overwrite=overwrite)
 
@@ -175,3 +186,6 @@ class BaselineExecutor(Executor):
 
     def cleanup(self):
         return True
+
+    def num_of_executed_operations(self):
+        return [0]
