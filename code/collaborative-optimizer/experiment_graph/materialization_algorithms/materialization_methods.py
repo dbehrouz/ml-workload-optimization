@@ -3,17 +3,16 @@ from abc import abstractmethod
 from experiment_graph.graph.graph_representations import ExperimentGraph
 from experiment_graph.graph.graph_representations import WorkloadDag
 
-ALPHA = 0.5
-
 
 class Materializer(object):
-    def __init__(self, storage_budget, modify_graph=False):
+    def __init__(self, storage_budget, modify_graph=False, alpha=0.5):
         """
 
         :type modify_graph: bool for debugging the utility values, set this to true
         """
         self.storage_budget = storage_budget
         self.modify_graph = modify_graph
+        self.alpha = alpha
 
     def compute_rhos(self, e_graph, w_dag):
         rhos = []
@@ -28,15 +27,17 @@ class Materializer(object):
                 rho = 0
                 # node[1]['data'].clear_content()
             elif node[1]['load_cost'] > node[1]['recreation_cost']:
-                #print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
+                # print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
                 rho = 0
             else:
                 # only compute the utility for the vertices which are already
                 # materialized or are in the workload graph
                 if node[1]['mat'] or (w_dag.has_node(node[0]) and w_dag.nodes[node[0]]['data'].computed):
-                    node_info = NodeInfo(node[0], node[1]['n_recreation_cost'],
-                                         node[1]['n_potential'],
-                                         node[1]['size'])
+                    node_info = NodeInfo(node_id=node[0],
+                                         normalized_cost=node[1]['n_recreation_cost'],
+                                         normalized_potential=node[1]['n_potential'],
+                                         size=node[1]['size'],
+                                         alpha=self.alpha)
                     rhos.append(node_info)
                     rho = node_info.utility_value
                 else:
@@ -83,7 +84,7 @@ class Materializer(object):
                     experiment_graph.materialize(node_id=node_id, artifact=artifact)
             else:
                 if attributes['mat']:
-                    #print 'unmaterialize node {}'.format(node_id)
+                    # print 'unmaterialize node {}'.format(node_id)
                     experiment_graph.unmaterialize(node_id)
 
     @abstractmethod
@@ -173,7 +174,7 @@ class StorageAwareMaterializer(Materializer):
 
             materialization_candidates, rhos = self.select_nodes_to_materialize(rhos, remaining_budget,
                                                                                 materialization_candidates)
-            #print 'current size: {}'.format(experiment_graph.get_size_of(materialization_candidates))
+            # print 'current size: {}'.format(experiment_graph.get_size_of(materialization_candidates))
             # if node new node is materialized, end the process
             if start_list == materialization_candidates:
                 break
@@ -243,15 +244,16 @@ class StorageAwareMaterializer(Materializer):
 
 
 class NodeInfo(object):
-    def __init__(self, node_id, normalized_cost, normalized_potential, size):
+    def __init__(self, node_id, normalized_cost, normalized_potential, size, alpha):
         self.node_id = node_id
         self.normalized_cost = normalized_cost
         self.normalized_potential = normalized_potential
         self.size = size
         self.utility_value = self.compute_rho()
+        self.alpha = alpha
 
     def compute_rho(self):
-        return (ALPHA * self.normalized_potential + (1 - ALPHA) * self.normalized_cost) / self.size
+        return (self.alpha * self.normalized_potential + (1 - self.alpha) * self.normalized_cost) / self.size
 
     def __lt__(self, other):
         return self.utility_value < other.utility_value
