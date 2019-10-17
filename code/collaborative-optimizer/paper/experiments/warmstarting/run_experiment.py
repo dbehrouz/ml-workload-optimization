@@ -143,5 +143,5 @@ for setup, pipeline in setup_and_pipelines:
         # get_benchmark_results has the following order:
         the_file.write(
             '{},{},{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
-                                                  EXPERIMENT, setup.flow_id, setup.setup_id, method,
-                                                  should_warmstart, mat_budget, current_score, elapsed))
+                                                     EXPERIMENT, setup.flow_id, setup.setup_id, method,
+                                                     should_warmstart, mat_budget, current_score, elapsed))

@@ -223,7 +223,6 @@ def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
         if flow == 'ERROR':
             print 'flow {} is not repairable'.format(row['flow_id'])
         else:
-
             pipeline = flows.flow_to_sklearn(flow)
             if row['setup_id'] in setup_dict:
                 setup = setup_dict[row['setup_id']]

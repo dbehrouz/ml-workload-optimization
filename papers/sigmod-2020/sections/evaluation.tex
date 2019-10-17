@@ -246,6 +246,32 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 \todo[inline]{Experiment is in progress}
 In this experiment, we evaluate the effect of our warmstarting method.
 We execute all the OpenML workloads with and without warmstarting.
-Figure xxx shows the cumulative run-time of the OpenML workloads.
+Figure \ref{exp-model-warmstarting} shows the effect of warmstarting on the OpenML workload.
+In Figure \ref{exp-model-warmstarting}(a) we observer that when no warmstarting is enabled, the run time of the baseline (OML) and our optimizer without warmstarting (CO-W) is nearly identical.
+With warmstarting is enabled (CO+W), we are able to reduce to the cumulative run time by a third.
+CO-W indeed manages to reuse many already computed intermediate artifacts.
+Since in the OpenML workloads, the datasets are small, the data transformation and feature engineering operations are very fast.
+The majority of time is spent in the model training operations.
+Thus, by reusing artifacts we manage to reduce the number of executed operations, as shown in Figure \ref{exp-model-warmstarting}(b),  it hardly has an impact on the total run time.
+Whereas, warmstarting decreases the total run time drastically.
+
+\begin{figure}
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{../images/experiment-results/openml/warmstarting/warmstarting.pgf}%
+}
+\caption{Run Time}
+\end{subfigure}%
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{../images/experiment-results/openml/warmstarting/warmstarting.pgf}%
+}
+\caption{Num of Operations}
+\end{subfigure}
+\caption{Effect of warmstarting on total run time}
+\label{exp-model-warmstarting}
+\end{figure}
 
 \subsection{Discussion}

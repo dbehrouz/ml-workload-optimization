@@ -61,7 +61,7 @@ After forward-pass, we must prune the set of reuse vertices to remove any artifa
 A vertex $v \in \mathcal{R}$ is not part of the execution path if there exists at least another vertex $v' \in \mathcal{R}$ in every outgoing path starting at $v$.
 Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
 In backward-pass, we visit every vertex of $WG$ starting from the terminal vertices.
-For every vertex, if it belongs to the reuse set, we add it to the final solution set and stop traversing its parents (Lines 4 and 5).
+For every vertex, if it belongs to the reuse set, we add it to the final solution set ($\mathcal{R}_p$) and stop traversing its parents (Lines 4 and 5).
 Otherwise, we continue traversing the parents of the vertex (Line 7).
 
 \begin{algorithm}[h]
