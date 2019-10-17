@@ -102,8 +102,8 @@ class HashBasedCollaborativeScheduler(CollaborativeScheduler):
         #         if path == '':
         #             path = pair[0]
         #         path += '-' + workload.graph.edges[pair[0], pair[1]]['name'] + '->' + pair[1]
-        #     if len(final_schedule) > 0:
-        #         print path
+        #
+        #     print len(final_schedule), path
         self.times[v_id] = (lapsed - reuse_optimization, reuse_optimization)
         self.num_of_operations.append(len(final_schedule))
 

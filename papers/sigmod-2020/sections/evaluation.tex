@@ -67,7 +67,7 @@ Kaggle reports users have copied and modified these workloads a total of 7000 ti
 Therefore, at the very least, users execute these workloads 7000 times.
 Figures \ref{exp-reuse-kaggle-same-workload}(a)-(c) show the result of repeating the execution of each workload twice.
 Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) have similar run-times.
-\todo[inline]{In Workloads 2 and 3, we are better than KG because the baseline scripts re-read the dataset multiple times which we avoid since our the workload DAG already contains the datasets. I still have to investigate why in Workload 1 Run 1 we are worse than KG. }
+\todo[inline]{I need to investigate why we are better for run 1 of Workload 2 and 3 but worse for run 1 of Workload 1, (I know why we are better in 2 and 3, once I figure out the behavior of workload 1 I will update the text).}
 By materializing and reusing the artifacts, CO reduces the run-time of the consecutive runs by one order of magnitude for workloads 2 and 3.
 Workload 1 executes an external visualization command that computes a bivariate kernel density estimate, which incurs a large overhead.
 Since our collaborative optimizer does not materialize such external information, it must re-execute the visualization command; thus, resulting in a smaller run-time reduction.
@@ -254,14 +254,22 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 \subsection{Warmstarting}
 In this experiment, we evaluate the effect of our warmstarting method.
 We execute all the OpenML workloads with and without warmstarting.
-Figure \ref{exp-model-warmstarting} shows the effect of warmstarting on the OpenML workload.
-In Figure \ref{exp-model-warmstarting}(a) we observer that when no warmstarting is enabled, the run time of the baseline (OML) and our optimizer without warmstarting (CO-W) is nearly identical.
-With warmstarting is enabled (CO+W), we are able to reduce to the cumulative run time by a third.
-CO-W indeed manages to reuse many already computed intermediate artifacts.
-Since in the OpenML workloads, the datasets are small, the data transformation and feature engineering operations are very fast.
-The majority of time is spent in the model training operations.
-Thus, by reusing artifacts we manage to reduce the number of executed operations, as shown in Figure \ref{exp-model-warmstarting}(b),  it hardly has an impact on the total run time.
-Whereas, warmstarting decreases the total run time drastically.
+Figure \ref{exp-model-warmstarting} shows the effect of warmstarting on the OpenML workloads.
+In Figure \ref{exp-model-warmstarting}(a), we observe that without warmstarting, the cumulative run-time of the baseline (OML) and our optimizer (CO-W) is nearly identical.
+Warmstarting (CO+W) reduces the cumulative run-time by a third.
+In OpenML workloads, because of the small size of the datasets, the run-time of the data transformation operations is very small, i.e., typically only a few milliseconds.
+The model training operations are the main contributors to the total run-time.
+Another characteristic of the OpenML workloads is that nearly every model training operation has a unique set of hyperparameters.
+For example, out of the 2000 workloads that we execute, only 4 have similar hyperparameters.
+Thus, the result of the model training operations cannot be reused, which results in CO-W having the same cumulative run-time as OML.
+To further show that warmstarting is the main reason behind the smaller cumulative run-time of CO+W, we also plot the total number of executed operations in Figure \ref{exp-model-warmstarting}(b).
+There are, on average, 25 operations in every OpenML workload.
+OML does not reuse any artifacts; thus, it has to execute every operation.
+In CO-W or CO+W, the average number of executed operations per workload is 7, i.e., 4 times smaller than the number of operations in OML.
+Since the reuse procedure in CO-W and CO+W is identical, the cumulative number of executed operations is also identical.
+However, due to the small run-time of preprocessing operations in OpenML workflow, we only observe an improvement in run-time with warmstarting.  
+
+
 
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}

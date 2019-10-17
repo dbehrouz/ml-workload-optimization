@@ -47,8 +47,8 @@ from paper.experiment_helper import Parser
 from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageManager
 from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
-from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    TopNModelMaterializer, OracleBestModelMaterializer
+from experiment_graph.materialization_algorithms.materialization_methods import TopNModelMaterializer, \
+    AllMaterializer
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
@@ -63,9 +63,6 @@ verbose = parser.get('verbose', 0)
 DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 ROOT_DATA_DIRECTORY = ROOT + '/data'
-
-mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
 storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
 
@@ -85,8 +82,6 @@ if not os.path.exists(os.path.dirname(result_file)):
         if exc.errno != errno.EEXIST:
             raise
 
-method = parser.get('method', 'optimized')
-
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
 setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OPENML_TASK + '/all_runs.csv',
@@ -98,7 +93,8 @@ alpha = float(parser.get('alpha', '0.5'))
 if mat_type == 'best_n':
     materializer = TopNModelMaterializer(n=1, alpha=alpha)
 else:
-    materializer = OracleBestModelMaterializer()
+    materializer = AllMaterializer()
+
 ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
 
@@ -108,12 +104,7 @@ def get_workload(setup, pipeline):
 
 
 def run(executor, workload):
-    if method == 'optimized' or method == 'mock_optimized':
-        return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
-    elif method == 'baseline':
-        return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
-    elif method == 'mock':
-        return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
+    return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
 
 
 def is_best_model_materialized(executor):
@@ -130,12 +121,11 @@ best_workload = None
 best_score = -1
 best_setup = -1
 best_pipeline = -1
+i = 0
 print 'experiment with materializer: {}, alpha: {}'.format(mat_type, alpha)
 for setup, pipeline in setup_and_pipelines:
-
     workload = get_workload(setup, pipeline)
     start = datetime.now()
-    # print '{}-Start of {} with pipeline {}, execution'.format(start, workload_name)
     success = run(executor, workload)
     end_current = datetime.now()
     run_time_current = (end_current - start).total_seconds()
@@ -147,14 +137,12 @@ for setup, pipeline in setup_and_pipelines:
     if best_workload is not None:
         start_best_workload = datetime.now()
         success = run(executor, best_workload)
-        run_time_best = (datetime.now() - start_best_workload).total_seconds()
-        if current_score > best_score:
+        if current_score > best_workload.get_score():
             best_score = current_score
             best_workload = workload
             best_setup = setup.setup_id
             best_pipeline = setup.flow_id
     else:
-        run_time_best = run_time_current
         best_workload = workload
         best_score = current_score
     end = datetime.now()
@@ -165,7 +153,9 @@ for setup, pipeline in setup_and_pipelines:
     executor.global_process()
     executor.cleanup()
     mat_status = 1 if is_best_model_materialized(executor) else 0
-
+    i += 1
+    if i % 50 == 0:
+        print 'run {} out of {} completed'.format(i, limit)
     if not success:
         elapsed = 'Failed!'
     # graph = executor.execution_environment.experiment_graph
