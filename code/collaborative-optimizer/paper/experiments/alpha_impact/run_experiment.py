@@ -48,7 +48,7 @@ from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageM
 from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import TopNModelMaterializer, \
-    AllMaterializer
+    AllMaterializer, OracleBestModelMaterializer
 from experiment_graph.optimizations.Reuse import AllMaterializedReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
@@ -93,7 +93,7 @@ alpha = float(parser.get('alpha', '0.1'))
 if mat_type == 'best_n':
     materializer = TopNModelMaterializer(n=1, alpha=alpha, modify_graph=True)
 else:
-    materializer = AllMaterializer()
+    materializer = OracleBestModelMaterializer()
 
 ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=AllMaterializedReuse.NAME)
 executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
@@ -152,7 +152,6 @@ for setup, pipeline in setup_and_pipelines:
     end_current = datetime.now()
     run_time_current = (end_current - start).total_seconds()
     current_score = workload.get_score()
-    print current_score
     if best_score == -1:
         best_score = current_score
         best_setup = setup.setup_id

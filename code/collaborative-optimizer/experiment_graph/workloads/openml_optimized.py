@@ -43,9 +43,10 @@ class OpenMLOptimizedWorkload(Workload):
             score = model.score(test_x,
                                 test_y,
                                 score_type='accuracy').data(verbose=verbose)
-            print score
+
             # print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
             self.score = score['accuracy']
+
             return True
         except:
             print 'error for pipeline: {}, setup: {}'.format(self.pipeline, self.setup)

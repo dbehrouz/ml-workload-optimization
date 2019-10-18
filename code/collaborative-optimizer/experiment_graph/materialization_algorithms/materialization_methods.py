@@ -141,18 +141,14 @@ class TopNModelMaterializer(Materializer):
         #     if d['type'] == 'SK_Model' and d['score'] > 0:
         #         if d['mat']:
         #             current_model_mat.append((n, d['score']))
-        top_node = ''
+
         while rhos:
             top = rhos.pop(0)
             if experiment_graph.graph.nodes[top.node_id]['type'] == 'SK_Model' and \
                     experiment_graph.graph.nodes[top.node_id]['score'] > 0:
                 if i < self.n:
-                    top_node = top.node_id
+                    to_mat.append(top.node_id)
                     i += 1
-            else:
-                to_mat.append(top.node_id)
-
-        to_mat.append(top_node)
 
         return to_mat
 
@@ -188,13 +184,7 @@ class OracleBestModelMaterializer(Materializer):
         else:
             top_node = best_model_id
 
-        sucs = list(graph.successors(top_node))
-        assert len(sucs) == 1
-        evals = list(graph.successors(sucs[0]))
-        assert len(evals) == 1
-
         to_mat.append(top_node)
-        to_mat.append(evals[0])
         return to_mat
 
 
