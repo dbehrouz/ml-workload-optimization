@@ -13,6 +13,8 @@ import sys
 import uuid
 from datetime import datetime
 
+
+
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -23,6 +25,7 @@ from paper.experiment_helper import ExperimentWorkloadFactory
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.storage_managers import storage_profiler
 
 parser = Parser(sys.argv)
@@ -70,7 +73,7 @@ if not os.path.exists(os.path.dirname(result_file)):
             raise
 
 if method == 'optimized':
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
     executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=sa_materializer)
 elif method == 'baseline':
