@@ -9,12 +9,13 @@ Then, we discuss our model warmstarting approach for model training operations w
 
 \subsection{Reuse Algorithm} 
 \textbf{Preliminaries and Notations.} 
-We refer to the workload DAG as $WG$.
-For every vertex, $v \in WG$, we define $cost_l(v)$ as the cost (in seconds) of loading $v$ from $EG$ and $cost_c(v)$ as the computation cost (also in seconds) of $v$ given its parent vertices in $WG$.
-If an artifact exist in $EG$ but is not materialized, then we set $cost_l(v)=\infty$.
-For artifacts that do not exist in $EG$, $cost_l(v)$ and $cost_c(v)$ are also set to $\infty$.
-Such artifacts have never appeared in any previous workloads; thus, EG has no prior information about them.
-Lastly, if an artifact is already computed inside $WG$, such as the source artifacts or pre-computed artifacts in interactive workloads, we set $cost_c(v)=0$, this is because the artifact is already available in the client's memory.
+We refer to the workload DAG as $G_W$.
+Every vertex, $v \in G_W$, has a load cost (i.e., $C_l(v)$ defined in Section \ref{sec-materialization}).
+We also define $C_i(v)$ as the computation cost (in seconds) of $v$ given its input vertices (i.e., the parents of the vertex $v$) in $G_W$.
+If an artifact exist in $G_E$ but is not materialized, then we set $C_l(v)=\infty$.
+For artifacts that do not exist in $G_E$, $C_l(v)$ and $C_i(v)$ are also set to $\infty$.
+Such artifacts have never appeared in any previous workloads; thus, Experiment Graph has no prior information about them.
+Lastly, if an artifact is already computed inside $G_W$, such as the source artifacts or pre-computed artifacts in interactive workloads, we set $C_i(v)=0$, this is because the artifact is already available in the client's memory.
 
 \textbf{Linear-time Algorithm.}
 Our reuse algorithm comprises two parts: forward-pass and backward-pass.
@@ -22,32 +23,32 @@ In forward-pass, the algorithm selects the set of materialized vertices to load 
 The backward-pass prunes any unnecessary materialized vertices before transferring the optimized DAG to the client.
 
 Algorithm \ref{forward-pass} shows the details of forward-pass.
-For every vertex of $WG$, we define the recreation cost as the total cost of computing the vertex from the sources.
+For every vertex of $G_W$, we define the recreation cost as the total cost of computing the vertex from the sources.
 We store the recreation costs of the vertices in the $recreation\_cost$ dictionary.
 In collaborative environments, the client always loads the source artifacts completely.
 Therefore, we set their recreation cost to 0 (Lines 1 and 2).
 Then, we visit every vertex in their topological order.
-If the client has already computed a vertex inside $WG$, then we set its recreation cost to 0 (Lines 5 and 6).
+If the client has already computed a vertex inside $G_W$, then we set its recreation cost to 0 (Lines 5 and 6).
 Otherwise, we compute the execution cost of a vertex as the sum of the compute cost of the vertex and the recreation cost of its parents (Lines 8 and 9).
 We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
 When the load cost is smaller, the algorithm adds the vertex to the set of reuse vertices.
 Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
 
 \begin{algorithm}[h]
-\KwData {$WG$: workload DAG, $EG$: Experiment Graph}
-\KwResult {$\mathcal{R}$: Set of vertices for reuse}
-\For {$s \in sources(WG)$}{
+\KwData {$G_W$ workload DAG, $G_E$ experiment graph}
+\KwResult {$\mathcal{R}$ set of vertices for reuse}
+\For {$s \in sources(G_W)$}{
 	$recreation\_cost[s] \coloneqq 0$\;
 }
 $\mathcal{R} \coloneqq \emptyset$\;
-\For {$v \leftarrow topological\_order(WG)$}{
-	\eIf{$v$ computed in $WG$}{
+\For {$v \leftarrow topological\_order(G_W)$}{
+	\eIf{$v$ computed in $G_W$}{
 		$recreation\_cost[v] \coloneqq 0$\; 		
 		}{
 		$p\_costs \coloneqq \sum\limits_{p \in parents(v)} recreation\_cost[p] $\;
-		$execution\_cost \coloneqq cost_c(v) + p\_costs$\;
-		\eIf {$ cost_l(v) < execution\_cost$}{
-			$recreation\_cost[v] \coloneqq cost_l(v)$\;
+		$execution\_cost \coloneqq C_i(v) + p\_costs$\;
+		\eIf {$ C_l(v) < execution\_cost$}{
+			$recreation\_cost[v] \coloneqq C_l(v)$\;
 			$\mathcal{R} \coloneqq \mathcal{R} \cup v$\;
 		}{
 			$recreation\_cost[v] \coloneqq execution\_cost$\;
@@ -60,15 +61,15 @@ return $\mathcal{R}$\;
 After forward-pass, we must prune the set of reuse vertices to remove any artifact that is not part of the execution path.
 A vertex $v \in \mathcal{R}$ is not part of the execution path if there exists at least another vertex $v' \in \mathcal{R}$ in every outgoing path starting at $v$.
 Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
-In backward-pass, we visit every vertex of $WG$ starting from the terminal vertices.
+In backward-pass, we visit every vertex of $G_W$ starting from the terminal vertices.
 For every vertex, if it belongs to the reuse set, we add it to the final solution set ($\mathcal{R}_p$) and stop traversing its parents (Lines 4 and 5).
 Otherwise, we continue traversing the parents of the vertex (Line 7).
 
 \begin{algorithm}[h]
-\KwData {$\mathcal{R}$: Current reuse set, $WG$: workload DAG}
+\KwData {$\mathcal{R}$: Current reuse set, $G_W$: workload DAG}
 \KwResult {$\mathcal{R}_p$: Final reuse set after pruning}
 $\mathcal{R}_p \coloneqq \emptyset$\;
-$v\_queue \coloneqq terminals(WG)$\;
+$v\_queue \coloneqq terminals(G_W)$\;
 \While{$v \leftarrow v\_queue.next()$}{
 	\eIf{$v \in \mathcal{R}$}{
 			$\mathcal{R}_p \coloneqq \mathcal{R}_p \cup v$\;
@@ -98,7 +99,7 @@ For example, since $v_3$ is materialized, backward-pass stops visiting its paren
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
-\caption{Reuse Algorithm Example. Each vertex has the label $\langle cost_c(v),cost_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
+\caption{Reuse Algorithm Example. Each vertex has the label $\langle C_i(v),C_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
 \label{fig-reuse-algorithm}
 \end{figure}
 

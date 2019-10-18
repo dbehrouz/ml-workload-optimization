@@ -12,13 +12,13 @@ The second algorithm takes the duplication information into account when decidin
 
 \textbf{Notations. }
 We use the following notations in this section.
-Graph $G = (V,E)$ is the Experiment Graph, where $V$ represents the set of artifacts and $E$ represents the set of operations.
+Graph $G_E = (V,E)$ is the Experiment Graph, where $V$ represents the set of artifacts and $E$ represents the set of operations.
 We use the terms artifact and vertex interchangeably.
 Each vertex $v \in V$ has the attributes $\langle f, t, s, mat \rangle$.
 $f$, $t$, and $s$ refer to the frequency, computation time, and size while $mat=1$ indicates $v$ is materialized and $0$ otherwise.
 We also define:
-\[M(G) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}\] as the set of all ML models in $G$ and 
-\[M(v) \coloneqq  \{m \in M(G) \mid\text{there is path from } v \text{ to } m\}\] as the set of all ML models that are reachable from vertex $v$.
+\[M(G_E) \coloneqq  \{v \in V \mid v \text{ is an ML model}\}\] as the set of all ML models in $G$ and 
+\[M(v) \coloneqq  \{m \in M(G_E) \mid\text{there is path from } v \text{ to } m\}\] as the set of all ML models that are reachable from vertex $v$.
 
 \textbf{Assumptions. }
 We assume there exists an evaluation function that assigns a score to user-created ML models.
@@ -39,10 +39,10 @@ In a collaborative environment, users continuously execute workloads resulting i
 Here, we formulate the problem of artifact materialization as a multi-objective optimization problem.
 The goal of artifact materialization is to materialize a subset of the artifacts which minimizes the weighted recomputation cost while maximizing the estimated quality.
 
-\textbf{Weighted Recomputation Cost Function (WC).} 
+\textbf{Weighted Recreation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the vertices in the graph:
 \[
-WC(G) \coloneqq  \sum\limits_{v \in V}  (1-v.mat) \times v.f \times v.t
+WC(G_E) \coloneqq  \sum\limits_{v \in V}  (1-v.mat) \times v.f \times v.t
 \]
 Intuitively, the weighted recreation cost computes the total amount of execution time required to recompute all the vertices while considering their frequencies.
 Materialized artifacts incur no cost since they are stored.
@@ -63,19 +63,21 @@ Note that vertices that are not connected to any model have a potential of 0.
 
 Now, we define the estimated quality function as:
 \[
-EQ(G) \coloneqq  \sum\limits_{v \in V}  v.mat \times p(v)
+EQ(G_E) \coloneqq  \sum\limits_{v \in V}  v.mat \times p(v)
 \]
 
 \textbf{Multi-Objective Optimization.}
 Given the two functions, i.e., weighted recreation cost and estimated quality, we would like to find the optimal set of vertices to materialize which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$.
 For ease of representation, we instead try to minimize the inverse of the estimated quality function.
 We formulate the optimization problem as follows:
-\begin{equation}
+
+\begin{equation}\label{multi-obj-opt}
 \begin{split}
-& minimize(WC(G), \dfrac{1}{EQ(G)}), \\
+& minimize(WC(G_E), \dfrac{1}{EQ(G_E)}), \\
 & \text{subject to:} \sum\limits_{v \in V} v.mat \times v.s \leq \mathcal{B}
 \end{split}
 \end{equation}
+
 Existing work prove that minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
 While there are different approximate strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}, they are time-consuming, which renders them inappropriate to our setting, where new artifacts are constantly added to the graph.
 Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
@@ -85,15 +87,15 @@ As a result, existing solutions to multi-objective optimization problems are not
 We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost and maximize the estimated quality function.
 
 \begin{algorithm}[h]
-\KwData  {$G$: experiment graph, $\mathcal{B}$: storage budget}
-\KwResult {$\mathcal{M}$: set of vertices to materialize}
+\KwData  {$G_E(V,E)$ experiment graph, $\mathcal{B}$ storage budget}
+\KwResult {$\mathcal{M}$ set of vertices to materialize}
 $S \coloneqq 0$\tcp*{size of the materialized artifacts}
 $\mathcal{M} \coloneqq \emptyset$\tcp*{materialized set}
 
 $PQ \coloneqq $ empty priority queue\;
 \For {$v \leftarrow V$}{
 	\If{$v.mat = 0$}{
-		 $utility \coloneqq \mathcal{U}(v)$\;
+		 $v.utility \coloneqq \mathcal{U}(v)$\;
 		 $PQ.insert(v)$\tcp*{sorted by $utility$}
 	}
 }
@@ -111,32 +113,33 @@ $v \coloneqq PQ.pop()$\tcp*{vertex with max $utility$}
 Algorithm \ref{algorithm-materialization} shows the details of our method for selecting the vertices to materialize.
 For every non-materialized vertex, we compute the utility value of the vertex (Lines 4-7).
 Then, we start materializing the vertices, sorted by their utilities, until the storage budget is exhausted (Lines 8-12).
-The utility function $\mathcal{U}(v)$ is combines the potential, recreation cost, and size of a vertex.
-To define the utility function, we first define the cost of a vertex as the following:  
+The utility function $\mathcal{U}(v)$ combines the potential, recreation cost, and size of a vertex.
+We design the utility function in such a way that materializing vertices with larger utility contributes more to minimizing the multi-objective optimization equation (Equation \ref{multi-obj-opt}).
+Before we define $\mathcal{U}(v)$, we need to define 3 functions: the recreation cost of a vertex $C_r(v)$, the cost-size ratio $r_{cs}(v)$, and the load cost of a vertex $C_l(v)$.
+The recreation cost of a vertex is:
 \[
-cost(v) \coloneqq \sum\limits_{v' \in G_v} v'.t
+C_r(v) \coloneqq \sum\limits_{v' \in G_v} v'.t
 \]
-where $G_v \subset G$ is the compute graph of $v$, i.e., the set of all vertices and edges which one must execute to recreate the vertex $v$.
+where $G_v \subseteq G_E$ is the compute graph of $v$, i.e., the set of all vertices and edges which one must execute to recreate the vertex $v$.
 The compute graph of a vertex always starts at one or more source vertices of the Experiment Graph and ends at the vertex itself.
-We also define $cost_l(v)$ as the cost (in seconds) of  loading the vertex $v$ from the Experiment Graph. 
-The $cost_l$ function depends on the size of the vertex and where the Experiment Graph resides (i.e., in memory, on disk, or in a remote location).
-Now, we define the weighted cost-size ratio as:
-\[cost_{ws}(v) = \frac{v.f  \times cost(v)}{v.s}\]
-The weighted cost-size ratio has the unit $\tfrac{s}/{Kb}$ and indicates how much time do we spend on computing 1 Kb of an artifact.
-In our utility function, we prioritize artifacts with larger $cost_{ws}$, since recomputing them is more costly.
+The weighted cost-size ratio is:
+\[r_{cs}(v) = \frac{v.f  \times C_r(v)}{v.s}\]
+The weighted cost-size ratio has the unit $\tfrac{s}{MB}$ and indicates how much time do we spend on computing 1 MB of an artifact.
+Lastly, $C_l(v)$ is the cost (in seconds) of loading the vertex $v$ from the Experiment Graph. 
+The $C_l(v)$ function depends on the size of the vertex and where the Experiment Graph resides (i.e., in memory, on disk, or in a remote location).
 We now define the utility function as the linear combination: 
 \[
 \mathcal{U}(v) \coloneqq  	
 		\begin{cases}
-		0, & \text{if }  cost_l(v) \ge cost(v)  \\ 
-		\dfrac{\alpha p'(v) + (1-\alpha)cost'_{ws}(v)}, & \text{otherwise}
+		0, & \text{if }  C_l(v) \ge C_r(v)  \\ 
+		\alpha p'(v) + (1-\alpha)r'_{cs}(v), & \text{otherwise}
 		\end{cases}
 \],
-where $p'(v)$ and $cost'_{ws}$ are normalized values of $p(v)$ and $cost_{ws}$ (i.e., the values are between 0 and 1).
-If $cost_l(v) \ge cost(v)$, then recomputing the vertex is always more efficient than loading it from the Experiment Graph.
+where $p'(v)$ and $r'_{cs}$ are normalized values of $p(v)$ and $r_{cs}$ (i.e., for every vertex divide the value by the total sum).
+If $C_l(v) \ge C_r(v)$, then recomputing the vertex is always more efficient than loading it from the Experiment Graph.
 Therefore, we never materialize such vertices.
 Taking the load cost into account enables us to adapt the materialization algorithm to different system architecture types (i.e., single node vs distributed) and storage unit types (i.e., memory or disk).
-$0 \leq \alpha \leq 1$ indicates the importance of potential.
+$ \alpha$ ($0 \leq \alpha \leq 1$) indicates the importance of potential.
 For example, when $\alpha > 0.5$, we assign more importance to model quality than weighted cost-size.
 Therefore, we still materialize vertices with high potential even though they have a small weighted cost-size ratio.
 In collaborative environments, where users are working toward building high-quality models and data exploration is not the main goal, a larger $\alpha$ encourages faster materialization of high-quality models.
@@ -182,18 +185,18 @@ Therefore, we update the size of $v_2$ to indicate the amount of storage it requ
 Finally, we compute the remaining budget by deducting the compressed size from the initial budget.
 %TODO $\mathcal{M'} \coloneqq  materialized\_nodes(G)$\; no need for this line
 \begin{algorithm}[h]
-\KwData  {$G$: experiment graph, $\mathcal{B}$: storage budget}
-\KwResult {$\mathcal{M}$: set of vertices to materialize}
-$R \coloneqq  \mathcal{B}$ \;
-\While {$R > 0$}{
-	 $\mathcal{M'} \coloneqq  materialized\_nodes(G)$\;
-	 $\mathcal{M} \coloneqq $ \textit{Artifact-Materialization}($G, R$)\;
+\KwData  {$G_E(V,E)$ experiment graph, $\mathcal{B}$ storage budget}
+\KwResult {$\mathcal{M}$ set of vertices to materialize}
+$ \mathcal{B}' \coloneqq  \mathcal{B}$ \;
+\While {$\mathcal{B}'  > 0$}{
+	 $\mathcal{M'} \coloneqq  materialized\_nodes(G_E)$\;
+	 $\mathcal{M} \coloneqq $ \textit{Artifact-Materialization}($G_E, \mathcal{B}' $)\;
 	\If {$\mathcal{M'} = \mathcal{M}$}{
 			return $\mathcal{M}$\;
 	}
-	$compressed\_size \coloneqq  deduplicate(G)$\;
-	$update\_required\_size(G)$\;
-	$R \coloneqq  \mathcal{B} -  compressed\_size$\;
+	$compressed\_size \coloneqq  deduplicate(G_E)$\;
+	$update\_required\_size(G_E)$\;
+	$\mathcal{B}'  \coloneqq  \mathcal{B} -  compressed\_size$\;
 }
 \caption{Storage-aware Materialization}\label{algorithm-compression-aware-materialization}
 \end{algorithm}

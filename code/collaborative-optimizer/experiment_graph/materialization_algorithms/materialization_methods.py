@@ -42,10 +42,8 @@ class Materializer(object):
                     rho = node_info.utility_value
                 else:
                     rho = 0
-
             if self.modify_graph:
                 node[1]['rho'] = rho
-
         rhos.sort(reverse=True)
         return rhos
 
@@ -123,8 +121,8 @@ class AllMaterializer(Materializer):
 
 
 class TopNModelMaterializer(Materializer):
-    def __init__(self, n=1, alpha=0.5):
-        super(TopNModelMaterializer, self).__init__(storage_budget=0, alpha=alpha)
+    def __init__(self, n=1, alpha=0.5, modify_graph=False):
+        super(TopNModelMaterializer, self).__init__(storage_budget=0, alpha=alpha, modify_graph=modify_graph)
         self.n = n
 
     def run(self, experiment_graph, workload_dag, verbose):
@@ -194,6 +192,7 @@ class OracleBestModelMaterializer(Materializer):
         assert len(sucs) == 1
         evals = list(graph.successors(sucs[0]))
         assert len(evals) == 1
+
         to_mat.append(top_node)
         to_mat.append(evals[0])
         return to_mat

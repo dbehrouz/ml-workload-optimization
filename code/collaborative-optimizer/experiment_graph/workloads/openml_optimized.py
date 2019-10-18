@@ -39,9 +39,11 @@ class OpenMLOptimizedWorkload(Workload):
 
             # TODO is it OK to assume all the openml pipelines end with a scikit learn model?
             model = x.fit_sk_model_with_labels(edges[-1], y, should_warmstart=self.should_warmstart)
+
             score = model.score(test_x,
                                 test_y,
                                 score_type='accuracy').data(verbose=verbose)
+            print score
             # print 'pipeline: {}, setup: {}, score: {}'.format(self.setup.flow_id, self.setup.setup_id, score)
             self.score = score['accuracy']
             return True

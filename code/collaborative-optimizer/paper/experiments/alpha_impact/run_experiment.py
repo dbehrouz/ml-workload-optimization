@@ -49,7 +49,7 @@ from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import TopNModelMaterializer, \
     AllMaterializer
-from experiment_graph.optimizations.Reuse import LinearTimeReuse
+from experiment_graph.optimizations.Reuse import AllMaterializedReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
 from experiment_graph.workloads.openml_optimized import OpenMLOptimizedWorkload
@@ -88,14 +88,14 @@ setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OP
                                              limit=limit)
 
 mat_type = parser.get('mat_type', 'best_n')
-alpha = float(parser.get('alpha', '0.5'))
+alpha = float(parser.get('alpha', '0.1'))
 
 if mat_type == 'best_n':
-    materializer = TopNModelMaterializer(n=1, alpha=alpha)
+    materializer = TopNModelMaterializer(n=1, alpha=alpha, modify_graph=True)
 else:
     materializer = AllMaterializer()
 
-ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=AllMaterializedReuse.NAME)
 executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
 
 
@@ -103,7 +103,7 @@ def get_workload(setup, pipeline):
     return OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
 
 
-def run(executor, workload):
+def run(executor, workload, verbose=0):
     return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
 
 
@@ -117,6 +117,28 @@ def is_best_model_materialized(executor):
     return graph.nodes[best[2]]['mat']
 
 
+def get_best_model(executor):
+    graph = executor.execution_environment.experiment_graph.graph
+    best = (0, {}, 'id')
+    for n, d in graph.nodes(data=True):
+        if d['type'] == 'SK_Model' and d['score'] > 0:
+            if best[0] < d['score']:
+                best = (d['score'], d, n)
+    return best[2], best[0], best[1]['potential'], best[1]['recreation_cost'], best[1]['size'], best[1]['meta_freq'], \
+           best[1]['rho']
+
+
+def get_mat_model(executor):
+    graph = executor.execution_environment.experiment_graph.graph
+    ns_ds = []
+    for n, d in graph.nodes(data=True):
+        if d['type'] == 'SK_Model' and d['score'] > 0 and d['mat']:
+            ns_ds.append((n, d))
+    assert len(ns_ds) <= 1
+    n, d = ns_ds[0]
+    return n, d['score'], d['potential'], d['recreation_cost'], d['size'], d['meta_freq'], d['rho']
+
+
 best_workload = None
 best_score = -1
 best_setup = -1
@@ -126,17 +148,19 @@ print 'experiment with materializer: {}, alpha: {}'.format(mat_type, alpha)
 for setup, pipeline in setup_and_pipelines:
     workload = get_workload(setup, pipeline)
     start = datetime.now()
-    success = run(executor, workload)
+    success = run(executor, workload, verbose=0)
     end_current = datetime.now()
     run_time_current = (end_current - start).total_seconds()
     current_score = workload.get_score()
+    print current_score
     if best_score == -1:
         best_score = current_score
         best_setup = setup.setup_id
         best_pipeline = setup.flow_id
     if best_workload is not None:
         start_best_workload = datetime.now()
-        success = run(executor, best_workload)
+        # print 'best model: '
+        success = run(executor, best_workload, verbose=0)
         if current_score > best_workload.get_score():
             best_score = current_score
             best_workload = workload
@@ -153,14 +177,14 @@ for setup, pipeline in setup_and_pipelines:
     executor.global_process()
     executor.cleanup()
     mat_status = 1 if is_best_model_materialized(executor) else 0
+    # print 'best: {}'.format(get_best_model(executor))
+    # print 'mat: {}'.format(get_mat_model(executor))
     i += 1
     if i % 50 == 0:
         print 'run {} out of {} completed'.format(i, limit)
     if not success:
         elapsed = 'Failed!'
-    # graph = executor.execution_environment.experiment_graph
-    # total_mat = graph.get_total_materialized_size()
-    # total_size = graph.get_total_size()
+
     with open(result_file, 'a') as the_file:
         # get_benchmark_results has the following order:
         the_file.write(

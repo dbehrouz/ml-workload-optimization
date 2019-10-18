@@ -35,13 +35,13 @@ def compute_recreation_cost(graph):
             if graph.nodes[n]['size'] is not None:
                 total_weighted_cost += (graph.nodes[n]['meta_freq'] * cost) / graph.nodes[n]['size']
 
-    for n in graph.nodes(data=True):
-        n[1]['recreation_cost'] = recreation_costs[n[0]]
-        if n[1]['size'] is not None:
-            n[1]['n_recreation_cost'] = ((n[1]['meta_freq'] * n[1]['recreation_cost']) / n[1][
-                'size']) / total_weighted_cost
+    for n, d in graph.nodes(data=True):
+        d['recreation_cost'] = recreation_costs[n]
+        if d['size'] is not None:
+            d['n_recreation_cost'] = \
+                ((d['meta_freq'] * d['recreation_cost']) / d['size']) / total_weighted_cost
         else:
-            n[1]['n_recreation_cost'] = 0
+            d['n_recreation_cost'] = 0
 
 
 def compute_vertex_potential(graph):
