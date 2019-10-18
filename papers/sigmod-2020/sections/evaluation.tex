@@ -48,7 +48,7 @@ We also design three workloads based on the existing ones.
 Table \ref{kaggle-workload} shows details of the workloads we utilize in our experiments.
 The use case has nine datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
 The combined size of the artifacts after executing all the workloads is around 130 GB.
-Unless specified otherwise, we set the materialization budget to 16 GB.
+Unless specified otherwise, we set the materialization budget to 16 GB (approximately 10\% of the combined size of the artifacts).
 For all the experiments, we execute the workloads in order (from 1 to 8) and report the results.
 We use the Kaggle workloads to show the effect of end-to-end optimization, storage-aware and heuristics-based materializations, and our reuse algorithm on executing workloads in collaborative environments.
 
@@ -59,6 +59,7 @@ We extracted the first 2000 runs for task 31, which results in 16 unique flows.
 The dataset is small, and the total size of the artifacts after executing the 2000 runs is 1.5 GB.
 For all the experiments, we execute the 2000 runs in order and report the result.
 We use the OpenML workloads to show the effects of the quality ratio (i.e., $\alpha$ in the utility function for artifact materialization) and model warmstarting on workload execution in collaborative environments.
+Unless specified otherwise, we set the materialization budget to 100 MB.
 
 \subsection{End-to-end Optimization}
 In this experiment, we evaluate the impact of our collaborative optimizer on the use case of Section \ref{sec-background}.
