@@ -144,7 +144,6 @@ By deduplicating the artifacts, our storage-aware materialization can materializ
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/size-16.pgf}%
 }
-
 \caption{Budget = 16 GB}
 \end{subfigure}
 \begin{subfigure}[b]{0.5\linewidth}
@@ -214,6 +213,13 @@ In comparison, re-executing the best pipeline for OML has an overhead of 2000 se
 \input{../images/experiment-results/openml/model_materialization/bestpipeline-overhead.pgf}%
 }
 \caption{Best pipeline run-time}
+\end{subfigure}
+\begin{subfigure}[b]{\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{../images/experiment-results/openml/alpha_impact/alpha-runtime.pgf}%
+}
+\caption{Effect of $\alpha$ on run-time}
 \end{subfigure}
 \caption{Effect of model materialization for OpenML workloads (CO = Collaborative Optimizer, OML = OpenML Default)}
 \label{exp-model-materialization}

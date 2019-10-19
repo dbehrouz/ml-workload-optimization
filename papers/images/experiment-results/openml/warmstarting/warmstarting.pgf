@@ -317,7 +317,7 @@
 \pgfsetlinewidth{3.011250pt}%
 \definecolor{currentstroke}{rgb}{0.866667,0.517647,0.321569}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{3.000000pt}{3.000000pt}}{0.000000pt}%
+\pgfsetdash{{9.000000pt}{3.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{2.317841in}{1.360808in}}%
 \pgfpathlineto{\pgfqpoint{2.325242in}{1.376603in}}%
 \pgfpathlineto{\pgfqpoint{2.327709in}{1.428538in}}%
@@ -505,7 +505,7 @@
 \pgfsetlinewidth{3.011250pt}%
 \definecolor{currentstroke}{rgb}{0.333333,0.658824,0.407843}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{6.000000pt}{3.000000pt}}{0.000000pt}%
+\pgfsetdash{{3.000000pt}{3.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{2.317841in}{1.360745in}}%
 \pgfpathlineto{\pgfqpoint{2.325242in}{1.376506in}}%
 \pgfpathlineto{\pgfqpoint{2.327709in}{1.447772in}}%
@@ -758,7 +758,7 @@
 \pgfsetlinewidth{4.015000pt}%
 \definecolor{currentstroke}{rgb}{0.866667,0.517647,0.321569}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{4.000000pt}{4.000000pt}}{0.000000pt}%
+\pgfsetdash{{12.000000pt}{4.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{4.351861in}{4.420639in}}%
 \pgfpathlineto{\pgfqpoint{4.918528in}{4.420639in}}%
 \pgfusepath{stroke}%
@@ -775,7 +775,7 @@
 \pgfsetlinewidth{4.015000pt}%
 \definecolor{currentstroke}{rgb}{0.333333,0.658824,0.407843}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{8.000000pt}{4.000000pt}}{0.000000pt}%
+\pgfsetdash{{4.000000pt}{4.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{6.049972in}{4.420639in}}%
 \pgfpathlineto{\pgfqpoint{6.616639in}{4.420639in}}%
 \pgfusepath{stroke}%
