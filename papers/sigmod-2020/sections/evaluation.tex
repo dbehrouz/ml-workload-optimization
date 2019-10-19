@@ -48,7 +48,7 @@ We also design three workloads based on the existing ones.
 Table \ref{kaggle-workload} shows details of the workloads we utilize in our experiments.
 The use case has nine datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
 The combined size of the artifacts after executing all the workloads is around 130 GB.
-Unless specified otherwise, we set the materialization budget to 16 GB (approximately 10\% of the combined size of the artifacts).
+Unless specified otherwise, we set the materialization budget to 16 GB (approximately 10\% of the combined size of the artifacts) and $\alpha=0.5$.
 For all the experiments, we execute the workloads in order (from 1 to 8) and report the results.
 We use the Kaggle workloads to show the effect of end-to-end optimization, storage-aware and heuristics-based materializations, and our reuse algorithm on executing workloads in collaborative environments.
 
@@ -59,7 +59,7 @@ We extracted the first 2000 runs for task 31, which results in 16 unique flows.
 The dataset is small, and the total size of the artifacts after executing the 2000 runs is 1.5 GB.
 For all the experiments, we execute the 2000 runs in order and report the result.
 We use the OpenML workloads to show the effects of the quality ratio (i.e., $\alpha$ in the utility function for artifact materialization) and model warmstarting on workload execution in collaborative environments.
-Unless specified otherwise, we set the materialization budget to 100 MB.
+Unless specified otherwise, we set the materialization budget to 100 MB and $\alpha=0.5$.
 
 \subsection{End-to-end Optimization}
 In this experiment, we evaluate the impact of our collaborative optimizer on the use case of Section \ref{sec-background}.
@@ -186,10 +186,11 @@ Recomputing these artifacts is costly, which results in a larger total run-time 
 
 \textbf{Model Materialization. }
 One goal of our materialization algorithms is to materialize high-quality models as soon as they appear in a new workload.
-In this experiment, we run a typical scenario, where users compare the score of their models with the score of the best performing model in the collaborative environment.
+In this experiment, we run a model-benchmarking scenario, where users compare the score of their models with the score of the best performing model in the collaborative environment.
+Here, we first compare the cumulative run-time of running the model-benchmarking scenario using our collaborative optimizer and the OpenML baseline (OML).
+Then, we investigate the effect of different values of $\alpha$, the parameter controlling the importance of quality, on run-time.
 We execute all the OpenML workloads one by one and keep track of the best performing workload.
 In every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
-\todo[inline]{Will re-run this experiment with different $\alpha$ values (Utility function in Section \ref{subsec-ml-based-materialization}}
 Figure \ref{exp-model-materialization}(a) shows the total run-time of executing all the OpenML workloads and comparing the model of each workload with the best performing model so far.
 In the baseline (OML), for every workload, we have to rerun the pipeline of the best performing model.
 As a result, OML has a much higher total run-time when compared with our collaborative optimizer (CO).
@@ -221,9 +222,22 @@ In comparison, re-executing the best pipeline for OML has an overhead of 2000 se
 }
 \caption{Effect of $\alpha$ on run-time}
 \end{subfigure}
-\caption{Effect of model materialization for OpenML workloads (CO = Collaborative Optimizer, OML = OpenML Default)}
+\caption{Impact of model materialization in OpenML workloads (CO = Collaborative Optimizer, OML = OpenML Default)}
 \label{exp-model-materialization}
 \end{figure}
+The parameter $\alpha$ indicates the importance of model quality when deciding to materialize an artifact or not.
+If $\alpha$ is close to 1, then the materializer aggressively stores high-quality models and ignores their recreation time and size.
+If $\alpha$ is close to 0, then the materializer prioritizes the recreation time and size over quality.
+When the materialization budget is large, it is difficult to show the effect of $\alpha$.
+Therefore, we re-run the experiment of Figures \ref{exp-model-materialization} (a) and (b), but instead of using our heuristics-based or storage-aware materializer, we design a materializer that only materializes the model with the top utility function.
+We run the OpenML workloads one by one and compare them with the best model so far.
+For every run, we vary the value of $\alpha$ from 0 to 1.
+$\alpha$ is 1, the materializer always materializes the best model, since it only considers the quality.
+Figure \ref{exp-model-materialization} (c) shows the delta in cumulative run-time between each run with different value of $\alpha$, i.e., how much larger the cumulative run-time is when compared to $\alpha=1$.
+Since in this experiment, we re-execute the pipeline with the best model, then if we materialize the best model, we incur a smaller cumulative run-time.
+In our collaborative optimizer, the default value of $\alpha$ is 0.5. 
+$\alpha =0.5$ provides a good balance between workloads that have the goal of training high-quality models and workloads that are more exploratory in nature.
+However, when we have prior knowledge of the nature of the workload in a collaborative environment, then we can set $\alpha$ accordingly, i.e., $\alpha>0.5$ for workloads with the goal of training high-quality models and $\alpha<0.5$ for workloads with exploratory data analysis.
 
 \subsection{Reuse}
 In this experiment, we evaluate the performance of our reuse algorithm.
