@@ -125,10 +125,17 @@ Furthermore, to show the total size of the materialized artifacts, we also imple
 The all-materializer materializes every artifact in EG.
 In HM, the maximum real size is always equal to the budget.
 However, in SA, we observe that the real size of the stored artifacts reaches up to 8 times the budget.
-With a materialization budget of 8 GB, SA materializes almost half of the total artifacts.
-When the materialization budget is more than 8 GB, SA materializes nearly all the artifacts.
+With a materialization budget of 8 GB and 16 GB, SA materializes nearly 50\% and 80\% of all the artifacts.
+When the materialization budget is more than 16 GB, SA materializes nearly all the artifacts.
 This indicates that there is considerable overlap between the artifacts of ML workloads.
 By deduplicating the artifacts, our storage-aware materialization can materialize more artifacts.
+Note that when an artifact with a high utility value has no overlap with other artifacts, SA still prioritizes it over other artifacts.
+As a result, it is likely that when materializing an artifact that has no overlap with other artifacts, the total size of the materialized data decreases.
+Figure \ref{exp-sa-vs-simple-size}(a) shows such an example.
+After executing Workload 2, SA materializes several artifacts that overlap with each other.
+However, in Workload 3, SA materializes a new artifact with a high utility, which represents a large dataset with many features (i.e., 1133 columns and around 3 GB).
+Since the new artifact is large, SA removes many of the existing artifacts.
+As a result, the total size of the materialized artifacts decreases after executing Workload 3.
 
 \begin{figure}
 \begin{subfigure}[b]{0.5\linewidth}
@@ -160,7 +167,7 @@ By deduplicating the artifacts, our storage-aware materialization can materializ
 }
 \caption{Budget = 64 GB}
 \end{subfigure}
-\caption{Real size of the stored artifact for storage-aware and heuristics-based materializations under different budgets (SA = storage-aware, HM = heuristics-based)  \todo[inline]{Need to properly explain the sudden rise at workload 7 for SA budget = 16, also in budget 8, SA drops from 2 to 3.}}
+\caption{Real size of the stored artifact for storage-aware and heuristics-based materializations under different budgets (SA = storage-aware, HM = heuristics-based)}
 \label{exp-sa-vs-simple-size}
 \end{figure}
 
