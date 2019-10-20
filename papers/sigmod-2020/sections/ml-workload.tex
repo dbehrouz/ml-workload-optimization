@@ -59,7 +59,7 @@ Terminal vertices represent the output of the workload.
 For example, a terminal vertex is a trained ML model, a preprocessed dataset, or aggregated data for visualization.
 Requesting the result of a terminal vertex triggers the optimization and execution of the workload DAG.
 Figure \ref{fig-workload-dag} shows the workload DAG constructed from the code in Listing \ref{listing-simple-workload}.
-In the Figure, the highlighted vertex represents a terminal vertex.
+In the Figure, the highlighted vertex represents a terminal vertex, which is the result of the print statement on Line 21 in Listing \ref{listing-simple-workload}.
 \begin{figure}
 \centering
 \includegraphics[width=\linewidth]{../images/tikz-standalone/example-graph}
@@ -74,7 +74,7 @@ There are two groups of unnecessary edges: edges that are not in the path from s
 The latter is very common in interactive workloads since every cell invocation in Jupyter notebooks computes some of the vertices.
 As a result, in the future cell invocations, previously executed operations can be skipped.
 Note that the pruner does not remove the unnecessary edges from the DAG and only marks them as inactive.
-For example, in Figure \ref{fig-workload-dag}, if $t\_subset$ is previously computed, the local pruner marks the edge between $train$ and $t\_subset$ as inactive.
+For example, in Figure \ref{fig-workload-dag}, if \textit{t\_subset} is previously computed, the local pruner marks the edge between \textit{train} and \textit{t\_subset} as inactive.
 After the pruning, the client sends the DAG to the server.
 To minimize the transfer cost, the client does not send the content of the computed artifact to the server.
 
@@ -141,7 +141,8 @@ First, it stores any source artifact, both the meta-data and the underlying cont
 This is to ensure that EG contains every raw dataset.
 Second, it updates EG to include all the vertices and edges of the executed DAG.
 If EG already contains a vertex, the updater increases its frequency.
-Lastly, by utilizing our materialization algorithm, the updater stores the underlying content of a selected set of artifacts (i.e., the output of the materialization algorithm).
+Lastly, by utilizing our materialization algorithm, the updater stores the underlying content of a selected set of artifacts, i.e., the output of the materialization algorithms.
+The materialization algorithms select the artifacts by considering their run-time, size, frequency, and score of ML models.
 Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
 
 %Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, and hyperparameters.

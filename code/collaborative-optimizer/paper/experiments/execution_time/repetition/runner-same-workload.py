@@ -53,7 +53,7 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 rep = int(parser.get('rep', 2))
 
 result_file = parser.get('result')
-profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
+
 
 
 def run(executor):
@@ -75,7 +75,7 @@ if not os.path.exists(os.path.dirname(result_file)):
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=sa_materializer)
+    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
 elif method == 'baseline':
     executor = BaselineExecutor()
 else:

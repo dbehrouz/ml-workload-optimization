@@ -118,11 +118,8 @@ class start_here_a_gentle_introduction(Workload):
         print('Testing Features shape: ', app_test.shape().data(verbose))
 
         train_labels = app_train['TARGET']
-        train_columns = app_train.data(verbose).columns
-        test_columns = app_test.data(verbose).columns
-        for c in train_columns:
-            if c not in test_columns:
-                app_train = app_train.drop(c)
+        app_train = app_train.align(app_test)
+        app_test = app_test.align(app_train)
 
         app_train = app_train.add_columns('TARGET', train_labels)
 
@@ -322,11 +319,8 @@ class start_here_a_gentle_introduction(Workload):
         app_test_poly = app_test.merge(poly_features_test, on='SK_ID_CURR', how='left')
 
         # Align the dataframes
-        train_columns = app_train_poly.data(verbose).columns
-        test_columns = app_test_poly.data(verbose).columns
-        for c in train_columns:
-            if c not in test_columns:
-                app_train_poly = app_train_poly.drop(c)
+        app_train_poly = app_train_poly.align(app_test_poly)
+        app_test_poly = app_test_poly.align(app_train_poly)
 
         # Print out the new shapes
         print('Training data with polynomial features shape: ',
