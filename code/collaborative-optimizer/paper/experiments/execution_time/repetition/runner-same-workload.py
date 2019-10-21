@@ -13,8 +13,6 @@ import sys
 import uuid
 from datetime import datetime
 
-
-
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -26,7 +24,6 @@ from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
-from experiment_graph.storage_managers import storage_profiler
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
@@ -53,7 +50,6 @@ e_id = uuid.uuid4().hex.upper()[0:8]
 rep = int(parser.get('rep', 2))
 
 result_file = parser.get('result')
-
 
 
 def run(executor):

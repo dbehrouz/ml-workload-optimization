@@ -1,10 +1,10 @@
 \section{Artifact Materialization}\label{sec-materialization}
 Depending on the number of executed workloads, the generated artifacts may require a large amount of storage space.
-For example, the three workloads in the use case of Section \ref{sec-background} generate up to 125 GB of artifacts.
+For example, the three workloads in the use case of Section \ref{subsec-motivational-example} generate up to 125 GB of artifacts.
 Moreover, depending on the storage and retrieval costs of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact from scratch.
 In this section, we introduce two algorithms for materializing the artifacts with a high likelihood of future reuse while ensuring the storage does not surpass the recomputation cost.
-The first algorithm utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
-The second algorithm extends the first algorithm and considers the duplication rate among the artifacts.
+The first algorithm, which we refer to as \textit{Heuristics-based}, utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
+The second algorithm, called \textit{Storage-aware}, extends the first algorithm and considers the duplication rate among the artifacts.
 Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact (for example, the drop and projection operations).
 As a result, many dataset artifacts have duplicated columns.
 To address this issue, we implement a deduplication strategy to avoid storing duplicated columns.

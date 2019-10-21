@@ -66,9 +66,17 @@ In the use case, we describe three workloads (Workloads 1-3 of Table \ref{kaggle
 Kaggle reports users have copied and modified these workloads a total of 7000 times.
 Therefore, at the very least, users execute these workloads 7000 times.
 Figures \ref{exp-reuse-kaggle-same-workload}(a)-(c) show the result of repeating the execution of each workload twice.
-Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) have similar run-times.
-\todo[inline]{I need to investigate why we are better for run 1 of Workload 2 and 3 but worse for run 1 of Workload 1, (I know why we are better in 2 and 3, once I figure out the behavior of workload 1 I will update the text).}
-By materializing and reusing the artifacts, CO reduces the run-time of the consecutive runs by one order of magnitude for workloads 2 and 3.
+Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) must execute all the operation in the workloads.
+In Workload 1, the run-time of CO is slightly larger than KG in the first run.
+Workload 1 executes two alignment operations.
+An alignment operation receives two datasets, removes all the columns that do not appear in both datasets, and returns the resulting two datasets.
+In CO, we need to measure the precise compute-cost of every artifact.
+This is not possible for operations that return multiple artifacts.
+Thus, we re-implemented the alignment operation, which is less optimized than the baseline implementation.
+In Workloads 2 and 3, CO outperforms KG even in the first.
+Both Workloads 2 and 3 contain many redundant operations.
+The local pruning step in CO identifies the redundancies and only execute such operations once.
+In the second run of the workloads, CO reduces the run-time by one order of magnitude for workloads 2 and 3.
 Workload 1 executes an external visualization command that computes a bivariate kernel density estimate, which incurs a large overhead.
 Since our collaborative optimizer does not materialize such external information, it must re-execute the visualization command; thus, resulting in a smaller run-time reduction.
 \begin{figure}
