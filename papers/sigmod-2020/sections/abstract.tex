@@ -7,7 +7,7 @@ However, existing collaborative environments lack a data management component fo
 
 In this paper, we present a system to optimize the execution of ML workloads in collaborative environments by reusing previously performed operations and their results.
 We utilize a so-called Experiment Graph (EG) to store the artifacts, i.e., raw and intermediate data or ML models, as vertices and operations of ML workloads as edges.
-In theory, the size of the EG can become unnecessarily large while the storage budget might be limited. 
+In theory, the size of the EG can become unnecessarily large, while the storage budget might be limited. 
 At the same time, for some artifacts, the overall storage and retrieval cost might outweigh the recomputation cost.
 To address this issue, we propose two algorithms for materializing artifacts based on their likelihood of future reuse.
 Given the materialized artifacts inside the EG, we devise a linear time reuse algorithm to find the optimal execution plan for incoming ML workloads.
