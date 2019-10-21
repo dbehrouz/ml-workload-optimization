@@ -20,7 +20,7 @@
 %\draw[help lines]  (-2,0) grid (6,6);
 \tikzstyle{every node}=[inner sep=0.2cm]
 % Legend
-\node (m) [circle, draw,inner sep=0.08cm, pattern=crosshatch, pattern color = green] at (0.5,1) {$v_i$};
+\node (m) [circle, draw,inner sep=0.08cm, pattern=crosshatch, pattern color = green!50] at (0.5,1) {$v_i$};
 \node (m) [] at (1.8,1) {materialized};
 
 \node (c) [circle, draw, fill=black] at (3.2,1) {};
@@ -50,20 +50,20 @@
 % layer 1
 \node (l1_1) [circle, draw] at (1,8.3) {};
 \node (l1_1_c) [circle, align=left] at (2,8.5) {\ \ \ \ \circled{\large{\textbf{3}}}\\$\langle$ \hl{$10$}$,\infty\rangle$};
-\node (l1_2) [circle, draw, inner sep=0.08cm, pattern=crosshatch, pattern color = green] at (5,8.3) {$v_1$};
+\node (l1_2) [circle, draw, inner sep=0.08cm, pattern=crosshatch, pattern color = green!50] at (5,8.3) {$v_1$};
 \node (l1_2_c) [circle, align=left] at (5.8,8.5) {\ \ \ \circled{\large{\textbf{2}}}\\$\langle$\hl{$5$}, $10\rangle$};
 \node (l1_3) [circle, draw] at (9,8.3) {};
 \node (l1_3_c) [circle, align=left] at (8,8.5) {\ \ \ \ \circled{\large{\textbf{3}}}\\$\langle$ \hl{$10$}$,\infty\rangle$};
 %layer 2
-\node (l2_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (3,6.4) {$v_2$};
+\node (l2_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green!50] at (3,6.4) {$v_2$};
 \node (l2_1_c) [circle, align=left] at (3.9,6.6) {\ \ \ \ \circled{\large{\textbf{5}}}\\$\langle2,$\hl{$16$}$\rangle$};
 \node (l2_2) [circle, draw, fill=black] at (9,6.4) {};
 \node (l2_2_c) [circle, align=left] at (8,6.6) {\ \ \ \circled{\large{\textbf{4}}}\\$\langle$ \hl{$0$}$,\infty\rangle$};
 %layer 3
-\node (l3_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green] at (6,4.8) {$v_3$};
+\node (l3_1) [circle, draw, inner sep=0.08cm,pattern=crosshatch, pattern color = green!50] at (6,4.8) {$v_3$};
 \node (l3_1_c) [circle, align=left] at (7,4.9) { \ \ \ \circled{\large{\textbf{5}}} \\ $\langle5,$\hl{$20$}$\rangle$};
 \node (l3_1_l) [circle, align=left] at (4,5) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{8}}} \\ stop backward pass $\rightarrow$};
-\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (4.25,4.2) {$v_3$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green!50] at (4.25,4.2) {$v_3$};
 \node (m) [] at (3.8,4.2) {$\mathcal{R}_p=\Big\{ \ \ \ \Big\}$};
 \node (m) [rectangle, minimum height=0.7cm, minimum width=2cm, draw] at (3.8,4.2) {};
 \node (m) [] at (1.5,4.2) {Final Solution:};
@@ -71,8 +71,8 @@
 %layer 4
 \node (l4_1) [circle, draw, pattern=north east lines,  pattern color = red] at (6,3.1) {};
 \node (l4_1_c) [circle, align=left] at (7.9,3.3) {\ \ \ \ \ \ \ \ \ \ \ \circled{\large{\textbf{6}}} \\ $\leftarrow$ stop forward pass};
-\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (7.92,2.6) {$v_2$};
-\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green] at (8.42,2.6) {$v_3$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green!50] at (7.92,2.6) {$v_2$};
+\node (m) [circle, draw,inner sep=0.03cm,pattern=crosshatch, pattern color = green!50] at (8.42,2.6) {$v_3$};
 \node (m) [circle] at (7.8,2.6) {$\mathcal{R}=\Big\{ \ \ \ \ \ \ \ \Big\}$};
 
 %layer 5
