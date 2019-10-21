@@ -1,8 +1,8 @@
-\section{Background} \label{sec-background}
-In this section, we first define the required terms referring to different entities in collaborative environments which we use throughout the paper.
-Next, we discuss a use case based on a real collaborative environment.
+\section{Background and Use Case} \label{sec-background}
+In this section, we first present the structure of a typical collaborative environment.
+Then, we discuss an motivating example based on a real collaborative environment.
 
-\subsection{Collaborative Environment for Data Science}
+\textbf{Collaborative Environment for Data Science.}
 A typical collaborative environment consists of a client and server space.
 Users write a script to fetch datasets from the server, analyze the data, and train machine learning models.
 The client is responsible for executing the script.
@@ -10,7 +10,7 @@ Although the client can be a single machine, users typically utilize Jupyter not
 Users can publish the results and the scripts on the server for other users to see.
 Isolated execution environments enable collaborative environments to better allocate resources for running scripts.
 
-\subsection{Use Case}\label{subsec-motivational-example}
+\textbf{Motivating Example.}
 Kaggle is a collaborative environment that enables users and organizations to publish datasets and organize machine learning competitions.
 In every competition, the organizer defines a task.
 Users submit their solutions to the task as ML scripts.
@@ -29,5 +29,5 @@ However, the number of users who copied these workloads indicates the potentiall
 
 Kaggle does not store the artifacts, nor does it offer any automatic reuse capabilities.
 Therefore, every time a user executes these workloads (or a modified version of them), Kaggle runs them from scratch.
-Our system, which stores the artifacts and reuses them later, can save hundreds of hours of execution time only for the three workloads in this use case, which benefits such a collaborative environment by reducing the amount of required resource and operation cost.
+Our system, which stores the artifacts and reuses them later, can save hundreds of hours of execution time only for the three workloads in the motivating example, which benefits such a collaborative environment by reducing the amount of required resource and operation cost.
 In the next sections, we show how we selectively store artifacts, given a storage budget, and how we quickly find the relevant artifacts for reuse.

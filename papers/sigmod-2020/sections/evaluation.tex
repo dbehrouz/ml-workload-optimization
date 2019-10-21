@@ -33,18 +33,17 @@ Finally, we investigate the effect of the individual contributions, i.e., materi
 We execute all the experiments on a server running Linux Ubuntu with 128 GB of RAM.
 We implement a prototype of our system in python 2.7.12.
 In the prototype, we implement EG using python's NetworkX 2.2 \cite{hagberg2008exploring}.
-Unless specified otherwise, we run every experiment 3 times and report the average results.
+Unless specified otherwise, we run every experiment 3 times and report the average results with error bars (most of the reported results have a small variation; thus, the error bars are not always visible).
 We evaluate our proposed optimizations on two different sets of workloads\footnote{We plan to release the entire codebase, i.e., the optimizer system and experiment workload scripts}.
 
 \textbf{Kaggle workloads.} 
 In the first set of workloads, we recreate the collaborative environment of the use case in Section \ref{sec-background}.
-We use a total of 8 workloads.
+We use eight workloads, which generate a total of 130 GB of artifacts.
 We introduced three workloads in the use case.
 We retrieve two more workloads from the same Kaggle competition.
 We also design three workloads based on the existing ones.
 Table \ref{kaggle-workload} shows details of the workloads we utilize in our experiments.
 The use case has nine datasets with a total size of 2.5 GB\footnote{https://www.kaggle.com/c/home-credit-default-risk/data}.
-The combined size of the artifacts after executing all the workloads is around 130 GB.
 Unless specified otherwise, we set the materialization budget to 16 GB (approximately 10\% of the combined size of the artifacts) and $\alpha=0.5$.
 For all the experiments, we execute the workloads in order (from 1 to 8) and report the results.
 We use the Kaggle workloads to show the effect of end-to-end optimization, storage-aware and heuristics-based materializations, and our reuse algorithm on executing workloads in collaborative environments.
@@ -247,6 +246,7 @@ We vary the value of $\alpha$ from 0 to 1.
 When $\alpha$ is 1, the materializer always selects the best model to materialize, since it only considers the quality.
 Therefore, $\alpha=1$ incurs the smallest cumulative run-time in the model-benchmarking scenario.
 For other values of $\alpha$, we report the difference in cumulative run-time when compared to $\alpha=1$ in Figure \ref{exp-model-materialization}(c).
+Note that because of the smaller y-scale, the variation of the reported result (i.e., the error band) is more visible when compared to the previous experiments.
 In the scenario, we repeatedly execute the pipeline with the best model; thus, the faster we materialize the best model, the smaller the cumulative run-time would be.
 Once we materialize a model, the delta in cumulative run-time reaches a plateau.
 This is because the overhead of re-executing the best model is negligible; thus, cumulative run-time becomes similar to when $\alpha=1$.

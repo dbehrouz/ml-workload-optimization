@@ -1,12 +1,10 @@
 \section{Artifact Materialization}\label{sec-materialization}
 Depending on the number of executed workloads, the generated artifacts may require a large amount of storage space.
-For example, the three workloads in the use case of Section \ref{subsec-motivational-example} generate up to 125 GB of artifacts.
+For example, the three workloads in our motivating example generate up to 125 GB of artifacts.
 Moreover, depending on the storage and retrieval costs of the artifacts from the Experiment Graph, it may be less costly to recompute an artifact from scratch.
 In this section, we introduce two algorithms for materializing the artifacts with a high likelihood of future reuse while ensuring the storage does not surpass the recomputation cost.
-The first algorithm, which we refer to as \textit{Heuristics-based}, utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
-The second algorithm, called \textit{Storage-aware}, extends the first algorithm and considers the duplication rate among the artifacts.
-Many data preprocessing and feature engineering operations only affect a subset of the columns of a dataset artifact (for example, the drop and projection operations).
-As a result, many dataset artifacts have duplicated columns.
+The first algorithm (Section \ref{subsec-ml-based-materialization}) utilizes general metrics, i.e., size, access frequency, and compute times, and storage cost of the vertices, and a machine learning specific metric, i.e., the quality of the machine learning models, to decide what artifacts to materialize.
+The second algorithm (Section \ref{subsec-storage-aware}) extends the first algorithm and considers any overlap between the artifacts, i.e., a data column appearing in multiple artifacts.
 To address this issue, we implement a deduplication strategy to avoid storing duplicated columns.
 The second algorithm takes the duplication information into account when deciding on what artifacts to materialize.
 
@@ -82,7 +80,8 @@ While there are different approximate strategies for solving multi-objective opt
 Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
 As a result, existing solutions to multi-objective optimization problems are not suitable for artifact materializations of the experiment graph.
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
-We propose a greedy heuristic-based algorithm for materializing the artifacts in the experiment graph which aims to minimize the weighted recreation cost and maximize the estimated quality function.
+We propose a greedy heuristic-based algorithm for solving the multi-objective optimization problem.
+Our algorithm aims to minimize the weighted recreation cost and maximize the estimated quality function.
 \begin{algorithm}[h]
 \KwData  {$G_E(V,E)$ experiment graph, $\mathcal{B}$ storage budget}
 \KwResult {$\mathcal{M}$ set of vertices to materialize}
@@ -151,7 +150,7 @@ First, we must compute the utility of the vertices belonging to the new workload
 The addition of the new vertices affects the normalized cost and potential of other vertices, thus requiring a recomputation.
 However, we only need to recompute the utility of the materialized vertices and compare them with the utility of the workload vertices.
 As a result, the complexity of each run of the materialization algorithm is $\mathcal{O}(|W| + |M|)$, where $|W|$ is the number of vertices in the new workload DAG and $|M|$ is the number of the materialized vertices.
-\subsection{Storage-Aware Materialization Algorithm}
+\subsection{Storage-Aware Materialization Algorithm}\label{subsec-storage-aware}
 Many feature engineering operations operate only on one or a few columns of a dataset artifact; thus, the output artifact of an operation may contain a subset of the input artifact of the operation.
 In such a case, materializing both the input and output artifact may lead to many duplicated columns.
 To further reduce the storage cost, we implement a deduplication mechanism.
@@ -168,7 +167,7 @@ The storage manager tracks the column hashes of all the artifacts in the Experim
 When a specific artifact is requested, the storage manager combines all the columns which belong to the artifact into a data frame and returns the data frame.
 
 \textbf{Greedy Meta-Algorithm.}
-We propose a storage aware materialization meta-algorithm (Algorithm \ref{algorithm-compression-aware-materialization}) which iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
+Using the storage manager, we propose a storage aware materialization meta-algorithm (Algorithm \ref{algorithm-compression-aware-materialization}) that iteratively invokes Algorithm \ref{algorithm-materialization} (Artifact-Materialization).
 We define a variable to represent the remaining budget (Line 1).
 While the budget is not exhausted, we proceed as follows.
 We apply the Artifact-Materialization algorithm using the remaining budget to compute new vertices for materialization (Line 4).
