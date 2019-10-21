@@ -21,18 +21,6 @@ Lastly, if an artifact is already computed inside $G_W$, such as the source arti
 Our reuse algorithm comprises two parts: forward-pass and backward-pass.
 In forward-pass, the algorithm selects the set of materialized vertices to load from the Experiment Graph into the workload DAG.
 The backward-pass prunes any unnecessary materialized vertices before transferring the optimized DAG to the client.
-
-Algorithm \ref{forward-pass} shows the details of forward-pass.
-For every vertex of $G_W$, we define the recreation cost as the total cost of computing the vertex from the sources.
-We store the recreation costs of the vertices in the $recreation\_cost$ dictionary.
-In collaborative environments, the client always loads the source artifacts completely.
-Therefore, we set their recreation cost to 0 (Lines 1 and 2).
-Then, we visit every vertex in their topological order.
-If the client has already computed a vertex inside $G_W$, then we set its recreation cost to 0 (Lines 5 and 6).
-Otherwise, we compute the execution cost of a vertex as the sum of the compute cost of the vertex and the recreation cost of its parents (Lines 8 and 9).
-We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
-When the load cost is smaller, the algorithm adds the vertex to the set of reuse vertices.
-Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
 \begin{algorithm}[h]
 \KwData {$G_W$ workload DAG, $G_E$ experiment graph}
 \KwResult {$\mathcal{R}$ set of vertices for reuse}
@@ -58,12 +46,45 @@ return $\mathcal{R}$\;
 \caption{Forward-pass}\label{forward-pass}
 \end{algorithm}
 
+Algorithm \ref{forward-pass} shows the details of forward-pass.
+For every vertex of $G_W$, we define the recreation cost as the total cost of computing the vertex from the sources.
+We store the recreation costs of the vertices in the $recreation\_cost$ dictionary.
+In collaborative environments, the client always loads the source artifacts completely.
+Therefore, we set their recreation cost to 0 (Lines 1 and 2).
+Then, we visit every vertex in their topological order.
+If the client has already computed a vertex inside $G_W$, then we set its recreation cost to 0 (Lines 5 and 6).
+Otherwise, we compute the execution cost of a vertex as the sum of the compute cost of the vertex and the recreation cost of its parents (Lines 8 and 9).
+We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
+When the load cost is smaller, the algorithm adds the vertex to the set of reuse vertices.
+Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
 After forward-pass, we must prune the set of reuse vertices to remove any artifact that is not part of the execution path.
 A vertex $v \in \mathcal{R}$ is not part of the execution path if there exists at least another vertex $v' \in \mathcal{R}$ in every outgoing path starting at $v$.
 Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
 In backward-pass, we visit every vertex of $G_W$ starting from the terminal vertices.
 For every vertex, if it belongs to the reuse set, we add it to the final solution set ($\mathcal{R}_p$) and stop traversing its parents (Lines 4 and 5).
 Otherwise, we continue traversing the parents of the vertex (Line 7).
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
+\caption{Reuse Algorithm Example. Each vertex has the label $\langle C_i(v),C_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
+\label{fig-reuse-algorithm}
+\vspace{-4mm}
+\end{figure}
+
+Figure \ref{fig-reuse-algorithm} shows how our reuse algorithm (forward-pass and backward-pass) operates on an example workload DAG.
+There are 3 source vertices in the workload DAG.
+The algorithm starts with forward-pass, traversing the graph from the sources (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{1}}}).
+For materialized vertices with a larger load cost than execution cost (i.e., the sum of the compute cost and parent's recreation costs), the algorithm sets the recreation cost to the execution cost (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{2}}}).
+For vertices that exist in EG but are unmaterialized, the algorithm chooses to compute them (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{3}}}).
+If a vertex is already computed inside the workload DAG, then the algorithm sets its recreation cost to zero (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{4}}}).
+For materialized vertices, which have a smaller load cost than the execution cost, the algorithm sets the recreation cost to the load cost of the vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{5}}}).
+For example, for the materialized vertex with label $v_2$, the total execution cost is $2 + 5 + 10 = 17$, which is larger than its load cost of $16$.
+Once the traversal reaches a node that does not exist in EG, the forward-pass stops (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{6}}}).
+At this stage, forward-pass has selected the materialized vertices $v_2$ and $v_3$ for reuse.
+Then, the algorithm starts backward-pass from the terminal vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{7}}}).
+Once the backward-pass visits a materialized vertex, it stops traversing its parents.
+The backward-pass removes any materialized vertices that it did not visit (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
+For example, since $v_3$ is materialized, backward-pass stops visiting its parents; thus, it removes $v_2$ from the final solution.
 \begin{algorithm}[h]
 \KwData {$\mathcal{R}$: Current reuse set, $G_W$: workload DAG}
 \KwResult {$\mathcal{R}_p$: Final reuse set after pruning}
@@ -79,27 +100,6 @@ $v\_queue \coloneqq terminals(G_W)$\;
 return $\mathcal{R}_p$\;
 \caption{Backward-pass}\label{backward-pass}
 \end{algorithm}
-\begin{figure}[t]
-\centering
-\includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
-\caption{Reuse Algorithm Example. Each vertex has the label $\langle C_i(v),C_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
-\label{fig-reuse-algorithm}
-\vspace{-4mm}
-\end{figure}
-Figure \ref{fig-reuse-algorithm} shows how our reuse algorithm (forward-pass and backward-pass) operates on an example workload DAG.
-There are 3 source vertices in the workload DAG.
-The algorithm starts with forward-pass, traversing the graph from the sources (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{1}}}).
-For materialized vertices with a larger load cost than execution cost (i.e., the sum of the compute cost and parent's recreation costs), the algorithm sets the recreation cost to the execution cost (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{2}}}).
-For vertices that exist in EG but are unmaterialized, the algorithm chooses to compute them (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{3}}}).
-If a vertex is already computed inside the workload DAG, then the algorithm sets its recreation cost to zero (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{4}}}).
-For materialized vertices, which have a smaller load cost than the execution cost, the algorithm sets the recreation cost to the load cost of the vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{5}}}).
-For example, for the materialized vertex with label $v_2$, the total execution cost is $2 + 5 + 10 = 17$, which is larger than its load cost of $16$.
-Once the traversal reaches a node that does not exist in EG, the forward-pass stops (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{6}}}).
-At this stage, forward-pass has selected the materialized vertices $v_2$ and $v_3$ for reuse.
-Then, the algorithm starts backward-pass from the terminal vertex (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{7}}}).
-Once the backward-pass visits a materialized vertex, it stops traversing its parents.
-The backward-pass removes any materialized vertices that it did not visit (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
-For example, since $v_3$ is materialized, backward-pass stops visiting its parents; thus, it removes $v_2$ from the final solution.
 
 \textbf{Complexity.} 
 Both forward-pass and backward-pass traverse the workload DAG once, resulting in $2*|V|$ vertex visits, where $V$ is the set of vertices in the workload DAG.

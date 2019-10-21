@@ -149,7 +149,6 @@ In this set of experiments, we investigate the impact of our materialization alg
 \end{subfigure}
 \caption{Real size of the stored artifact for storage-aware (SA) and heuristics-based (HM) materializations}
 \label{exp-sa-vs-simple-size}
-\vspace{-8mm}
 \end{figure}
 \textbf{Effect of Materialization on Storage.}
 Typically, in a real collaborative environment, deciding on a reasonable materialization budget requires knowledge of the expected size of the artifacts, number of the users in a collaborative environment, and rate of incoming workloads.
@@ -210,7 +209,7 @@ When CO encounters a model that performs better than all the existing models, th
 As a result, we reuse the model from EG instead of re-running all the operations to train the model.
 In Figure \ref{exp-model-materialization}(b), we observe that reusing the best pipeline for all the 2000 OpenML workloads has an overhead of 65 seconds.
 In comparison, re-executing the best pipeline for OML has an overhead of 2000 seconds.
-\vspace{-4mm}
+
 \begin{figure}[h]
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -235,7 +234,6 @@ In comparison, re-executing the best pipeline for OML has an overhead of 2000 se
 \end{subfigure}
 \caption{Impact of model materialization (OML = OpenML (baseline), CO = Collaborative Optimizer)}
 \label{exp-model-materialization}
-\vspace{-5mm}
 \end{figure}
 The parameter $\alpha$ indicates the importance of model quality when computing the utility value of an artifact.
 If $\alpha$ is close to 1, then the materializer aggressively stores high-quality models and ignores their recreation time and size.
@@ -261,7 +259,6 @@ In our collaborative optimizer, the default value of $\alpha$ is 0.5.
 $\alpha =0.5$ provides a good balance between workloads that have the goal of training high-quality models (e.g., the model-benchmarking scenario) and workloads that are more exploratory in nature.
 However, when we have prior knowledge of the nature of the workload in a collaborative environment, then we can set $\alpha$ accordingly.
 Therefore, we recommend $\alpha>0.5$ for workloads with the goal of training high-quality models and $\alpha<0.5$ for workloads with exploratory data analysis.
-\vspace{-4mm}
 \begin{figure}[h]
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -295,7 +292,6 @@ Many of the artifacts of Workload 7 incur larger load costs than compute costs.
 As a result, our reuse algorithm chooses to recompute these artifacts; thus, resulting in a smaller cumulative run-time when compared with ALL\_M.
 In this experiment, EG is inside the memory of the machine; thus, load times are generally low.
 In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a larger margin due to the very large load cost of some of the materialized artifacts.
-\vspace{-2mm}
 \begin{figure}[h]
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
@@ -314,7 +310,6 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 \caption{Effect of warmstarting on total run time}
 \label{exp-model-warmstarting}
 \end{figure}
-\vspace{-8mm}
 \subsection{Warmstarting}
 In this experiment, we evaluate the effect of our warmstarting method.
 We execute all the OpenML workloads with and without warmstarting.
