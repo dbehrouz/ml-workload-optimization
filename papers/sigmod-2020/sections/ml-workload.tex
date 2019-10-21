@@ -1,3 +1,9 @@
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\columnwidth]{../images/system-workflow}
+\caption{Overview of the collaborative workload optimizer system}
+\label{system-workflow}
+\end{figure}
 \section{Collaborative ML Workload Optimizations} \label{sec-ml-workloads}
 In this section, we provide an overview of our collaborative ML workload optimization system.
 Figure \ref{system-workflow} shows the high-level architecture of our system.
@@ -10,14 +16,6 @@ Similar to collaborative environments, the client and server can run within a si
 In the rest of this section, we describe the process of parsing, pruning, generating workload DAGs, and executing the workloads.
 Then, we describe the process of constructing the Experiment Graph and how we utilize the Experiment Graph in our materialization and reuse algorithms. 
 Finally, we show the integration process and the impact of our system on the use case in Section \ref{subsec-motivational-example}.
-
-\begin{figure}
-\centering
-\includegraphics[width=0.9\columnwidth]{../images/system-workflow}
-\caption{Overview of the collaborative workload optimizer system}
-\label{system-workflow}
-\end{figure}
-
 \subsection{Client Components}
 \textbf{ML Script and Parser.}
 Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are common choices for data analysis and machine learning workloads.
@@ -60,12 +58,6 @@ For example, a terminal vertex is a trained ML model, a preprocessed dataset, or
 Requesting the result of a terminal vertex triggers the optimization and execution of the workload DAG.
 Figure \ref{fig-workload-dag} shows the workload DAG constructed from the code in Listing \ref{listing-simple-workload}.
 In the Figure, the highlighted vertex represents a terminal vertex, which is the result of the print statement on Line 21 in Listing \ref{listing-simple-workload}.
-\begin{figure}
-\centering
-\includegraphics[width=\linewidth]{../images/tikz-standalone/example-graph}
-\caption{Workload DAG constructed from the Listing \ref{listing-simple-workload}. The highlighted node shows a terminal vertex.}
-\label{fig-workload-dag}
-\end{figure}
 
 \textbf{Local Pruner.}
 Once the user requests the result of a terminal vertex, the client prunes the DAG before sending it to the server.
@@ -77,38 +69,19 @@ Note that the pruner does not remove the unnecessary edges from the DAG and only
 For example, in Figure \ref{fig-workload-dag}, if \textit{t\_subset} is previously computed, the local pruner marks the edge between \textit{train} and \textit{t\_subset} as inactive.
 After the pruning, the client sends the DAG to the server.
 To minimize the transfer cost, the client does not send the content of the computed artifact to the server.
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{../images/tikz-standalone/example-graph}
+\caption{Workload DAG constructed from the Listing \ref{listing-simple-workload}. The highlighted node shows a terminal vertex.}
+\label{fig-workload-dag}
+\end{figure}
+\vspace{-2mm}
 
-\textbf{Executor. }
+\textbf{Executor.}
 After the server optimizes a workload DAG, the executor receives the optimized DAG to execute the operations and returns the result to the user.
 The executor runs the operations in the optimized DAG in their topological order and returns the result to the user.
 To avoid redundant computation, the executor ignores inactive edges.
 After the executor completes the execution of a workload DAG, it annotates the DAG vertices with compute-time and sizes before sending it to the updater for storage.
-
-%
-%\begin{figure}\label{DAG-workflow}
-%\begin{subfigure}{\columnwidth}
-%\centering
-%\includegraphics[width=0.8\linewidth]{../images/tikz-standalone/system-workflow-legend}
-%\end{subfigure}
-%\begin{subfigure}{0.3\columnwidth}
-%\centering
-%\includegraphics[width=0.8\linewidth]{../images/tikz-standalone/system-workflow-1}
-%\parbox{3cm}{\caption{Original DAG}}
-%\end{subfigure}%
-%\begin{subfigure}{0.3\columnwidth}
-%\centering
-%\includegraphics[width=0.8\linewidth]{../images/tikz-standalone/system-workflow-2}
-%\parbox{3cm}{\caption{Pruned DAG}}
-%\end{subfigure}%
-%\begin{subfigure}{0.3\columnwidth}
-%\centering
-%\includegraphics[width=0.8\linewidth]{../images/tikz-standalone/system-workflow-3}
-%\parbox{3cm}{\caption{Optimized DAG}}
-%\end{subfigure}
-%\label{fig-experiment-graph}
-%\caption{Different stages of a Workload DAG. Loaded: an artifact with its underlying data available, Computed: an artifact who is previously computed in an interactive workload, Materialized: an artifact which is available in the Experiment Graph, Null: an artifact which is not yet computed}
-%\end{figure}
-
 \subsection{Server Components}
 \textbf{Experiment Graph (EG).}
 EG is the union of all the executed workload DAGs, where vertices represent the artifacts and edges represent the operations.
@@ -122,10 +95,6 @@ The updater component decides whether to store the underlying content of an arti
 EG maintains a list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
 Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
-%Note that we construct one EG per ML task.
-%Every source vertex of EG corresponds to a training or testing dataset in the ML task.
-%Furthermore, all the model artifacts in EG are evaluated using the metric defined in the ML task.
-%As a result, we can compare ML model performances, which is a requirement for our materialization algorithm.
 
 \textbf{Optimizer. }
 The optimizer receives the workload DAG from the client and queries the Experiment Graph for materialized artifacts.
@@ -141,54 +110,8 @@ First, it stores any source artifact, both the meta-data and the underlying cont
 This is to ensure that EG contains every raw dataset.
 Second, it updates EG to include all the vertices and edges of the executed DAG.
 If EG already contains a vertex, the updater increases its frequency.
-Lastly, by utilizing our materialization algorithm, the updater stores the underlying content of a selected set of artifacts, i.e., the output of the materialization algorithms.
-The materialization algorithms select the artifacts by considering their run-time, size, frequency, and score of ML models.
+Lastly, by utilizing our novel materialization algorithms, the updater stores the underlying content of a selected set of artifacts, i.e., the output of the materialization algorithms.
 Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
-
-%Each edge contains the meta-data of the operation it represents, such as the function name, training algorithm, and hyperparameters.
-%To uniquely identify an edge, we utilize a hash function which receives as input the operation and its hyperparameters (if it has any).
-%Since the experiment graph is rooted, we assign a hash value to every vertex which is computed in the following way:
-%\[
-%    h(v)= 
-%\begin{cases}
-%    id,& \text{if } v \text{ is root}\\
-%    h\Big(\sum\limits_{e \in in\_edge(v)} (h(e.source) + h(e) ) \Big)  ,              & \text{otherwise}.
-%\end{cases}
-%\]
-%where $in\_edge(v)$ returns the edges with destination $v$. 
-%Intuitively, the hash of a root vertex is its unique identifier (location on disk or download URL) and the hashes of other vertices are derived recursively by combining the hashes of their parents and edges which connect them to their parents.
-
-%After a machine learning workload is executed, we update the experiment graph by adding the new artifacts and operations.
-%If any of the artifacts already exist in the graph, their frequency is updated.
-%We start with an empty Experiment Graph.
-%After the execution of the script and updating the Experiment Graph, all the artifacts (vertices) have a frequency of 1.
-%To represent operations which process multiple input artifacts, e.g., concat and svm.fit operations in Listing \ref{listing-experiment-graph}, we proceed as follows.
-%First, we merge the vertices representing the artifacts into a single vertex using a merge operator.
-%The merge operator is a logical operator which does not incur a cost, i.e., it has a run-time of 0 seconds.
-%The merged vertex is also a logical vertex with no actual attributes which only contains the vertex ids of the merged vertices.
-%Then, we draw an edge from the merged vertex which represents the actual operation.
-%For example, in Figure \ref{fig-experiment-graph}a, before applying the concatenation operation, we merge $v_4$ and $v_5$ into $v_6$, then we apply the concatenation operation (c1).
-%Furthermore, when computing the hash of a merged vertex, we take the merge order into account.
-%For example, the operation svm.fit has $X$ (represented by $v_7$) as first argument and train['y'] (represented by $v_3$) as its second argument.
-%When computing hash of $v_8$, we combine the parents in the same order, i.e., $h(v_8) = h(h(v_7) + m + h(v_3) + m)$. 
-%After the DAG is constructed, its execution is invoked with the call to the $get()$ command on Line 18.
-%\subsection{System Architecture and Workflow}
-%Figure \ref{system-workflow} shows the components of our collaborative workload optimizer system.
-%First, a parser component generates the workload DAG from the user scripts (Step 1).
-%Upon the invocation of the $get()$ method of a vertex, i.e., the terminal vertex, a local optimization process beings.
-%The local optimizer extracts the subgraph which must be executed in order to compute the terminal vertex.
-%The local optimizer traverses the graph in reverse order starting at the terminal vertex until the root vertices.
-%It stops the traversal when it reaches a previously computed vertex.
-%In interactive workloads, it is likely that many of the intermediate vertices between the terminal vertex and the root vertices are previously computed.
-%The subgraph of all the visited vertices and the edges connecting them is another DAG, which we refer to as the \textit{local execution DAG}, and is the result of the local optimizer (Step 2).
-%The global optimizer component receives the local execution DAG and looks for optimization opportunities, i.e., reusing materialized vertices or warmstarting model training, in the experiment graph.
-%Using early stopping, search space pruning, and heuristics the global optimizer finds the relevant artifacts \hl{with negligible overhead}.
-%The result of the global optimization process is another subgraph, which we refer to as the \textit{global execution DAG} (Step 3).
-%Then, an execution planner receives the global execution DAG and generates the execution schedule by sorting the edges based on their topological order, which is then executed by the execution engine (Step 4).
-%If the experiment graph is empty, then the execution planner users local execution DAG to generate the execution schedule.
-%After the execution, an updater component updates the experiment graph to include the vertices and edges of the workload DAG (Step 5).
-%Lastly, a materializer component decides what vertices to materialize, i.e., store their underlying data in the vertex of the graph (Step 6).
-
 \subsection{Improved Use Case}
 In this section, we show how our collaborative workload optimizer improves the workload execution process of the Kaggle use case.
 We maintain an Experiment Graph for the Home Credit Default Risk competition.
@@ -198,4 +121,3 @@ Our optimizer generates efficient workloads by querying EG for materialized arti
 In the use case, we highlighted 3 workloads that were copied and modified 7000 times.
 Optimizing the execution of these workloads saves 100s of hours of execution time.
 As a result, our collaborative optimizer reduces the required resources and operation cost of Kaggle.
-

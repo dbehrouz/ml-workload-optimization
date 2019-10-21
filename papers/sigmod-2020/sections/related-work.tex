@@ -12,8 +12,7 @@ These platforms provide APIs and primitives for users to query the details of th
 Contrary to our systems, none of these platforms offer automatic materialization and reuse of the ML artifacts and leave that task to the users.
 
 \textbf{Data Management and Provenance.}
-\todo[inline]{Need to quickly reread Context and Aurum to make sure I'm accurate about their description}
-Context \cite{garcia2018context}, JuNEAU \cite{ives2019dataset}, Ground \cite{hellerstein2017ground}, ProvDB \cite{miao2018provdb}, Aurum \cite{fernandez2018aurum}, and DataHub \cite{bhardwaj2014datahub, bhattacherjee2015principles} are data management and provenance systems that efficiently store fine-grained lineage information about the data artifacts and operations.
+DataHub \cite{bhardwaj2014datahub, bhattacherjee2015principles}, Context \cite{garcia2018context}, Ground \cite{hellerstein2017ground}, ProvDB \cite{miao2018provdb}, Aurum \cite{fernandez2018aurum}, and JuNEAU \cite{ives2019dataset} are data management and provenance systems that efficiently store fine-grained lineage information about the data artifacts and operations.
 Furthermore, some of these systems provide primitives for querying lineage and discovering datasets.
 We design our Experiment Graph by utilizing the approaches discussed in these systems.
 Specifically, we follow DataHub's graph representation.
@@ -21,7 +20,7 @@ However, contrary to these systems, we utilize the stored information to optimiz
 Furthermore, our materialization algorithm extends the materialization approach of Bhattacherjee et al. \cite{bhattacherjee2015principles} to tailor it to the machine learning workloads by considering the quality of the model artifacts.
 
 \textbf{Materialization and Reuse in ML and Data Processing Systems.}
-Helix \cite{xin2018h, xin2018helix}, DeepDive \cite{zhang2015deepdive}, Columbus \cite{zhang2016materialization}, and Mistique \cite{vartak2018mistique} are machine learning  systems which optimize workloads by materializing intermediate data for reuse.
+Helix \cite{xin2018h, xin2018helix}, DeepDive \cite{zhang2015deepdive}, Columbus \cite{zhang2016materialization}, and Mistique \cite{vartak2018mistique} are machine learning systems which optimize workloads by materializing intermediate data for reuse.
 These systems have three fundamental differences when compared to our system.
 First, the workload DAGs are typically small as these system work with machine learning pipelines of a few operations.
 Therefore, these systems do not need to tackle the problem of searching for reuse opportunities in a large graph.
@@ -32,11 +31,5 @@ Third, our system operates in a collaborative and multi-tenant environment.
 Whereas, the scope of optimization in these systems, except for Mistique, is limited to a single session.
 However, Mistique is a model diagnosis tool, which enables users to query intermediate artifacts from an artifact store efficiently.
 Whereas, we focus on generating optimal execution plans for future workloads by utilizing reusing the artifacts in the Experiment Graph.
-
-Nectar \cite{gunda2010nectar} is a  Dryad/DryadLINQ cluster data management system, which offers cache and reuse of intermediate data generated in DryadLINQ programs \cite{fetterly2009dryadlinq}.
+Nectar \cite{gunda2010nectar} is a  cluster data management system, which also offers caching and reusing of intermediate data generated in DryadLINQ programs \cite{fetterly2009dryadlinq}.
 However, Nectar only supports simple data processing pipelines and do not offer any optimizations for machine learning workloads.
-
-
-%Alpine Meadow \cite{shang2019democratizing} is an AutoML system that offers materialization and reuse of the intermediate data during the ML pipeline search.
-%Contrary to our system, Alpine Meadow only operates on ML pipelines (chain of operations rather than a DAG). 
-%Furthermore, Alpine Meadow assumes the storage budget is unlimited and materializes all the intermediate data.

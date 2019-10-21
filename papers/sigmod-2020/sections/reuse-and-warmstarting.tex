@@ -4,9 +4,9 @@ Every artifact of the incoming workload DAG is in one of the three following sta
 For the first two states, the client must execute the operations of the workload DAG to compute the artifact.
 However, when the artifact is materialized, we can either load it from the Experiment Graph or let the client execute the operations to compute the artifact.
 Both loading and computing an artifact incur costs.
-In this section, we first describe our reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., the sum of loading and computing cost of all the artifacts of the workload DAG.
-Then, we discuss our model warmstarting approach for model training operations with different hyperparameters.
-
+In this section, we first describe our linear-time reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., the sum of loading and computing cost of all the artifacts of the workload DAG.
+Then, we investigate the complexity of the reuse algorithm.
+Finally, we discuss our model warmstarting approach for model training operations with different hyperparameters.
 \subsection{Reuse Algorithm} 
 \textbf{Preliminaries and Notations.} 
 We refer to the workload DAG as $G_W$.
@@ -33,7 +33,6 @@ Otherwise, we compute the execution cost of a vertex as the sum of the compute c
 We then compare the load cost of the vertex with the execution cost and set its recreation cost to the smaller of the two (Lines 10-14).
 When the load cost is smaller, the algorithm adds the vertex to the set of reuse vertices.
 Note that vertices that are not materialized have a load cost of $\infty$; therefore, the algorithm never loads an unmaterialized vertex.
-
 \begin{algorithm}[h]
 \KwData {$G_W$ workload DAG, $G_E$ experiment graph}
 \KwResult {$\mathcal{R}$ set of vertices for reuse}
@@ -58,13 +57,13 @@ $\mathcal{R} \coloneqq \emptyset$\;
 return $\mathcal{R}$\;
 \caption{Forward-pass}\label{forward-pass}
 \end{algorithm}
+
 After forward-pass, we must prune the set of reuse vertices to remove any artifact that is not part of the execution path.
 A vertex $v \in \mathcal{R}$ is not part of the execution path if there exists at least another vertex $v' \in \mathcal{R}$ in every outgoing path starting at $v$.
 Algorithm \ref{backward-pass} shows the details of the backward-pass algorithm.
 In backward-pass, we visit every vertex of $G_W$ starting from the terminal vertices.
 For every vertex, if it belongs to the reuse set, we add it to the final solution set ($\mathcal{R}_p$) and stop traversing its parents (Lines 4 and 5).
 Otherwise, we continue traversing the parents of the vertex (Line 7).
-
 \begin{algorithm}[h]
 \KwData {$\mathcal{R}$: Current reuse set, $G_W$: workload DAG}
 \KwResult {$\mathcal{R}_p$: Final reuse set after pruning}
@@ -80,7 +79,13 @@ $v\_queue \coloneqq terminals(G_W)$\;
 return $\mathcal{R}_p$\;
 \caption{Backward-pass}\label{backward-pass}
 \end{algorithm}
-
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
+\caption{Reuse Algorithm Example. Each vertex has the label $\langle C_i(v),C_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
+\label{fig-reuse-algorithm}
+\vspace{-4mm}
+\end{figure}
 Figure \ref{fig-reuse-algorithm} shows how our reuse algorithm (forward-pass and backward-pass) operates on an example workload DAG.
 There are 3 source vertices in the workload DAG.
 The algorithm starts with forward-pass, traversing the graph from the sources (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{1}}}).
@@ -96,13 +101,6 @@ Once the backward-pass visits a materialized vertex, it stops traversing its par
 The backward-pass removes any materialized vertices that it did not visit (Scenario \textcircled{\raisebox{-0.9pt}{\textbf{8}}}).
 For example, since $v_3$ is materialized, backward-pass stops visiting its parents; thus, it removes $v_2$ from the final solution.
 
-\begin{figure}
-\centering
-\includegraphics[width=\linewidth]{../images/tikz-standalone/reuse-algorithm}
-\caption{Reuse Algorithm Example. Each vertex has the label $\langle C_i(v),C_l(v) \rangle$. $T$ represent the recreation cost passed along to the children vertices. Numbered circles show different scenarios.}
-\label{fig-reuse-algorithm}
-\end{figure}
-
 \textbf{Complexity.} 
 Both forward-pass and backward-pass traverse the workload DAG once, resulting in $2*|V|$ vertex visits, where $V$ is the set of vertices in the workload DAG.
 Therefore, our reuse algorithm has a worst-case complexity of $\mathcal{O}(|V|)$.
@@ -115,12 +113,11 @@ This is an important requirement of the collaborative environments.
 In a typical collaborative environment, many clients send workloads to the server for optimization.
 Furthermore, in interactive workloads, clients expect a response very fast.
 Therefore, If the reuse algorithm incurs a large overhead, the server does not respond in time or becomes unresponsive.
-
 \subsection{Warmstarting}
 Many model training operations include different hyperparameters, which impact the training process.
 Two training operations on the same dataset with different hyperparameters may result in completely different models.
 In such scenarios, we cannot reuse a materialized model in EG instead of a model artifact in the workload DAG.
-Therefore, instead of reusing a model, we try to warmstart the model training operations using the models in EG.
+However, we try to warmstart the model training operations using the models in EG to reduce the training time.
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
 Warmstarting has shown to decrease the total training time in some scenarios \cite{baylor2017tfx}.
 Note that in many scenarios, there is no guarantee that warmstarting works.

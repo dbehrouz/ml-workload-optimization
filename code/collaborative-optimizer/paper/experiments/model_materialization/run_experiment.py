@@ -50,7 +50,6 @@ from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
     TopNModelMaterializer
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
-from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
 from experiment_graph.workloads.openml_optimized import OpenMLOptimizedWorkload
 from experiment_graph.workloads.openml_baseline import OpenMLBaselineWorkload
@@ -77,7 +76,6 @@ OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 config.set_cache_directory(OPENML_DIR + '/cache')
 
 result_file = parser.get('result', ROOT + '/experiment_results/local/model_materialization/openml/test.csv')
-profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
 
 if not os.path.exists(os.path.dirname(result_file)):
     try:
@@ -96,7 +94,7 @@ setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OP
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     materializer = StorageAwareMaterializer(storage_budget=mat_budget)
-    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
+    executor = CollaborativeExecutor(ee, materializer=materializer)
 elif method == 'baseline':
     executor = BaselineExecutor()
 else:
