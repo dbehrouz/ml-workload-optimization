@@ -104,7 +104,7 @@ Since our collaborative optimizer does not materialize such external information
 }
 \caption{Execution of Kaggle workloads in sequence}
 \end{subfigure}
-\caption{Execution of Kaggle workloads. KG = Kaggle's infrastructure (baseline), CO = Collaborative Optimizer.}
+\caption{Run-time of Kaggle workloads. KG = Default Kaggle, CO = Collaborative Optimizer.}
 \label{exp-reuse-kaggle-same-workload}
 \end{figure}
 
@@ -183,7 +183,7 @@ However, the HM is unable to exploit this similarity and chooses not to material
 Recomputing these artifacts is costly, which results in a larger total run-time for HM under a smaller budget.
 \begin{figure}[h]
 \centering
- \resizebox{0.7\columnwidth}{!}{%
+ \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/kaggle_home_credit/materialization/run-time.pgf}%
 }
 \caption{Total run-time of the workloads with different materialization algorithms and budgets}
@@ -276,7 +276,7 @@ Therefore, we recommend $\alpha>0.5$ for workloads with the goal of training hig
 \end{subfigure}
 \caption{Run-time of linear-time (LN), all compute (ALL\_C), and all materialized (ALL\_M) reuse methods.}
 \label{reuse-experiment}
-\vspace{-6mm}
+\vspace{-4mm}
 \end{figure}
 \subsection{Reuse}
 In this experiment, we evaluate the performance of our reuse algorithm.
@@ -309,6 +309,7 @@ In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a large
 \end{subfigure}
 \caption{Effect of warmstarting on total run time}
 \label{exp-model-warmstarting}
+\vspace{-4mm}
 \end{figure}
 \subsection{Warmstarting}
 In this experiment, we evaluate the effect of our warmstarting method.
