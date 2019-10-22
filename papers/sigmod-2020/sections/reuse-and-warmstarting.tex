@@ -1,8 +1,8 @@
 \section{Reuse and Warmstarting Optimizations}\label{sec-reuse-and-warmstarting}
-After constructing the Experiment Graph and materializing its artifacts, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts of the Experiment Graph and warmstart model training operations.
-Every artifact of the incoming workload DAG is in one of the three following states: (1) the artifact does not exist in the Experiment Graph, (2) the artifact exists in the Experiment Graph but is unmaterialized, and (3) the artifact is materialized.
+After constructing the Experiment Graph and materializing its artifacts, our collaborative optimizer looks for opportunities to reuse existing materialized artifacts of EG and warmstart model training operations.
+Every artifact of the incoming workload DAG is in one of the three following states: (1) the artifact does not exist in EG, (2) the artifact exists in EG but is unmaterialized, and (3) the artifact is materialized.
 For the first two states, the client must execute the operations of the workload DAG to compute the artifact.
-However, when the artifact is materialized, we can either load it from the Experiment Graph or let the client execute the operations to compute the artifact.
+However, when the artifact is materialized, we can either load it from EG or let the client execute the operations to compute the artifact.
 Both loading and computing an artifact incur costs.
 In this section, we first describe our linear-time reuse algorithm, which selects a subset of the materialized artifacts, and outputs an optimized DAG with the lowest execution time, i.e., the sum of loading and computing cost of all the artifacts of the workload DAG.
 Then, we investigate the complexity of the reuse algorithm.
