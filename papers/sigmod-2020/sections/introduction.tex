@@ -35,10 +35,10 @@ We propose two novel algorithms for materializing the content of the artifacts g
 Our materialization algorithms utilize several metrics such as the size, recreation cost, access frequency, operation run-time, and the score of the machine learning models to decide what artifacts to store.
 To the best of our knowledge, this is the first work that considers the score of ML models in the materialization decision.
 
-To optimize the execution of the incoming ML workloads, we propose a linear-time reuse algorithm that decides when to load an artifact from the EG and when to recompute the artifact locally.
+To optimize the execution of the incoming ML workloads, we propose a linear-time reuse algorithm that decides when to load an artifact from EG and when to recompute the artifact locally.
 Our reuse algorithm receives the DAG representation of an ML workload and generates an optimal execution plan that minimizes the total execution cost, i.e., the sum of the retrieval and the computation costs.
-However, for some ML model artifacts, due to the stochasticity of the training operations and differences in hyperparameters, we cannot always reuse an existing model from the EG.
-Instead, we warmstart the training operation of the workload DAG with a model artifact from the Experiment Graph.
+However, for some ML model artifacts, due to the stochasticity of the training operations and differences in hyperparameters, we cannot always reuse an existing model from EG.
+Instead, we warmstart such training operations with a model artifact from the Experiment Graph.
 Model warmstarting increases the convergence rate resulting in faster execution time of the model training operations.
 
 In summary, we make the following contributions:
