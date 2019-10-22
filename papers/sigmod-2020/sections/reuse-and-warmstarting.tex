@@ -108,7 +108,7 @@ Backward-pass stops traversing the parents of a vertex when the vertex is in the
 Furthermore, in our implementation of forward-pass, we also include an early-stopping condition.
 The early-stopping condition instructs forward-pass to stop traversing down a path when it encounters a vertex that is not in EG.
 Thus, the reuse algorithm generates the optimized DAG with a small overhead.
-This is an important requirement of the collaborative environments.
+This is an important requirement in collaborative environments.
 In a typical collaborative environment, many clients send workloads to the server for optimization.
 Furthermore, in interactive workloads, clients expect a response very fast.
 Therefore, If the reuse algorithm incurs a large overhead, the server does not respond in time or becomes unresponsive.
@@ -120,7 +120,7 @@ However, we try to warmstart the model training operations using the models in E
 In warmstarting, instead of randomly initializing the parameters of a model before training, we initialize the model parameters to a previously trained model.
 Warmstarting has shown to decrease the total training time in some scenarios \cite{baylor2017tfx}.
 Note that in many scenarios, there is no guarantee that warmstarting works.
-Therefore, we only warmstart a model training operation, when users explicitly requests it.
+Therefore, we only warmstart a model training operation, when users explicitly request it.
 The default behavior of our system is not to warmstart model training operations.
 
 The process of warmstarting is as follows.

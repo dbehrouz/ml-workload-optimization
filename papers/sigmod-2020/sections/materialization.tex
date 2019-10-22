@@ -38,7 +38,7 @@ Second, existing solutions address an offline scenario where new artifacts do no
 In a collaborative environment, users continuously execute workloads resulting in new artifacts.
 
 Here, we formulate the problem of artifact materialization as a multi-objective optimization problem.
-The goal of artifact materialization is to materialize a subset of the artifacts which minimizes the weighted recomputation cost while maximizing the estimated quality.
+The goal of artifact materialization is to materialize a subset of the artifacts that minimizes the weighted recomputation cost while maximizing the estimated quality.
 
 \textbf{Weighted Recreation Cost Function (WC).} 
 The first function computes the weighted recreation cost of all the vertices in the graph:
@@ -67,7 +67,7 @@ EQ(G_E) \coloneqq  \sum\limits_{v \in V}  v.mat \times p(v)
 \]
 
 \textbf{Multi-Objective Optimization.}
-Given the two functions, i.e., weighted recreation cost and estimated quality, we would like to find the optimal set of vertices to materialize which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$.
+Given the two functions, i.e., weighted recreation cost and estimated quality, we would like to find the optimal set of vertices to materialize, which minimizes the weighted recreation cost function and maximizes the estimated quality function under limited storage size, $\mathcal{B}$.
 For ease of representation, we instead try to minimize the inverse of the estimated quality function.
 We formulate the optimization problem as follows:
 \begin{equation}\label{multi-obj-opt}
@@ -76,9 +76,9 @@ We formulate the optimization problem as follows:
 & \text{subject to:} \sum\limits_{v \in V} v.mat \times v.s \leq \mathcal{B}
 \end{split}
 \end{equation}
-Existing work prove that minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
+Existing work proves that minimizing the recreation cost alone is an NP-Hard problem \cite{bhattacherjee2015principles}.
 While there are different approximate strategies for solving multi-objective optimization problems \cite{coello2007evolutionary}, they are time-consuming, which renders them inappropriate to our setting, where new artifacts are constantly added to the graph.
-Execution of every workload results in an update to the experiment graph, which in turn, requires a recomputation of the materialized set.
+Execution of every workload results in an update to the experiment graph, which in turn requires a recomputation of the materialized set.
 As a result, existing solutions to multi-objective optimization problems are not suitable for artifact materializations of the experiment graph.
 \subsection{ML-Based Greedy Algorithm}\label{subsec-ml-based-materialization}
 We propose a greedy heuristic-based algorithm for solving the multi-objective optimization problem.

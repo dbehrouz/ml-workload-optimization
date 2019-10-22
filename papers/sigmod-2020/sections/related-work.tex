@@ -1,5 +1,5 @@
 \section{Related Work} \label{sec-related-work}
-Our system lies at the intersection of data science platforms that enable collaboration between users and machine learning, data management and provenance systems which capture the relationship between data artifacts, and machine learning and data processing systems which optimize workloads by storing intermediates.
+Our system lies at the intersection of data science platforms that enable collaboration between users and machine learning, data management and provenance systems, which capture the relationship between data artifacts, and machine learning and data processing systems which optimize workloads by storing intermediates.
 
 \textbf{Collaborative Data Science Platforms.}
 Cloud-based systems, such AzureML \cite{team2016azureml}, Google's AI platform \cite{googleai}, Kaggle \cite{kagglewebsite}, and Google Colaboratory \cite{googlecolab} provide the necessary tools for users to write ML workloads in Jupyter notebooks.
@@ -22,9 +22,9 @@ Furthermore, our materialization algorithm extends the materialization approach 
 \textbf{Materialization and Reuse in ML and Data Processing Systems.}
 Helix \cite{xin2018h, xin2018helix}, DeepDive \cite{zhang2015deepdive}, Columbus \cite{zhang2016materialization}, and Mistique \cite{vartak2018mistique} are machine learning systems which optimize workloads by materializing intermediate data for reuse.
 These systems have three fundamental differences when compared to our system.
-First, the workload DAGs are typically small as these system work with machine learning pipelines of a few operations.
+First, the workload DAGs are typically small as these systems work with machine learning pipelines of a few operations.
 Therefore, these systems do not need to tackle the problem of searching for reuse opportunities in a large graph.
-However, Helix offers a reuse procedure with a polynomial time-complexity which can potentially perform well on larger DAGs.
+However, Helix offers a reuse procedure with a polynomial time-complexity, which can potentially perform well on larger DAGs.
 However, our reuse procedure for finding the optimal execution plan has a linear time-complexity.
 Second, the materialization decisions in this system only utilize run-time and size and do not take into account the model quality.
 Third, our system operates in a collaborative and multi-tenant environment.

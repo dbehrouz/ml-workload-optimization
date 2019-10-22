@@ -48,7 +48,8 @@ Unless specified otherwise, we use storage-aware materialization with a budget o
 For all the experiments, we execute the workloads in order (from 1 to 8) and report the results.
 We use the Kaggle workloads to investigate the effect of end-to-end optimization, storage-aware and heuristics-based materializations, and our reuse algorithm.
 
-\textbf{OpenML workloads.} In the OpenML workloads, we retrieve all the scikit-learn pipelines for Task 31 from the OpenML platform\footnote{https://www.openml.org/t/31}, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{asuncion2007uci}.
+\textbf{OpenML workloads.} 
+In the OpenML workloads, we retrieve all the scikit-learn pipelines for Task 31 from the OpenML platform\footnote{https://www.openml.org/t/31}, i.e., classifying customers as good or bad credit risks using the German Credit data from the UCI repository \cite{asuncion2007uci}.
 Task 31 is the most popular task with the highest number of ML pipeline runs.
 For every task, OpenML stores a log of all the runs.
 We extracted the first 2000 runs of Task 31 from the logs.
@@ -62,7 +63,7 @@ In our motivating, we describe three workloads (Workloads 1-3 of Table \ref{kagg
 Kaggle reports users have copied and modified these workloads a total of 7000 times.
 Therefore, at the very least, users execute these workloads 7000 times.
 Figures \ref{exp-reuse-kaggle-same-workload}(a)-(c) show the result of repeating the execution of each workload twice.
-Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) must execute all the operation in the workloads.
+Before the first run, EG is empty; therefore, both the baseline (KG) and our collaborative optimizer (CO) must execute all the operations in the workloads.
 In Workload 1, the run-time of CO is slightly larger than KG in the first run.
 Workload 1 executes two alignment operations.
 An alignment operation receives two datasets, removes all the columns that do not appear in both datasets, and returns the resulting two datasets.
@@ -176,7 +177,7 @@ As a result, the total size of the materialized artifacts decreases after execut
 The goal of this experiment is to show that SA has a small run-time with a low materialization budget.
 Figure \ref{run-time-vs-mat} shows the total run-time of all the workloads under different budgets for heuristics-based and storage-aware algorithms.
 We also plot the total run-time for the all-materializer.
-Even with a materialization budget of 8 GB, SA has a comparable performance to the scenario where all the artifacts are materialized (i.e., difference in run-time is 100 seconds).
+Even with a materialization budget of 8 GB, SA has comparable performance to the scenario where all the artifacts are materialized (i.e., the difference in run-time is 100 seconds).
 On the contrary, under a small materialization budget ($\leq 16$), HM performs on average 50\% worse than SA.
 For larger materialization budgets ($\geq 16$), HM performs better, however, its performance is still around 40\% worse than SA.
 This is mainly because many of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 3 GB.
