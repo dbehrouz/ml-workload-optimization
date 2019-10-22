@@ -15,7 +15,7 @@ This architecture enables us to integrate our system into the existing collabora
 Similar to collaborative environments, the client and server can run within a single cloud environment where each client is an isolated container.
 In the rest of this section, we describe the process of parsing, pruning, generating workload DAGs, and executing the workloads.
 Then, we describe the process of constructing the Experiment Graph and how we utilize the Experiment Graph in our materialization and reuse algorithms. 
-Finally, we show the integration process and the impact of our system on our motivating example (Section \ref{sec-background}).
+Finally, we show the integration process and the impact of our system on our motivating example (described in Section \ref{sec-background}).
 \subsection{Client Components}
 \textbf{ML Script and Parser.}
 Instead of designing a new DSL, we extend the existing Pandas and scikit-learn \cite{sklearn_api} python packages that are common choices for data analysis and machine learning workloads.
@@ -86,22 +86,22 @@ After the executor completes the execution of a workload DAG, it annotates the D
 \textbf{Experiment Graph (EG).}
 EG is the union of all the executed workload DAGs, where vertices represent the artifacts and edges represent the operations.
 Every vertex in EG has the attributes $frequency$, $size$, and $compute\_time$, representing the number of different workloads an artifact appeared in, the storage size of the artifact, and the time required to compute the artifact given its input artifacts, respectively.
-Every vertex in the experiment Graph carries the meta-data of the artifact it represents.
+Every vertex in EG carries the meta-data of the artifact it represents.
 For datasets, the meta-data includes the name, type, and size of each column.
 For ML models, the meta-data includes the name, type, hyperparameters, and the evaluation score of the model.
-To save storage space, EG does not contain the underlying content, i.e., Pandas data frame and model weights, of all the artifacts.
-The updater component decides whether to store the underlying content of an artifact.
+To save storage space, EG does not contain the content, i.e., Pandas data frame and model weights, of all the artifacts.
+The updater component decides whether to store the content of an artifact.
 
 EG maintains a list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
-Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
+Therefore, given a workload DAG, EG can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
 %Note that EG comprises of many connected components.
 %Each connected component represents the union of all the workload DAGs that share the same source datasets and are solving the same machine learning task.
 %In our motivating example, if one EG represents the entire Kaggle, each competition inside Kaggle is one connected component of EG.
 %In the rest of the paper, when we use the term EG, we refer to one connected component.
 
 \textbf{Optimizer. }
-The optimizer receives the workload DAG from the client and queries the Experiment Graph for materialized artifacts.
+The optimizer receives the workload DAG from the client and queries EG for materialized artifacts.
 Then, the optimizer utilizes our reuse algorithm to generate an optimized DAG with some of its vertices already materialized.
 Similar to the local pruning step, the optimizer also marks unnecessary edges as inactive before returning the optimized DAG to the client.
 The optimized DAG guarantees to incur the smallest execution cost, i.e., the cost of transferring the materialized artifacts plus executing the remaining operations.
@@ -110,12 +110,12 @@ The optimized DAG guarantees to incur the smallest execution cost, i.e., the cos
 The updater receives the executed DAG from the client.
 The vertices in the executed DAG contain the size and compute-time of the artifacts they represent.
 The updater performs the three following tasks.
-First, it stores any source artifact, both the meta-data and the underlying content, that is not in EG.
+First, it stores any source artifact, both the meta-data and the content, that is not in EG.
 This is to ensure that EG contains every raw dataset.
 Second, it updates EG to include all the vertices and edges of the executed DAG.
 If EG already contains a vertex, the updater increases its frequency.
-Lastly, by utilizing our novel materialization algorithms, the updater stores the underlying content of a selected set of artifacts, i.e., the output of the materialization algorithms.
-Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
+Lastly, by utilizing our novel materialization algorithms, the updater stores the content of a selected set of artifacts, i.e., the output of the materialization algorithms.
+Note that EG contains the meta-data of all the artifacts, including the unmaterialized artifacts.
 \subsection{Improved Motivating Example}
 In this section, we show how our collaborative workload optimizer improves the workload execution process of our motivating example.
 We maintain an EG for the Home Credit Default Risk competition.
