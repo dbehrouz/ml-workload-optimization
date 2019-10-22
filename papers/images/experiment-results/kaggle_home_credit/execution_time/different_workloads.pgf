@@ -533,10 +533,10 @@
 \pgfusepath{clip}%
 \pgfsetbuttcap%
 \pgfsetroundjoin%
-\pgfsetlinewidth{3.011250pt}%
+\pgfsetlinewidth{5.018750pt}%
 \definecolor{currentstroke}{rgb}{0.298039,0.447059,0.690196}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{3.000000pt}{0.000000pt}}{0.000000pt}%
+\pgfsetdash{{5.000000pt}{0.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{2.107069in}{1.300478in}}%
 \pgfpathlineto{\pgfqpoint{3.214212in}{1.558838in}}%
 \pgfpathlineto{\pgfqpoint{4.321355in}{2.003587in}}%
@@ -609,10 +609,10 @@
 \pgfusepath{clip}%
 \pgfsetbuttcap%
 \pgfsetroundjoin%
-\pgfsetlinewidth{3.011250pt}%
+\pgfsetlinewidth{5.018750pt}%
 \definecolor{currentstroke}{rgb}{0.866667,0.517647,0.321569}%
 \pgfsetstrokecolor{currentstroke}%
-\pgfsetdash{{9.000000pt}{3.000000pt}}{0.000000pt}%
+\pgfsetdash{{15.000000pt}{5.000000pt}}{0.000000pt}%
 \pgfpathmoveto{\pgfqpoint{2.107069in}{1.289767in}}%
 \pgfpathlineto{\pgfqpoint{3.214212in}{1.599441in}}%
 \pgfpathlineto{\pgfqpoint{4.321355in}{2.152459in}}%
