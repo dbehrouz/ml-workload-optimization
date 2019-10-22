@@ -117,11 +117,11 @@ If EG already contains a vertex, the updater increases its frequency.
 Lastly, by utilizing our novel materialization algorithms, the updater stores the underlying content of a selected set of artifacts, i.e., the output of the materialization algorithms.
 Note that the Experiment Graph contains the meta-data of all the artifacts, including the unmaterialized artifacts.
 \subsection{Improved Motivating Example}
-In this section, we show how our collaborative workload optimizer improves the workload execution process our motivating example.
+In this section, we show how our collaborative workload optimizer improves the workload execution process of our motivating example.
 We maintain an EG for the Home Credit Default Risk competition.
 After users start publishing their workload scripts on the Kaggle platform, other users will read, re-run, or modify the existing scripts.
 The updater component of our system stores the artifacts with a high likelihood of reuse into EG.
 Our optimizer generates efficient workloads by querying EG for materialized artifacts and transforming the workload DAG into a more optimized DAG.
-In the motivating example, we highlighted 3 workloads that were copied and modified 7000 times.
-Optimizing the execution of these workloads saves 100s of hours of execution time.
+In the motivating example, we highlighted three workloads that were copied and modified 7000 times.
+Optimizing the execution of these workloads saves hundreds of hours of execution time.
 As a result, our collaborative optimizer reduces the required resources and operation cost of Kaggle.
