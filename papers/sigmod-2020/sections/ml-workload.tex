@@ -95,11 +95,10 @@ The updater component decides whether to store the underlying content of an arti
 EG maintains a list of all the source vertices that it contains.
 Furthermore, every edge in the graph stores the hash of the operation it represents.
 Therefore, given a workload DAG, the Experiment Graph can quickly detect if it contains any of the artifacts of the workload DAG by traversing the edges starting from the source.
-
-Note that EG comprises of many connected components.
-Each connected component represents the union of all the workload DAGs that share the same source datasets and are solving the same machine learning task.
-In our motivating example, if one EG represents the entire Kaggle, each competition inside Kaggle is one connected component of EG.
-In the rest of the paper, when we use the term EG, we refer to one connected component.
+%Note that EG comprises of many connected components.
+%Each connected component represents the union of all the workload DAGs that share the same source datasets and are solving the same machine learning task.
+%In our motivating example, if one EG represents the entire Kaggle, each competition inside Kaggle is one connected component of EG.
+%In the rest of the paper, when we use the term EG, we refer to one connected component.
 
 \textbf{Optimizer. }
 The optimizer receives the workload DAG from the client and queries the Experiment Graph for materialized artifacts.

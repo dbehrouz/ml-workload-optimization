@@ -31,5 +31,5 @@ Third, our system operates in a collaborative and multi-tenant environment.
 Whereas, the scope of optimization in these systems, except for Mistique, is limited to a single session.
 However, Mistique is a model diagnosis tool, which enables users to query intermediate artifacts from an artifact store efficiently.
 Whereas, we focus on generating optimal execution plans for future workloads by utilizing reusing the artifacts in the Experiment Graph.
-Nectar \cite{gunda2010nectar} is a  cluster data management system, which also offers caching and reusing of intermediate data generated in DryadLINQ programs \cite{fetterly2009dryadlinq}.
-However, Nectar only supports simple data processing pipelines and do not offer any optimizations for machine learning workloads.
+Nectar \cite{gunda2010nectar} and ReStore \cite{elghandour2012restore} offer materialization and reuse of intermediate data generated in DryadLINQ \cite{fetterly2009dryadlinq} and MapReduce jobs.
+However, Both of these systems only support simple data processing pipelines and do not offer any optimizations for machine learning workloads.

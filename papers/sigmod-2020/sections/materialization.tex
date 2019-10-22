@@ -25,8 +25,9 @@ M(v) \coloneqq  \{m \in M(G_E) \mid\text{there is path from } v \text{ to } m\}
 
 \textbf{Assumptions. }
 We assume there exists an evaluation function that assigns a score to user-created ML models.
-This is a reasonable assumption as the success of any ML application can only be measured through an evaluation function (e.g., using a test dataset in a Kaggle competition or monitoring certain KPIs in a company).
-In the Experiment Graph, any vertex that represents an ML model artifact contains an extra attribute $q$ representing the quality of the model, where $0 \leq q \leq 1$.
+This is a reasonable assumption as the success of any ML application can only be measured through an evaluation function.
+For instance, our motivating example uses the area under the ROC curve for scoring the submitted workloads.
+In the Experiment Graph, any vertex that represents an ML model artifact contains an extra attribute, $q$($0 \leq q \leq 1$), representing the quality of the model, where.
 \subsection{Materialization Problem Formulation}\label{subsec-materialization-problem}
 Existing work proposes different algorithms for the efficient storage of dataset versions and their storage and recomputation trade-off \cite{bhattacherjee2015principles}.
 The goal of the existing algorithms is to materialize the artifacts that result in a small recomputation cost while ensuring the total size of the materialized artifacts does not exceed the storage capacity.

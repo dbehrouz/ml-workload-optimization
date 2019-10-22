@@ -177,7 +177,7 @@ The goal of this experiment is to show that SA has a small run-time with a low m
 Figure \ref{run-time-vs-mat} shows the total run-time of all the workloads under different budgets for heuristics-based and storage-aware algorithms.
 We also plot the total run-time for the all-materializer.
 Even with a materialization budget of 8 GB, SA has a comparable performance to the scenario where all the artifacts are materialized (i.e., difference in run-time is 100 seconds).
-On the contrary, under a small materialization budget ($\leq 16$), HM performs on average 50\% worse SA.
+On the contrary, under a small materialization budget ($\leq 16$), HM performs on average 50\% worse than SA.
 For larger materialization budgets ($\geq 16$), HM performs better, however, its performance is still around 40\% worse than SA.
 This is mainly because many of the preprocessed dataset artifacts are large, e.g., in Workload 3, some artifacts are more than 3 GB.
 Most of these artifacts differ with each other in only a few columns.
@@ -201,7 +201,7 @@ The implementation of the scenario is as follows.
 First, We execute every OpenML workload one by one and keep track of the best performing workload.
 Then, for every workload, as a post-processing step, we compare the score of the model with the score of the best performing model so far.
 We compare the cumulative run-time of running the model-benchmarking scenario using our collaborative optimizer (CO) with default configuration (i.e., storage-aware materializer with budget 100 MB and $\alpha=0.5$) and the OpenML baseline (OML).
-Figure \ref{exp-model-materialization}(a) shows the cumulative run-time of executing the model-benchmarking scenario for CO and OML.
+Figure \ref{exp-model-materialization}(a) shows the cumulative run-time of executing the model-benchmarking scenario for CO and OML (i.e., the combined run-time of the current and the best workload).
 In OML, for every workload, we have to re-run the pipeline of the best performing model.
 As a result, OML has a larger cumulative run-time when compared with CO.
 Figure \ref{exp-model-materialization}(b) explains the reason for such a large difference between OML and CO.
@@ -216,14 +216,14 @@ In comparison, re-executing the best pipeline for OML has an overhead of 2000 se
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/openml/model_materialization/cumulative-runtime.pgf}%
 }
-\caption{Model-benchmark}
+\caption{Combined run-time}
 \end{subfigure}%
 \begin{subfigure}[b]{0.5\linewidth}
 \centering
  \resizebox{\columnwidth}{!}{%
 \input{../images/experiment-results/openml/model_materialization/bestpipeline-overhead.pgf}%
 }
-\caption{Best pipeline}
+\caption{Best pipeline run-time}
 \end{subfigure}
 \begin{subfigure}[b]{\linewidth}
 \centering
@@ -284,14 +284,19 @@ Therefore, we recommend $\alpha>0.5$ for workloads with the goal of training hig
 In this experiment, we evaluate the performance of our reuse algorithm on Kaggle workloads.
 We compare our linear time reuse algorithm (LN) with two baselines.
 In the first baseline (ALL\_M), we reuse every materialized artifact.
-In the second baseline (ALL\_C), we recompute every materialized artifact.
+In the second baseline (ALL\_C), we recompute every artifact.
 Figure \ref{reuse-experiment} shows the total run-time of the Kaggle workloads with different reuse approaches under different materialization algorithms.
-The performance of ALL\_C is similar to when there is no Experiment Graph.
-Thus, ALL\_C, independent of the materialization algorithm and budget, finishes the execution of all the Kaggle workloads in around 2000.
-Since storage-aware materializes more artifacts than heuristics-based, ALL\_M and LN incur lower cumulative-run times in storage-aware.
+ALL\_C, independent of the materialization algorithm and budget, finishes the execution of all the Kaggle workloads in around 2000.
+For HM materialization, all three reuse algorithms have similar performance until Workload 6.
+Since Workload 3 has large artifacts, HM exhausts its budget by materializing them (as explained the materialization experiments).
+Furthermore, Workloads 4, 5, and 6 are modified versions of Workloads 1 and 2 (Table \ref{kaggle-workload}).
+Therefore, there are not many reuse opportunities until Workload 7.
+However, for SA materialization, both ALL\_M and LN outperform ALL\_C starting from Workload 4.
+SA has better utilization of the budget and materializes some of the artifacts of the Workload 1 and 2.
+ALL\_M and LN reuse these artifacts in Workloads 4, 5, and 6; thus, incurring a smaller run-time.
 For both materialization algorithms, ALL\_M has a similar performance to LN until Workload 7.
 Many of the artifacts of Workload 7 incur larger load costs than compute costs.
-As a result, our reuse algorithm chooses to recompute these artifacts; thus, resulting in a smaller cumulative run-time when compared with ALL\_M.
+As a result, LN recomputes these artifacts and results in a smaller cumulative run-time than ALL\_M, i.e., around 300 seconds in both HM and SA materialization.
 In this experiment, EG is inside the memory of the machine; thus, load times are generally low.
 In scenarios where EG is on disk, we expect LN to outperform ALL\_M with a larger margin due to the higher load cost of the materialized artifacts.
 \begin{figure}[t]
