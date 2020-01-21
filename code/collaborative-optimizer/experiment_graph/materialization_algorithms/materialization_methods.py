@@ -121,6 +121,10 @@ class AllMaterializer(Materializer):
 
 
 class TopNModelMaterializer(Materializer):
+    """
+    Given an n and alpha (for computing utility) this class materializes the top n ML models.
+    It is used for experiments only.
+    """
     def __init__(self, n=1, alpha=0.5, modify_graph=False):
         super(TopNModelMaterializer, self).__init__(storage_budget=0, alpha=alpha, modify_graph=modify_graph)
         self.n = n
@@ -154,6 +158,11 @@ class TopNModelMaterializer(Materializer):
 
 
 class OracleBestModelMaterializer(Materializer):
+    """
+    A simple materializer that only materializes the best trained ml model.
+    This class is just for performing experiments and showing the result of alpha in node utility.
+    It is used in model materialization experiments.
+    """
     def __init__(self):
         super(OracleBestModelMaterializer, self).__init__(0)
 
