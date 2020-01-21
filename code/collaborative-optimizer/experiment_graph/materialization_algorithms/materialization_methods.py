@@ -189,6 +189,15 @@ class OracleBestModelMaterializer(Materializer):
 
 
 class HeuristicsMaterializer(Materializer):
+    """
+    This is our heuristics based materializer. It selects the nodes based on their utilities.
+    Where U(v) = alpha x p'(v) + (1-alpha) x r'(v)
+    p' is the normalized potential of the node. p is the potential, i.e., the quality of the best model reachable
+    from v
+    r' is normalized weighted recreation cost. r is the weighted recreation cost
+    r = (freq(v) x recreation(v)) / size(v)
+    recreation(v) is the cost of recreating v, i.e., executing all of its predecessors starting from source vertices
+    """
 
     def run(self, experiment_graph, workload_dag, verbose=0):
         """
@@ -221,6 +230,10 @@ class HeuristicsMaterializer(Materializer):
 
 
 class StorageAwareMaterializer(Materializer):
+    """
+    Our storage aware materializer.
+    It iteratively calls the 'HeuristicsMaterializer' and deduplicates the data until the storage is full
+    """
 
     def run(self, experiment_graph, workload_dag, verbose=0):
 
