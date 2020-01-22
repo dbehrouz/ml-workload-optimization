@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from experiment_graph.graph.graph_representations import ExperimentGraph
 from experiment_graph.graph.graph_representations import WorkloadDag
+import networkx as nx
 
 
 class Materializer(object):
@@ -125,6 +126,7 @@ class TopNModelMaterializer(Materializer):
     Given an n and alpha (for computing utility) this class materializes the top n ML models.
     It is used for experiments only.
     """
+
     def __init__(self, n=1, alpha=0.5, modify_graph=False):
         super(TopNModelMaterializer, self).__init__(storage_budget=0, alpha=alpha, modify_graph=modify_graph)
         self.n = n
@@ -163,6 +165,7 @@ class OracleBestModelMaterializer(Materializer):
     This class is just for performing experiments and showing the result of alpha in node utility.
     It is used in model materialization experiments.
     """
+
     def __init__(self):
         super(OracleBestModelMaterializer, self).__init__(0)
 
@@ -329,6 +332,52 @@ class StorageAwareMaterializer(Materializer):
                             rho.size -= underlying_data.column_sizes[ch]
 
         return current_size
+
+
+class HelixMaterializer(Materializer):
+    """
+    based on the materialization algorithm of the Helix paper:
+    "HELIX: Holistic Optimization for Accelerating Iterative Machine Learning"
+    It materializes any node with recreation cost > 2 x load cost.
+
+    In the algorithm and the description in the paper, there is no mention of removing old nodes.
+    Essentially, when the storage becomes full, new nodes are never materialized !! TODO I have to double check this.
+    """
+
+    def run(self, experiment_graph, workload_dag, verbose):
+        graph = experiment_graph.graph
+        total_mat_size = 0.0
+
+        to_mat = []
+        for n_id, node in graph.nodes(data=True):
+            if node['mat']:
+                total_mat_size += node['size']
+
+                to_mat.append(n_id)
+        new_mat_count = 0
+        # The topological sort here would act the same way as their out of core approach
+        # since earlier nodes in the topological sort have children which are already computed
+        for n_id in nx.topological_sort(graph):
+            node_size = graph.nodes[n_id]['size']
+            if not graph.nodes[n_id]['mat'] and total_mat_size + node_size < self.storage_budget:
+                total_mat_size += node_size
+                new_mat_count += 1
+                to_mat.append(n_id)
+        if verbose:
+            if new_mat_count == 0:
+                print('storage is full, no new nodes are materialized!')
+            else:
+                print('{} new nodes are materialized'.format(new_mat_count))
+        return to_mat
+
+    def run_and_materialize(self, experiment_graph, workload_dag, verbose=0):
+        """
+        calls run and then the materialize function
+        it 'materializes' the nodes specified by the run method. After calling this method,
+        the data manager and history graph of the execution environment will be modified
+        """
+        should_materialize = self.run(experiment_graph, workload_dag, verbose)
+        self.materialize(experiment_graph, workload_dag, should_materialize)
 
 
 class NodeInfo(object):
