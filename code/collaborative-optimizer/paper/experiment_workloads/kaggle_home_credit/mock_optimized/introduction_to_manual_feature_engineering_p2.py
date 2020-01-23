@@ -302,7 +302,7 @@ if __name__ == "__main__":
     from experiment_graph.data_storage import DedupedStorageManager
     from experiment_graph.executor import CollaborativeExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
+    from experiment_graph.optimizations.Reuse import LinearTimeReuse
     from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
     workload = introduction_to_manual_feature_engineering_p2()
@@ -310,14 +310,14 @@ if __name__ == "__main__":
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
     root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering_p2/sa_16'
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
-    executor = CollaborativeExecutor(ee, materializer=sa_materializer)
+    executor = CollaborativeExecutor(execution_environment=ee, materializer=sa_materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)
