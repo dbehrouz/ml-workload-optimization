@@ -20,14 +20,15 @@ else:
 
 sys.path.append(SOURCE_CODE_ROOT)
 from paper.experiment_helper import ExperimentWorkloadFactory
-from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
+from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor, HelixExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
-ROOT = parser.get('root', SOURCE_CODE_ROOT)
+DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+ROOT = parser.get('root', DEFAULT_ROOT)
 
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
@@ -42,23 +43,25 @@ MODE = parser.get('mode', 'local')
 EXPERIMENT_TIMESTAMP = datetime.now()
 
 mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-method = parser.get('method', 'optimized')
+method = parser.get('method', 'helix')
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
 
 rep = int(parser.get('rep', 2))
 
-result_file = parser.get('result')
+result_file = parser.get('result', ROOT + '/local/execution_time/repetition/mock/test.csv')
 
 
 def run(executor):
-    if method == 'optimized':
-        workload = ExperimentWorkloadFactory.get_workload(EXPERIMENT, method, WORKLOAD)
+    if method == 'optimized' or method == 'helix':
+        workload = ExperimentWorkloadFactory.get_workload(EXPERIMENT, 'optimized', WORKLOAD)
         return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
     elif method == 'baseline':
         workload = ExperimentWorkloadFactory.get_workload(EXPERIMENT, method, WORKLOAD)
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
+    else:
+        raise Exception('invalid method: {}'.format(method))
 
 
 if not os.path.exists(os.path.dirname(result_file)):
@@ -74,6 +77,10 @@ if method == 'optimized':
     executor = CollaborativeExecutor(ee, materializer=sa_materializer)
 elif method == 'baseline':
     executor = BaselineExecutor()
+elif method == 'helix':
+    # TODO once we implement Helix Reuse, we should replace the Linear Time Reuse with it
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+    executor = HelixExecutor(ee, budget=mat_budget)
 else:
     raise Exception('invalid method: {}'.format(method))
 
