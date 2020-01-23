@@ -49,6 +49,10 @@ class Materializer(object):
         return rhos
 
     @staticmethod
+    def get_root_nodes(graph):
+        return [n_id for n_id, is_root in graph.nodes(data='root') if is_root]
+
+    @staticmethod
     def select_nodes_to_materialize(rhos, remaining_budget, materialized_so_far):
         to_mat = list(materialized_so_far)
         current_budget = remaining_budget
@@ -133,30 +137,19 @@ class TopNModelMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose):
         graph = experiment_graph.graph
-        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
-        root_size = 0.0
-        to_mat = []
-        for n in graph.nodes(data=True):
-            if n[1]['root']:
-                root_size += n[1]['size']
-                to_mat.append(n[0])
+        rhos = self.compute_rhos(graph, workload_dag.graph)
+        materialization_candidates = self.get_root_nodes(graph)
+
         i = 0
-
-        # current_model_mat = []
-        # for n, d in graph.nodes(data=True):
-        #     if d['type'] == 'SK_Model' and d['score'] > 0:
-        #         if d['mat']:
-        #             current_model_mat.append((n, d['score']))
-
         while rhos:
             top = rhos.pop(0)
             if experiment_graph.graph.nodes[top.node_id]['type'] == 'SK_Model' and \
                     experiment_graph.graph.nodes[top.node_id]['score'] > 0:
                 if i < self.n:
-                    to_mat.append(top.node_id)
+                    materialization_candidates.append(top.node_id)
                     i += 1
 
-        return to_mat
+        return materialization_candidates
 
 
 class OracleBestModelMaterializer(Materializer):
@@ -171,12 +164,7 @@ class OracleBestModelMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose):
         graph = experiment_graph.graph
-        root_size = 0.0
-        to_mat = []
-        for n in graph.nodes(data=True):
-            if n[1]['root']:
-                root_size += n[1]['size']
-                to_mat.append(n[0])
+        materialization_candidates = self.get_root_nodes(graph)
 
         best_model_score = 0
         best_model_id = ''
@@ -196,8 +184,8 @@ class OracleBestModelMaterializer(Materializer):
         else:
             top_node = best_model_id
 
-        to_mat.append(top_node)
-        return to_mat
+        materialization_candidates.append(top_node)
+        return materialization_candidates
 
 
 class HeuristicsMaterializer(Materializer):
@@ -220,23 +208,19 @@ class HeuristicsMaterializer(Materializer):
         """
 
         graph = experiment_graph.graph
-        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
-        root_size = 0.0
-        to_mat = []
-        for n in graph.nodes(data=True):
-            if n[1]['root']:
-                root_size += n[1]['size']
-                to_mat.append(n[0])
+        rhos = self.compute_rhos(graph, workload_dag.graph)
+        materialization_candidates = self.get_root_nodes(graph)
+
         should_materialize, remaining = self.select_nodes_to_materialize(rhos, self.storage_budget,
-                                                                         to_mat)
+                                                                         materialization_candidates)
 
         total_node_size = experiment_graph.get_size_of(should_materialize)
         remaining_budget = self.storage_budget - total_node_size
         if verbose:
-            print 'state after heuristics based materialization'
-            print 'total size of materialized nodes: {}'.format(total_node_size)
-            print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
-                                                                                    len(should_materialize))
+            print('state after heuristics based materialization')
+            print('total size of materialized nodes: {}'.format(total_node_size))
+            print('remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
+                                                                                    len(should_materialize)))
 
         return should_materialize
 
@@ -249,14 +233,9 @@ class StorageAwareMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose=0):
 
-        rhos = self.compute_rhos(experiment_graph.graph, workload_dag.graph)
-        root_size = 0.0
-        materialization_candidates = []
-
-        for n in experiment_graph.graph.nodes(data=True):
-            if n[1]['root']:
-                root_size += n[1]['size']
-                materialization_candidates.append(n[0])
+        graph = experiment_graph.graph
+        rhos = self.compute_rhos(graph, workload_dag.graph)
+        materialization_candidates = self.get_root_nodes(graph)
 
         remaining_budget = self.storage_budget
         i = 1
@@ -273,11 +252,12 @@ class StorageAwareMaterializer(Materializer):
             remaining_budget = self.storage_budget - current_size
             if verbose:
                 total_node_size = experiment_graph.get_size_of(materialization_candidates)
-                print 'state after iteration {}'.format(i)
-                print 'total size of materialized nodes: {}, actual on disk size: {}'.format(total_node_size,
-                                                                                             current_size)
-                print 'remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
-                                                                                        len(materialization_candidates))
+                print('state after iteration {}'.format(i))
+                print('total size of materialized nodes: {}, actual on disk size: {}'.format(total_node_size,
+                                                                                             current_size))
+                print('remaining budget: {}, number of nodes to materialize: {}'.format(remaining_budget,
+                                                                                        len(materialization_candidates)
+                                                                                        ))
 
             i += 1
         return materialization_candidates
@@ -346,18 +326,14 @@ class HelixMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose):
         graph = experiment_graph.graph
+        materialization_candidates = self.get_root_nodes(graph)
         total_mat_size = 0.0
-        to_mat = []
-
-        for n in experiment_graph.graph.nodes(data=True):
-            if n[1]['root']:
-                to_mat.append(n[0])
 
         for n_id, node in graph.nodes(data=True):
             if node['mat']:
                 total_mat_size += node['size']
+                materialization_candidates.append(n_id)
 
-                to_mat.append(n_id)
         new_mat_count = 0
         # The topological sort here would act the same way as their out of core approach
         # since earlier nodes in the topological sort have children which are already computed
@@ -367,22 +343,13 @@ class HelixMaterializer(Materializer):
                 if not graph.nodes[n_id]['mat'] and total_mat_size + node_size < self.storage_budget:
                     total_mat_size += node_size
                     new_mat_count += 1
-                    to_mat.append(n_id)
+                    materialization_candidates.append(n_id)
         if verbose:
             if new_mat_count == 0:
                 print('storage is full, no new nodes are materialized!')
             else:
                 print('{} new nodes are materialized'.format(new_mat_count))
-        return to_mat
-
-    def run_and_materialize(self, experiment_graph, workload_dag, verbose=0):
-        """
-        calls run and then the materialize function
-        it 'materializes' the nodes specified by the run method. After calling this method,
-        the data manager and history graph of the execution environment will be modified
-        """
-        should_materialize = self.run(experiment_graph, workload_dag, verbose)
-        self.materialize(experiment_graph, workload_dag, should_materialize)
+        return materialization_candidates
 
 
 class NodeInfo(object):
