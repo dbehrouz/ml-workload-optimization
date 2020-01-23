@@ -11,6 +11,7 @@ import sys
 import uuid
 from datetime import datetime
 
+
 if len(sys.argv) > 1:
     SOURCE_CODE_ROOT = sys.argv[1]
 else:
@@ -22,8 +23,9 @@ if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
 
 from paper.experiments.scenario import get_kaggle_baseline_scenario, get_kaggle_optimized_scenario
-from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
+from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor, HelixExecutor
 from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
 
@@ -56,7 +58,7 @@ profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY
 
 
 def run(executor, workload):
-    if method == 'optimized' or method == 'mock_optimized':
+    if method == 'optimized' or method == 'mock_optimized' or method == 'helix':
         return executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     elif method == 'baseline':
         return executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY)
@@ -79,6 +81,11 @@ if method == 'optimized':
 elif method == 'baseline':
     executor = BaselineExecutor()
     workloads = get_kaggle_baseline_scenario()
+elif method == 'helix':
+    # TODO once we implement Helix Reuse, we should replace the Linear Time Reuse with it
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+    executor = HelixExecutor(ee, budget=mat_budget)
+    workloads = get_kaggle_optimized_scenario()
 else:
     ee = ExecutionEnvironment(DedupedStorageManager())
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
@@ -104,7 +111,7 @@ for workload in workloads:
             '{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
                                             EXPERIMENT, workload_name, method, mat_budget, elapsed))
 
-    if method == 'optimized':
+    if method == 'optimized' or method == 'helix' or method == 'mock_optimized':
         executor.local_process()
         executor.global_process()
         executor.cleanup()

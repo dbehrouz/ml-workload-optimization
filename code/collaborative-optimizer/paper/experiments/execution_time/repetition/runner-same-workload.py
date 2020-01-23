@@ -35,7 +35,7 @@ from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
-WORKLOAD = parser.get('workload', 'introduction_to_manual_feature_engineering')
+WORKLOAD = parser.get('workload', 'introduction_to_manual_feature_engineering_p2')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
 MODE = parser.get('mode', 'local')
@@ -104,7 +104,7 @@ while i < rep:
             '{},{},{},{},{},{},{},{}\n'.format(EXPERIMENT_TIMESTAMP.strftime("%H:%M:%S"), e_id,
                                                EXPERIMENT, WORKLOAD, method, i + 1, mat_budget, elapsed))
 
-    if method == 'optimized':
+    if method == 'optimized' or method == 'helix':
         executor.local_process()
         executor.global_process()
         executor.cleanup()

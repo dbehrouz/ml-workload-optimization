@@ -12,6 +12,10 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=5.0' 'method=optimized' 'materializer=storage_aware'
+
+python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=5.0' 'method=optimized' 'materializer=helix'
 #
 #python /Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 #${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \

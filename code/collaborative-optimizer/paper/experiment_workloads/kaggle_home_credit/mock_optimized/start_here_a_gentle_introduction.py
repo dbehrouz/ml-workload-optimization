@@ -171,17 +171,17 @@ if __name__ == "__main__":
 
     sys.path.append(ROOT_PACKAGE)
     from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
+    from experiment_graph.executor import CollaborativeExecutor, HelixExecutor
     from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+    from experiment_graph.optimizations.Reuse import LinearTimeReuse
+    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, HelixMaterializer
 
     workload = start_here_a_gentle_introduction()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer(storage_budget=mat_budget)
+    sa_materializer = HelixMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
     root_data = ROOT + '/data'
     # database_path = \
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
 
-    executor = CollaborativeExecutor(ee, sa_materializer)
+    executor = HelixExecutor(ee)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

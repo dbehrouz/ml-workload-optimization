@@ -22,7 +22,7 @@ sys.path.append(SOURCE_CODE_ROOT)
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
 from paper.experiments.scenario import get_kaggle_optimized_scenario
-from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.executor import CollaborativeExecutor, HelixExecutor
 from experiment_graph.data_storage import DedupedStorageManager
 from paper.experiment_helper import Parser
 from experiment_graph.storage_managers import storage_profiler
@@ -36,7 +36,7 @@ ROOT = parser.get('root', DEFAULT_ROOT)
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    HeuristicsMaterializer, AllMaterializer
+    HeuristicsMaterializer, AllMaterializer, HelixMaterializer
 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
@@ -66,12 +66,18 @@ if materializer_type == 'storage_aware':
     materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'simple':
     materializer = HeuristicsMaterializer(storage_budget=mat_budget)
+elif materializer_type == 'helix':
+    materializer = HelixMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'all':
     materializer = AllMaterializer()
 else:
     raise Exception('Invalid materializer type: {}'.format(materializer_type))
 
-executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
+if materializer_type == 'helix':
+    executor = HelixExecutor(ee, cost_profile=profile)
+else:
+    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
+
 workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__

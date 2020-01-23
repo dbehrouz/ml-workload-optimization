@@ -347,8 +347,12 @@ class HelixMaterializer(Materializer):
     def run(self, experiment_graph, workload_dag, verbose):
         graph = experiment_graph.graph
         total_mat_size = 0.0
-
         to_mat = []
+
+        for n in experiment_graph.graph.nodes(data=True):
+            if n[1]['root']:
+                to_mat.append(n[0])
+
         for n_id, node in graph.nodes(data=True):
             if node['mat']:
                 total_mat_size += node['size']
@@ -359,10 +363,11 @@ class HelixMaterializer(Materializer):
         # since earlier nodes in the topological sort have children which are already computed
         for n_id in nx.topological_sort(graph):
             node_size = graph.nodes[n_id]['size']
-            if not graph.nodes[n_id]['mat'] and total_mat_size + node_size < self.storage_budget:
-                total_mat_size += node_size
-                new_mat_count += 1
-                to_mat.append(n_id)
+            if node_size is not None:
+                if not graph.nodes[n_id]['mat'] and total_mat_size + node_size < self.storage_budget:
+                    total_mat_size += node_size
+                    new_mat_count += 1
+                    to_mat.append(n_id)
         if verbose:
             if new_mat_count == 0:
                 print('storage is full, no new nodes are materialized!')

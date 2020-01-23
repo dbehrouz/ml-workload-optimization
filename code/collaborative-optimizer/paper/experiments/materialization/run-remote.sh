@@ -17,11 +17,7 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=8.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=8.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+'mat_budget=8.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
@@ -33,6 +29,22 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=8.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=16.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
@@ -41,11 +53,7 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=16.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=16.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+'mat_budget=16.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
@@ -54,6 +62,22 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=16.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=16.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=16.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=16.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=16.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
@@ -65,11 +89,7 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=32.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=32.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+'mat_budget=32.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
@@ -81,6 +101,22 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=32.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=64.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
@@ -89,11 +125,7 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=64.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
-
-python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
-${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
-'mat_budget=64.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+'mat_budget=64.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
@@ -102,6 +134,22 @@ ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} '
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
 'mat_budget=64.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=64.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=64.0' 'method=optimized' 'materializer=storage_aware' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=64.0' 'method=optimized' 'materializer=simple' 'profile='${root}'/data/profiles/cloud-41-dedup'
+
+python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
+${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
+'mat_budget=64.0' 'method=optimized' 'materializer=helix' 'profile='${root}'/data/profiles/cloud-41-dedup'
 
 python ~/collaborative-optimization/code/collaborative-optimizer/paper/experiments/materialization/run_experiment.py \
 ${root}'/code/collaborative-optimizer/' 'root='${root} 'result='${result_path} 'experiment='${experiment} \
