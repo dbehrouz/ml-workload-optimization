@@ -45,8 +45,8 @@ MODE = parser.get('mode', 'local')
 
 EXPERIMENT_TIMESTAMP = datetime.now()
 
-mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-method = parser.get('method', 'optimized')
+mat_budget = float(parser.get('mat_budget', '16.0')) * 1024.0 * 1024.0
+method = parser.get('method', 'helix')
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]
