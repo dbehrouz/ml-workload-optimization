@@ -1,12 +1,13 @@
 from abc import abstractmethod
 
-from data_storage import SimpleStorageManager, DedupedStorageManager
+from data_storage import DedupedStorageManager
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.execution_environment import ExecutionEnvironment
-from experiment_graph.workload import Workload
-from heuristics import compute_recreation_cost, compute_vertex_potential, compute_load_costs
 from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
     StorageAwareMaterializer, HelixMaterializer
+from experiment_graph.optimizations.Reuse import HelixReuse
+from experiment_graph.workload import Workload
+from heuristics import compute_recreation_cost, compute_vertex_potential, compute_load_costs
 
 
 class Executor:
@@ -175,14 +176,15 @@ class HelixExecutor(Executor):
     DEFAULT_PROFILE = {"Agg": 0.08959999999999999, "SK_Model": 0.0002258063871079322, "Evaluation": 0.02909090909090909,
                        "Feature": 2.5703229163279242e-05, "Dataset": 0.0005039403928584662}
 
-    def __init__(self, execution_environment, cost_profile=None, budget=16.0):
+    def __init__(self, cost_profile=None, budget=16.0):
         """
+        :type budget: object
+        :type cost_profile: object
 
-        :type execution_environment: ExecutionEnvironment
         """
         Executor.__init__(self)
         self.cost_profile = CollaborativeExecutor.DEFAULT_PROFILE if cost_profile is None else cost_profile
-        self.execution_environment = execution_environment
+        self.execution_environment = ExecutionEnvironment(reuse_type=HelixReuse.NAME)
         self.materializer = HelixMaterializer(storage_budget=budget)
         # storage aware materialization only works with deduped storage manager
 
