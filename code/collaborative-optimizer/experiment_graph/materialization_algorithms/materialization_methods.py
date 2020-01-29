@@ -321,20 +321,14 @@ class HelixMaterializer(Materializer):
     It materializes any node with recreation cost > 2 x load cost.
 
     In the algorithm and the description in the paper, there is no mention of removing old nodes.
-    Essentially, when the storage becomes full, new nodes are never materialized !! TODO I have to double check this.
+    At the end of every iteration, they assume the cache is empty. This means we do not carry information from
+    previous iteration.
     """
 
     def run(self, experiment_graph, workload_dag, verbose):
         graph = experiment_graph.graph
         materialization_candidates = self.get_root_nodes(graph)
         total_mat_size = 0.0
-
-        for n_id, node in graph.nodes(data=True):
-            if node['mat']:
-                total_mat_size += node['size']
-                materialization_candidates.append(n_id)
-
-        new_mat_count = 0
         # The topological sort here would act the same way as their out of core approach
         # since earlier nodes in the topological sort have children which are already computed
         for n_id in nx.topological_sort(graph):
@@ -342,13 +336,13 @@ class HelixMaterializer(Materializer):
             if node_size is not None:
                 if not graph.nodes[n_id]['mat'] and total_mat_size + node_size < self.storage_budget:
                     total_mat_size += node_size
-                    new_mat_count += 1
-                    materialization_candidates.append(n_id)
+
         if verbose:
-            if new_mat_count == 0:
-                print('storage is full, no new nodes are materialized!')
-            else:
-                print('{} new nodes are materialized'.format(new_mat_count))
+            print('state after heuristics based materialization')
+            print('total size of materialized nodes: {}'.format(total_mat_size))
+            print(
+                'remaining budget: {}, number of nodes to materialize: {}'.format(self.storage_budget - total_mat_size,
+                                                                                  len(materialization_candidates)))
         return materialization_candidates
 
 
