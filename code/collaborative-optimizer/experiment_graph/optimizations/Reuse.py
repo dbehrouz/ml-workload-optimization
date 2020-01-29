@@ -1,4 +1,5 @@
 import copy
+import uuid
 from abc import abstractmethod
 from collections import deque
 
@@ -248,7 +249,6 @@ class LinearTimeReuse(Reuse):
 
     @staticmethod
     def backward_pass(terminal, workload_subgraph, materialized_vertices, to_warmstart, verbose):
-
         execution_set = set()
         prevs = workload_subgraph.predecessors
         final_materialized_vertices = set()
@@ -274,44 +274,45 @@ class LinearTimeReuse(Reuse):
 
 
 class HelixReuse(Reuse):
-    infinity = 100
+    infinity = 10000
     epsilon = 0.0001
 
     NAME = 'helix'
+    TEMP_NODE = 'SPECIAL_TEMP_NODE_FOR_HELIX'
 
     def run(self, vertex, workload, history, verbose):
         workload_subgraph = workload.compute_execution_subgraph(vertex)
         experiment_graph = history.graph
-        unified_problem = self.unify_graph(workload_subgraph, experiment_graph)
+        unified_problem = self.unify_graph(workload_subgraph, experiment_graph, vertex)
         psp_graph = self.workload_graph_to_psp(unified_problem)
-        max_flow_graph = self.psp_to_max_flow(psp_graph, vertex)
+        max_flow_graph = self.psp_to_max_flow(psp_graph)
         cut_value, st = nx.minimum_cut(max_flow_graph, 'start', 'terminal', flow_func=nx.algorithms.flow.edmonds_karp)
-        print(cut_value, st)
         execution_set = set()
         materialized_set = set()
-        counter = {}
+        states = {}
         for psp_node_id in st[0]:
             if psp_node_id == 'start':
                 pass
-            elif psp_node_id.startswith('a_') or psp_node_id.startswith('b_'):
-                if psp_node_id[2:] in counter:
-                    counter[psp_node_id[2:]] += 1
-                else:
-                    counter[psp_node_id[2:]] = 1
+            elif psp_node_id.startswith('a_'):
+                if psp_node_id[2:] not in states:
+                    states[psp_node_id[2:]] = 'l'
+            elif psp_node_id.startswith('b_'):
+                states[psp_node_id[2:]] = 'c'
             else:
                 raise Exception('invalid node name: {}'.format(psp_node_id))
-        for k, v in counter.items():
-            if v == 2:
-                execution_set.add(k)
-            elif v == 1:
-                execution_set.add(k)
+        for k, v in states.items():
+            if v == 'l':
                 materialized_set.add(k)
+                execution_set.add(k)
+            elif v == 'c':
+                execution_set.add(k)
             else:
                 raise Exception('invalid node found Helix Reuse: {}'.format(k))
-
+        if self.TEMP_NODE in execution_set:
+            execution_set.remove(self.TEMP_NODE)
         return materialized_set, execution_set, set()
 
-    def unify_graph(self, workload_subgraph, experiment_graph):
+    def unify_graph(self, workload_subgraph, experiment_graph, vertex):
         problem = nx.DiGraph()
         for n_id in nx.topological_sort(workload_subgraph):
             if not experiment_graph.has_node(n_id):
@@ -321,71 +322,63 @@ class HelixReuse(Reuse):
                 load_cost = self.infinity
             else:
                 remote_node = experiment_graph.nodes[n_id]
-                # These are the root nodes of this sub graph
-                # according to the paper they have l_i to c_i
                 if workload_subgraph.nodes[n_id]['data'].computed:
-                    compute_cost = self.epsilon
-                    load_cost = self.epsilon
+                    continue
                 else:
-                    # compute_cost = remote_node['compute_cost'] + self.epsilon
                     compute_cost = remote_node['compute_cost']
                     load_cost = remote_node['load_cost'] if remote_node['mat'] else self.infinity
-                # print('adding {}'.format(n_id))
             problem.add_node(n_id, compute_cost=compute_cost, load_cost=load_cost)
 
             for parent in workload_subgraph.predecessors(n_id):
                 if problem.has_node(parent):
                     problem.add_edge(parent, n_id)
 
+        if experiment_graph.has_node(vertex):
+            # the target vertex is already in the experiment graph and we can directly load it
+            # this is a case that Helix does not expect thus we add a dummy new node as the target
+            problem.add_node(self.TEMP_NODE, compute_cost=-self.epsilon, load_cost=self.infinity)
+            problem.add_edge(vertex, self.TEMP_NODE)
+
         return problem
 
     @staticmethod
     def workload_graph_to_psp(problem_graph):
         psp_graph = nx.DiGraph()
+
+        def a(node_id):
+            return 'a_{}'.format(node_id)
+
+        def b(node_id):
+            return 'b_{}'.format(node_id)
+
         for n_id in nx.topological_sort(problem_graph):
-
             node = problem_graph.nodes[n_id]
-            a_id = 'a_{}'.format(n_id)
-            b_id = 'b_{}'.format(n_id)
-            psp_graph.add_node(a_id, profit=-node['load_cost'])
-            psp_graph.add_node(b_id, profit=node['load_cost'] - node['compute_cost'])
-            psp_graph.add_edge(b_id, a_id)
-
-            for parent in problem_graph.predecessors(n_id):
-                psp_graph.add_edge(b_id, 'a_{}'.format(parent))
+            if problem_graph.in_degree(n_id) == 0:
+                psp_graph.add_node(a(n_id), profit=-node['load_cost'])
+            elif problem_graph.out_degree(n_id) == 0:
+                psp_graph.add_node(b(n_id), profit=node['load_cost'] - node['compute_cost'])
+                for parent in problem_graph.predecessors(n_id):
+                    psp_graph.add_edge(b(n_id), a(parent))
+            else:
+                psp_graph.add_node(a(n_id), profit=-node['load_cost'])
+                psp_graph.add_node(b(n_id), profit=node['load_cost'] - node['compute_cost'])
+                psp_graph.add_edge(b(n_id), a(n_id))
+                for parent in problem_graph.predecessors(n_id):
+                    psp_graph.add_edge(b(n_id), a(parent))
         return psp_graph
 
-    def psp_to_max_flow(self, psp_graph, vertex):
+    @staticmethod
+    def psp_to_max_flow(psp_graph):
         max_flow = nx.DiGraph()
         start = 'start'
         terminal = 'terminal'
-        max_flow.add_node(start)
-        max_flow.add_node(terminal)
-        # max_flow.add_edges_from(psp_graph.edges, capacity=self.infinity)
-        max_flow.add_edges_from(psp_graph.edges)
-        # mean_profit = sum([profit for n_id, profit in psp_graph.nodes(data='profit')]) / len(psp_graph.nodes(
-        # data='profit'))
-        # print('mean profit: {}'.format(mean_profit))
         for n_id, node in psp_graph.nodes(data=True):
-            # if n_id.startswith('b_'):
-            # max_flow.add_edge(start, n_id, capacity=node['profit'])
-            # if n_id.startswith('a_'):
-            # max_flow.add_edge(n_id, terminal, capacity=node['profit'])
-            # if node['profit'] > 0:
-            #     if n_id == 'b_{}'.format(vertex):
-            #         max_flow.add_edge(start, n_id)
-            #     else:
-            #         max_flow.add_edge(start, n_id, capacity=node['profit'])
             if node['profit'] >= 0:
                 max_flow.add_edge(start, n_id, capacity=node['profit'])
             if node['profit'] < 0:
                 max_flow.add_edge(n_id, terminal, capacity=-node['profit'])
 
-        # if not max_flow.has_edge('start', 'a_{}'.format(vertex)):
-        #     max_flow.add_edge('start', 'a_{}'.format(vertex),
-        #                       capacity=abs(psp_graph.nodes['a_{}'.format(vertex)]['profit']))
-        #     max_flow.add_edge('start', 'b_{}'.format(vertex),
-        #                       capacity=abs(psp_graph.nodes['b_{}'.format(vertex)]['profit']))
+        max_flow.add_edges_from(psp_graph.edges)
         return max_flow
 
 
