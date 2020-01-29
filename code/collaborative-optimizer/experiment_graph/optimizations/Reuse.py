@@ -274,7 +274,7 @@ class LinearTimeReuse(Reuse):
 
 
 class HelixReuse(Reuse):
-    infinity = 10000
+    infinity = 10000000
     epsilon = 0.0001
 
     NAME = 'helix'
@@ -302,6 +302,7 @@ class HelixReuse(Reuse):
                 raise Exception('invalid node name: {}'.format(psp_node_id))
         for k, v in states.items():
             if v == 'l':
+               # if k not in in_memory_nodes:
                 materialized_set.add(k)
                 execution_set.add(k)
             elif v == 'c':
@@ -310,6 +311,10 @@ class HelixReuse(Reuse):
                 raise Exception('invalid node found Helix Reuse: {}'.format(k))
         if self.TEMP_NODE in execution_set:
             execution_set.remove(self.TEMP_NODE)
+
+        if verbose == 1:
+            print('materialized_vertices: {}'.format(materialized_set))
+
         return materialized_set, execution_set, set()
 
     def unify_graph(self, workload_subgraph, experiment_graph, vertex):
@@ -323,7 +328,8 @@ class HelixReuse(Reuse):
             else:
                 remote_node = experiment_graph.nodes[n_id]
                 if workload_subgraph.nodes[n_id]['data'].computed:
-                    continue
+                    compute_cost = self.epsilon
+                    load_cost = self.epsilon
                 else:
                     compute_cost = remote_node['compute_cost']
                     load_cost = remote_node['load_cost'] if remote_node['mat'] else self.infinity
@@ -355,6 +361,8 @@ class HelixReuse(Reuse):
             node = problem_graph.nodes[n_id]
             if problem_graph.in_degree(n_id) == 0:
                 psp_graph.add_node(a(n_id), profit=-node['load_cost'])
+                psp_graph.add_node(b(n_id), profit=node['load_cost'] - node['compute_cost'])
+                psp_graph.add_edge(b(n_id), a(n_id))
             elif problem_graph.out_degree(n_id) == 0:
                 psp_graph.add_node(b(n_id), profit=node['load_cost'] - node['compute_cost'])
                 for parent in problem_graph.predecessors(n_id):

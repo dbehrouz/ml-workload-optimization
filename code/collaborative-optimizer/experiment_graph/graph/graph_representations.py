@@ -426,6 +426,7 @@ class ExperimentGraph(BaseGraph):
     def retrieve_data(self, node_id):
         node = self.graph.nodes[node_id]
         if node['mat'] is not True:
+            print(node)
             raise Exception('The node ({}) is not materialized'.format(node_id))
 
         if node['type'] == 'Dataset':

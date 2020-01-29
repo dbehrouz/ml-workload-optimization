@@ -178,10 +178,10 @@ if __name__ == "__main__":
 
     workload = start_here_a_gentle_introduction()
 
-    mat_budget = 16.0 * 1024.0 * 1024.0
+    mat_budget = 1.0 * 1024.0 * 1024.0
     sa_materializer = HelixMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+    # ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
     root_data = ROOT + '/data'
     # database_path = \
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # if os.path.exists(database_path):
     #     ee.load_history_from_disk(database_path)
 
-    executor = HelixExecutor(ee)
+    executor = HelixExecutor(budget=mat_budget)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)
@@ -198,3 +198,5 @@ if __name__ == "__main__":
     elapsed = (execution_end - execution_start).total_seconds()
 
     print('finished execution in {} seconds'.format(elapsed))
+    print('running again')
+    executor.end_to_end_run(workload=workload, root_data=root_data, verbose=1)

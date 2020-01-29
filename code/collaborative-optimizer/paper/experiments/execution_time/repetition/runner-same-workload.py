@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 """Repetition Experiments Runner script
 
 Run the same workloads 2 times. The first time no experiment experiment_graphs exists so both baseline and optimized
@@ -79,8 +81,8 @@ elif method == 'baseline':
     executor = BaselineExecutor()
 elif method == 'helix':
     # TODO once we implement Helix Reuse, we should replace the Linear Time Reuse with it
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
-    executor = HelixExecutor(ee, budget=mat_budget)
+    # ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
+    executor = HelixExecutor(budget=mat_budget)
 else:
     raise Exception('invalid method: {}'.format(method))
 
@@ -88,10 +90,10 @@ i = 0
 while i < rep:
 
     start = datetime.now()
-    print '{}-Start of {} workload execution {}'.format(start, method, i + 1)
+    print('{}-Start of {} workload execution {}'.format(start, method, i + 1))
     success = run(executor)
     end = datetime.now()
-    print '{}-End of {} workload execution {}'.format(end, method, i + 1)
+    print('{}-End of {} workload execution {}'.format(end, method, i + 1))
 
     elapsed = (end - start).total_seconds()
 
