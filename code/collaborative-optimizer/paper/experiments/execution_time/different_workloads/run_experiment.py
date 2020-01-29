@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 """Execution Time Experiment
 
 Run a list of workloads in sequence and report the execution time for each one
@@ -82,9 +84,7 @@ elif method == 'baseline':
     executor = BaselineExecutor()
     workloads = get_kaggle_baseline_scenario()
 elif method == 'helix':
-    # TODO once we implement Helix Reuse, we should replace the Linear Time Reuse with it
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
-    executor = HelixExecutor(ee, budget=mat_budget)
+    executor = HelixExecutor(budget=mat_budget)
     workloads = get_kaggle_optimized_scenario()
 else:
     ee = ExecutionEnvironment(DedupedStorageManager())
@@ -95,10 +95,10 @@ else:
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
-    print '{}-Start of {} {} workload execution'.format(start, method, workload_name)
+    print('{}-Start of {} {} workload execution'.format(start, method, workload_name))
     success = run(executor, workload)
     end = datetime.now()
-    print '{}-End of {} {} workload execution'.format(end, method, workload_name)
+    print('{}-End of {} {} workload execution'.format(end, method, workload_name))
 
     elapsed = (end - start).total_seconds()
 

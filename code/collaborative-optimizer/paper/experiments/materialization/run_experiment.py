@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 """Execution Time Experiment
 
 Run a list of workloads in sequence and report the execution time for each one
@@ -74,20 +76,20 @@ else:
     raise Exception('Invalid materializer type: {}'.format(materializer_type))
 
 if materializer_type == 'helix':
-    executor = HelixExecutor(ee, cost_profile=profile)
+    executor = HelixExecutor(budget=mat_budget)
 else:
-    executor = CollaborativeExecutor(ee, cost_profile=profile, materializer=materializer)
+    executor = CollaborativeExecutor(execution_environment=ee, materializer=materializer)
 
 workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
-    print '{} Start-workload: {}, mat_type: {}, budget: {}'.format(start, workload_name, materializer_type,
-                                                                   mat_budget)
+    print('{} Start-workload: {}, mat_type: {}, budget: {}'.format(start, workload_name, materializer_type,
+                                                                   mat_budget))
     success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     end = datetime.now()
-    print '{} End-workload: {}, mat_type: {}, budget: {}'.format(end, workload_name, materializer_type,
-                                                                 mat_budget)
+    print('{} End-workload: {}, mat_type: {}, budget: {}'.format(end, workload_name, materializer_type,
+                                                                 mat_budget))
 
     elapsed = (end - start).total_seconds()
 

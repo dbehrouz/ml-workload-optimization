@@ -80,8 +80,6 @@ if method == 'optimized':
 elif method == 'baseline':
     executor = BaselineExecutor()
 elif method == 'helix':
-    # TODO once we implement Helix Reuse, we should replace the Linear Time Reuse with it
-    # ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     executor = HelixExecutor(budget=mat_budget)
 else:
     raise Exception('invalid method: {}'.format(method))
