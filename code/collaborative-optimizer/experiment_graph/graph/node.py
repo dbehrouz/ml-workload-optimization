@@ -256,6 +256,25 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
+    def run_operation(self, operation):
+        """
+
+        :type operation: Operation
+        """
+        return_type = operation.return_type
+        if return_type == 'Dataset':
+            self.generate_dataset_node(operation.name, operation.params)
+        elif return_type == 'Feature':
+            self.generate_feature_node(operation.name, operation.params)
+        elif return_type == 'Agg':
+            self.generate_agg_node(operation.name, operation.params)
+        else:
+            raise Exception('Invalid return type: {}'.format(return_type))
+
+    def p_run_operation(self, operation):
+        data = self.get_materialized_data()
+        return operation.run(data)
+
     def store_dataframe(self, columns, df):
         self.execution_environment.data_storage.store_dataframe(columns, df)
 
