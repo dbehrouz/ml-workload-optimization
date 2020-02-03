@@ -658,15 +658,15 @@ if __name__ == "__main__":
     from experiment_graph.storage_managers import storage_profiler
 
     from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
-        StorageAwareMaterializer, HeuristicsMaterializer
+        StorageAwareMaterializer, HeuristicsMaterializer, HelixMaterializer
 
     parser = Parser(sys.argv)
     verbose = parser.get('verbose', 0)
     DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
     ROOT = parser.get('root', DEFAULT_ROOT)
     ROOT_DATA_DIRECTORY = ROOT + '/data'
-    mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
-    materializer_type = parser.get('materializer', 'storage_aware')
+    mat_budget = float(parser.get('mat_budget', '10.0')) * 1024.0 * 1024.0
+    materializer_type = parser.get('materializer', 'helix')
     storage_type = parser.get('storage_type', 'dedup')
     if materializer_type == 'storage_aware':
         materializer = StorageAwareMaterializer(storage_budget=mat_budget)
@@ -674,6 +674,8 @@ if __name__ == "__main__":
         materializer = HeuristicsMaterializer(storage_budget=mat_budget)
     elif materializer_type == 'all':
         materializer = AllMaterializer()
+    elif materializer_type == 'helix':
+        materializer = HelixMaterializer(storage_budget=mat_budget)
     else:
         raise Exception('invalid materializer: {}'.format(materializer_type))
 
@@ -681,19 +683,22 @@ if __name__ == "__main__":
     profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
     workload = start_here_a_gentle_introduction()
 
-    ee = ExecutionEnvironment(storage_manager)
+    ee = ExecutionEnvironment(storage_manager, reuse_type='linear')
     ROOT_DATA_DIRECTORY = ROOT + '/data'
-
     if parser.has('experiment_graph'):
+
         database_path = parser.get('experiment_graph')
         if os.path.exists(database_path):
+            print('loading experiment graph from {}'.format(database_path))
             ee.load_history_from_disk(database_path)
+        else:
+            print('experiment graph is not created yet: {}'.format(database_path))
 
     executor = CollaborativeExecutor(ee, materializer=materializer)
     execution_start = datetime.now()
 
     executor.end_to_end_run(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=1)
-    if parser.get('update_graph', 'No').lower() == 'yes':
+    if parser.get('update_graph', 'yes').lower() == 'yes':
         executor.store_experiment_graph(database_path, overwrite=True)
 
     execution_end = datetime.now()
