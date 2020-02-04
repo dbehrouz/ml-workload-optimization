@@ -43,12 +43,12 @@ from experiment_graph.materialization_algorithms.materialization_methods import 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
-method = parser.get('method', 'mock_optimized')
-materializer_type = parser.get('materializer', 'storage_aware')
+method = parser.get('method', 'optimized')
+materializer_type = parser.get('materializer', 'helix')
 
 EXPERIMENT_TIMESTAMP = datetime.now()
 
-mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
+mat_budget = float(parser.get('mat_budget', '8.0')) * 1024.0 * 1024.0
 
 # unique identifier for the experiment run
 e_id = uuid.uuid4().hex.upper()[0:8]

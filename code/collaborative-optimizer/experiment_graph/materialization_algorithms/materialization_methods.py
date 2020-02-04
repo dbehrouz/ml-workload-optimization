@@ -333,12 +333,20 @@ class HelixMaterializer(Materializer):
         # The topological sort here would act the same way as their out of core approach
         # since earlier nodes in the topological sort have children which are already computed
         for n_id in nx.topological_sort(graph):
+            if n_id in materialization_candidates:
+                continue
+            if graph.nodes[n_id]['type'] == 'SuperNode':
+                continue
+            if graph.nodes[n_id]['type'] == 'GroupBy':
+                continue
+            elif graph.nodes[n_id]['load_cost'] > graph.nodes[n_id]['recreation_cost']:
+                continue
+
             if graph.nodes[n_id]['mat'] or (w_dag.has_node(n_id) and w_dag.nodes[n_id]['data'].computed):
                 node_size = graph.nodes[n_id]['size']
-                if node_size is not None:
-                    if total_mat_size + node_size < self.storage_budget:
-                        materialization_candidates.append(n_id)
-                        total_mat_size += node_size
+                if total_mat_size + node_size <= self.storage_budget:
+                    materialization_candidates.append(n_id)
+                    total_mat_size += node_size
 
         if verbose:
             print('state after heuristics based materialization')

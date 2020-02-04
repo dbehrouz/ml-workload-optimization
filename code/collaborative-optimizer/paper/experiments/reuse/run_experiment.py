@@ -36,7 +36,7 @@ ROOT = parser.get('root', DEFAULT_ROOT)
 # Experiment Graph
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    HeuristicsMaterializer, AllMaterializer
+    HeuristicsMaterializer, AllMaterializer, HelixMaterializer
 
 EXPERIMENT = parser.get('experiment', 'kaggle_home_credit')
 ROOT_DATA_DIRECTORY = ROOT + '/data'
@@ -71,6 +71,8 @@ elif materializer_type == 'simple':
     materializer = HeuristicsMaterializer(storage_budget=mat_budget)
 elif materializer_type == 'all':
     materializer = AllMaterializer()
+elif materializer_type == 'helix':
+    materializer = HelixMaterializer(storage_budget=mat_budget)
 else:
     raise Exception('Invalid materializer type: {}'.format(materializer_type))
 
