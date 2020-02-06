@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-"""Optimized Fork of Workload 3
+"""Optimized workload ID = 7
 
-This script is the optimized version of the workload 'fork_introduction_to_manual_feature_engineering_p2'
-which utilizes our Experiment Graph for optimizing the workload
+This script is the optimized version of the baseline workload 'fork_introduction_to_manual_feature_engineering_p2'
+(ID = 7) which utilizes our Experiment Graph for optimizing the workload
 
+Number of artifacts: 121
+Total artifact size: 21 GB
 """
 import warnings
 # matplotlib and seaborn for plotting

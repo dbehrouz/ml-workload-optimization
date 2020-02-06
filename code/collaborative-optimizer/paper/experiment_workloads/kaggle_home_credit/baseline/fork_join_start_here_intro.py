@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-"""Fork Baseline Workload 1 and Workload 2
+"""Baseline Workload ID = 8
+
+Fork Baseline Workload 1 and Workload 2
 
 This script combines 'start_here_a_gentle_introduction' and 'introduction_to_manual_feature_engineering'
 

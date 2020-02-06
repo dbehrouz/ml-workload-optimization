@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Baseline workload 2
+"""Baseline workload ID = 2
 
 This script is the original workload 'introduction_to_manual_feature_engineering' submitted by user 'willkoehrsen'
 to  Kaggle's Home Credit Default Risk competition

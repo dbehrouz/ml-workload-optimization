@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
 
-"""Optimized workload 3
+"""Optimized workload ID = 3
 
-This script is the optimized version of the workload 'introduction_to_manual_feature_engineering_p2'
+This script is the optimized version of the baseline workload 'introduction_to_manual_feature_engineering_p2' (ID = 3)
 which utilizes our Experiment Graph for optimizing the workload
+
+Original notebook is located here:
+    https://www.kaggle.com/willkoehrsen/introduction-to-manual-feature-engineering-p2
 
 Number of artifacts: 146
 Total artifact size: 83.5 GB

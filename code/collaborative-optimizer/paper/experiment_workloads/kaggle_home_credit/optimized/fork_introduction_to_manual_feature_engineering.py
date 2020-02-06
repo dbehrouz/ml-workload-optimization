@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-"""Optimized Fork of Workload 2
+"""Optimized workload ID = 6
 
-This script is the optimized version of the workload 'fork_introduction_to_manual_feature_engineering'
-which utilizes our Experiment Graph for optimizing the workload
+This script is the optimized version of the baseline workload 'fork_introduction_to_manual_feature_engineering'
+(ID = 6) which utilizes our Experiment Graph for optimizing the workload
 
 Number of artifacts: 121
 Total artifact size: 21 GB

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-"""Optimized Fork of Workload 1
+"""Optimized workload ID = 5
 
-This script is the optimized version of the fork of workload 1 submitted by user taozhongxiao
-which utilizes our Experiment Graph for optimizing the workload.
+This script is the optimized version of the baseline workload 'fork_taozhongxiao_start_here_a_gentle_introduction'
+(ID = 5) which utilizes our Experiment Graph for optimizing the workload
+
+Original notebook is located here:
+    https://www.kaggle.com/taozhongxiao/begining-with-lightgbm-in-detail
 
 Number of artifacts: 402
 Total artifact size: 13.8 GB

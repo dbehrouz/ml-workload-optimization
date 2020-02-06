@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""Baseline workload 1
+"""Baseline workload ID = 1
 
 This script is the original workload 'start_here_a_gentle_introduction' submitted by user 'willkoehrsen'
 to  Kaggle's Home Credit Default Risk competition

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-"""Optimized Fork of Joined Workload 1 and 2
+"""Optimized workload ID = 8
 
-This script is the optimized version of the workload 'fork_join_start_here_intro.py'
+This script is the optimized version of the baseline workload 'fork_join_start_here_intro.py' (ID = 8)
 which utilizes our Experiment Graph for optimizing the workload
+
+Number of artifacts: 341
+Total artifact size: 21.1 GB
 """
 import os
 import warnings

@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-"""Fork of Baseline workload 2
+"""Baseline Workload ID = 6
 
+Fork of Baseline workload 2 and 4
 This is generated script which forks 'introduction_to_manual_feature_engineering.py'
 
 

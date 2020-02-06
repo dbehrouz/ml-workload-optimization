@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-"""Optimized workload 1
+"""Optimized workload ID = 1
 
-This script is the optimized version of the workload 'start_here_a_gentle_introduction'
+This script is the optimized version of the baseline workload 'start_here_a_gentle_introduction' (ID = 1)
 which utilizes our Experiment Graph for optimizing the workload
+
+Original notebook is located here:
+    https://www.kaggle.com/willkoehrsen/start-here-a-gentle-introduction
 
 Number of artifacts: 397
 Total artifact size: 14.5 GB

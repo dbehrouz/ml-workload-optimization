@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-"""Optimized Fork of Workload 1
+""" Optimized workload ID = 4
 
-This script is the optimized version of the fork of workload 1 submitted by user cridata
-which utilizes our Experiment Graph for optimizing the workload.
+This script is the optimized version of the baseline workload 'fork_cridata_start_here_a_gentle_introduction'
+(ID = 4) which utilizes our Experiment Graph for optimizing the workload
+
+Original notebook is located here:
+    https://www.kaggle.com/crldata/start-here-a-gentle-introduction-312251
 
 Number of artifacts: 280
 Total artifact size: 10 GB
