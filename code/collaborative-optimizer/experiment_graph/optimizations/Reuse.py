@@ -145,8 +145,8 @@ class AllMaterializedReuse(Reuse):
 
         warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, all_models)
         if verbose == 1:
-            print 'materialized_vertices: {}'.format(materialized_vertices)
-            print 'warmstarting_candidates: {}'.format(warmstarting_candidates)
+            print('materialized_vertices: {}'.format(materialized_vertices))
+            print('warmstarting_candidates: {}'.format(warmstarting_candidates))
         return materialized_vertices, execution_vertices, warmstarting_candidates
 
     @staticmethod
@@ -171,7 +171,7 @@ class AllMaterializedReuse(Reuse):
                     warmstarting_candidates.add(n)
 
         if verbose:
-            print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates)
+            print('After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, warmstarting_candidates))
         return materialized_vertices, execution_set, warmstarting_candidates
 
 
@@ -198,8 +198,8 @@ class LinearTimeReuse(Reuse):
 
         warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, to_warmstart)
         if verbose == 1:
-            print 'materialized_vertices: {}'.format(materialized_vertices)
-            print 'warmstarting_candidates: {}'.format(warmstarting_candidates)
+            print ('materialized_vertices: {}'.format(materialized_vertices))
+            print ('warmstarting_candidates: {}'.format(warmstarting_candidates))
         return materialized_vertices, execution_vertices, warmstarting_candidates
 
     @staticmethod
@@ -244,7 +244,7 @@ class LinearTimeReuse(Reuse):
                 else:
                     recreation_costs[n] = execution_cost
         if verbose == 1:
-            print 'After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart)
+            print('After forward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart))
         return materialized_vertices, to_warmstart
 
     @staticmethod
@@ -268,7 +268,7 @@ class LinearTimeReuse(Reuse):
                         queue.append((prev_node, prevs(prev_node)))
 
         if verbose == 1:
-            print 'After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart)
+            print('After backward pass mat_set={}, warm_set={}'.format(materialized_vertices, to_warmstart))
 
         return final_materialized_vertices, execution_set, final_to_warmstart
 
@@ -302,7 +302,6 @@ class HelixReuse(Reuse):
                 raise Exception('invalid node name: {}'.format(psp_node_id))
         for k, v in states.items():
             if v == 'l':
-               # if k not in in_memory_nodes:
                 materialized_set.add(k)
                 execution_set.add(k)
             elif v == 'c':
