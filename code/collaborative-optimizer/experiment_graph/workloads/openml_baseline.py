@@ -46,8 +46,8 @@ class OpenMLBaselineWorkload(Workload):
             predictions = model.predict(test_x)
             self.score = accuracy_score(test_y, predictions)
             return True
-        except:
-            print 'error for pipeline: {}, setup: {}'.format(self.pipeline, self.setup)
+        except Exception as err:
+            print('error for pipeline: {}, setup: {}, err: {}'.format(self.pipeline, self.setup.setup_id, err))
             return False
 
         # print 'pipeline: {}, setup: {}, score: {0:.6f}'.format(self.setup.flow_id, self.setup.setup_id, score)

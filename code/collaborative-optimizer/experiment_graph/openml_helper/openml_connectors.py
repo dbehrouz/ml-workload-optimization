@@ -9,6 +9,8 @@ from openml import tasks, datasets, runs, flows, setups, config
 OPENML_ROOT_DIRECTORY = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/data/openml'
 FLOW_DICTIONARY = 'flows.pickle'
 SETUP_DICTIONARY = 'setups.pickle'
+SETUP_FLOW_LIST = 'setup_flow.pickle'
+FILTERED_SETUP = 'filtered_setups.csv'
 EXCLUDE_FLOWS = [5981, 5987, 5983, 5981, 6223]
 
 
@@ -141,16 +143,16 @@ def repair(flow):
     :return:
     """
     flow.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
-    for v in flow.components.itervalues():
+    for v in flow.components.values():
         if v.class_name.startswith('helper.dual_imputer') or v.class_name.startswith('extra.dual_imputer'):
-            print 'undefined class: {}'.format(v.class_name)
+            print('undefined class: {}'.format(v.class_name))
             return 'ERROR'
         # if 'OneHotEncoder' in v.class_name:
         #     v.class_name = 'sklearn.preprocessing.OneHotEncoder'
         v.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
         # for meta components (e.g, boosting algorithms)
         if hasattr(v, 'components'):
-            for vv in v.components.itervalues():
+            for vv in v.components.values():
                 vv.dependencies = u'sklearn>=0.19.1\nnumpy>=1.6.1\nscipy>=0.9'
 
     return flow
@@ -178,7 +180,7 @@ def run_to_workload(run_id, execution_environment):
         x = train_data.drop('class')
         flow = repair(flows.get_flow(run.flow_id))
         if flow == 'ERROR':
-            print 'skipping run {} because flow {} is not repairable'.format(run_id, run.flow_id)
+            print('skipping run {} because flow {} is not repairable'.format(run_id, run.flow_id))
             return
         pipeline = flows.flow_to_sklearn(flow)
         setup = setups.get_setup(run.setup_id)
@@ -195,6 +197,42 @@ def run_to_workload(run_id, execution_environment):
         model.data()
     except Exception:
         print ('ERROR AT FLOW:{} and RUN: {}'.format(flow.flow_id, run_id))
+
+
+def convert_to_tuple(openml_dir):
+    flows_path = openml_dir + '/' + FLOW_DICTIONARY
+    setups_path = openml_dir + '/' + SETUP_DICTIONARY
+    setups_flow_path = openml_dir + '/' + SETUP_FLOW_LIST
+    setup_flow = []
+    with open(flows_path, 'rb') as g_input:
+        flow_dict = pickle.load(g_input)
+
+    with open(setups_path, 'rb') as g_input:
+        setup_dict = pickle.load(g_input)
+
+    for k, v in setup_dict.items():
+        pipeline = flows.flow_to_sklearn(flow_dict[v.flow_id])
+        setup_flow.append((v, pipeline))
+
+    with open(setups_flow_path, 'wb') as output:
+        pickle.dump(setup_flow, output, pickle.HIGHEST_PROTOCOL)
+
+
+def get_filtered_setup_from_file(openml_dir):
+    setups_flow_path = openml_dir + '/' + SETUP_FLOW_LIST
+    with open(setups_flow_path, 'rb') as g_input:
+        setup_flow = pickle.load(g_input)
+    filtered_setups = pd.read_csv(openml_dir + '/' + FILTERED_SETUP, names=['setup_id'])
+    return [(s, p) for s, p in setup_flow if s.setup_id in filtered_setups.setup_id.values]
+
+
+def get_setup_from_file(openml_dir, limit):
+    setups_flow_path = openml_dir + '/' + SETUP_FLOW_LIST
+    with open(setups_flow_path, 'rb') as g_input:
+        setup_flow = pickle.load(g_input)
+
+    return setup_flow[:limit]
+    # return setup_flow
 
 
 def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
@@ -221,15 +259,18 @@ def get_setup_and_pipeline(openml_dir, runs_file, limit=1000):
             flow_dict[row['flow_id']] = flow
 
         if flow == 'ERROR':
-            print 'flow {} is not repairable'.format(row['flow_id'])
+            print('flow {} is not repairable'.format(row['flow_id']))
         else:
-            pipeline = flows.flow_to_sklearn(flow)
-            if row['setup_id'] in setup_dict:
-                setup = setup_dict[row['setup_id']]
-            else:
-                setup = setups.get_setup(row['setup_id'])
-                setup_dict[row['setup_id']] = setup
-            setup_flow.append((setup, pipeline))
+            try:
+                pipeline = flows.flow_to_sklearn(flow)
+                if row['setup_id'] in setup_dict:
+                    setup = setup_dict[row['setup_id']]
+                else:
+                    setup = setups.get_setup(row['setup_id'])
+                    setup_dict[row['setup_id']] = setup
+                setup_flow.append((setup, pipeline))
+            except Exception as err:
+                print('Error while conversion to setup: {}'.format(err))
 
     with open(flows_path, 'wb') as output:
         pickle.dump(flow_dict, output, pickle.HIGHEST_PROTOCOL)

@@ -957,7 +957,7 @@ class Feature(Node):
         return self.hash_and_return_dataseries('__le__{}'.format(other), self.get_materialized_data() <= other)
 
     def __eq__(self, other):
-        return self.math('__eq__', oththater)
+        return self.math('__eq__', other)
 
     def p___eq__(self, other):
         return self.hash_and_return_dataseries('__eq__{}'.format(other), self.get_materialized_data() == other)

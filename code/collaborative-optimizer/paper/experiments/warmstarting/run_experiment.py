@@ -88,12 +88,13 @@ if not os.path.exists(os.path.dirname(result_file)):
 method = parser.get('method', 'optimized')
 should_warmstart = bool(int(parser.get('warmstart', 1)))
 
-print 'running experiment {} with warmstarting: {}'.format(method, should_warmstart)
+print ('running experiment {} with warmstarting: {}'.format(method, should_warmstart))
 
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
 setup_and_pipelines = get_setup_and_pipeline(openml_dir=OPENML_DIR, runs_file=OPENML_TASK + '/all_runs.csv',
                                              limit=limit)
+# setup_and_pipelines = get_setup_from_file(openml_dir=OPENML_DIR, limit=limit)
 
 if method == 'optimized':
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
@@ -135,7 +136,7 @@ for setup, pipeline in setup_and_pipelines:
     executor.cleanup()
     i += 1
     if i % 50 == 0:
-        print 'run {} out of {} completed'.format(i, limit)
+        print('run {} out of {} completed'.format(i, limit))
     if not success:
         elapsed = 'Failed!'
 

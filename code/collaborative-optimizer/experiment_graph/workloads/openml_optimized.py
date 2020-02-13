@@ -48,8 +48,8 @@ class OpenMLOptimizedWorkload(Workload):
             self.score = score['accuracy']
 
             return True
-        except:
-            print 'error for pipeline: {}, setup: {}'.format(self.pipeline, self.setup)
+        except Exception as err:
+            print('error for pipeline: {}, setup: {}, err: {}'.format(self.pipeline, self.setup.setup_id, err))
             return False
 
     def get_score(self):
