@@ -47,6 +47,9 @@ class ExecutionEnvironment(object):
         self.experiment_graph.extend(self.workload_dag)
         self.update_time(BenchmarkMetrics.UPDATE_HISTORY, (datetime.now() - start).total_seconds())
 
+    def mock_update_history(self):
+        self.experiment_graph.mock_extend(self.workload_dag)
+
     def save_history(self, environment_folder, overwrite=False, skip_history_update=False):
         if os.path.exists(environment_folder) and not overwrite:
             raise Exception('Directory already exists and overwrite is not allowed')
@@ -72,7 +75,7 @@ class ExecutionEnvironment(object):
         # optimizer.times has  the form {vertex_id:(execution time, optimization time)}
         total_execution_time = 0
         total_reuse_time = 0
-        for _, v in self.scheduler.times.iteritems():
+        for _, v in self.scheduler.times.items():
             total_execution_time += v[0]
             total_reuse_time += v[1]
         self.update_time(BenchmarkMetrics.TOTAL_EXECUTION, total_execution_time)

@@ -512,12 +512,21 @@ class ExperimentGraph(BaseGraph):
         import gc
         gc.collect()
 
-        # self.graph.add_edges_from(workload.graph.edges(data=True))
+    def mock_extend(self, workload):
+        self.roots = list(set(self.roots + workload.roots))
+
+        for node_id, node_attributes in workload.graph.nodes(data=True):
+            # self.add_node_to_experiment_graph(node_id, node_attributes)
+            self.graph.add_node(node_id, **node_attributes)
+
+        for s, d, data in workload.graph.edges(data=True):
+            if s in self.graph.nodes and d in self.graph.nodes:
+                self.graph.add_edge(s, d, **data)
 
     def add_node_to_experiment_graph(self, node_id, node_attributes):
         if node_id not in self.graph.nodes:
             eg_attributes = {}
-            for k, v in node_attributes.iteritems():
+            for k, v in node_attributes.items():
                 if k != 'data':
                     eg_attributes[k] = copy.deepcopy(v)
             eg_attributes['data'] = None

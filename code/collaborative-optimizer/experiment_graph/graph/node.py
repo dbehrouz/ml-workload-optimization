@@ -90,7 +90,7 @@ class Node(object):
 
     @staticmethod
     def vertex_hash(prev, edge_hash):
-        # TODO what are teh chances that this cause a collision?
+        # TODO what are the chances that this cause a collision?
         # we should implement a collision strategy as well
         return hashlib.md5(prev + edge_hash).hexdigest().upper()
 
