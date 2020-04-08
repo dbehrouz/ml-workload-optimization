@@ -1,7 +1,0 @@
-Is the solution straightforward.
-- Right now it seems more of we enable users to do reuse, warmstarting, hyperparameter bayesian tuning
-- The thesis is very simple, what we do is if I do reuse and warmstaring it takes this much and if I dont it takes this much. What we need is more systematic approach
-
-- The contirbutions are presented very late in the introduction.
-- Generally we should make the intro shorter
-- 
