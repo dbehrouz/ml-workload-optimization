@@ -8,10 +8,9 @@ import numpy as np
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
 # TODO: make file with all the global names
-from auxilary import DataFrame, DataSeries
-from experiment_graph.data_storage import DedupedStorageManager, SimpleStorageManager
+from experiment_graph.graph.auxilary import DataFrame, DataSeries
+from experiment_graph.data_storage import SimpleStorageManager
 from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
-from node import Feature, Dataset
 
 
 class BaseGraph(object):

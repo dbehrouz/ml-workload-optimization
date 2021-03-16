@@ -236,7 +236,7 @@ class HelixExecutor(Executor):
         """
         # copy the time manager
         self.execution_environment.compute_total_reuse_optimization_time()
-        for k, v in self.execution_environment.time_manager.iteritems():
+        for k, v in self.execution_environment.time_manager.items():
             if k in self.time_manager:
                 self.time_manager[k] += v
             else:
