@@ -19,13 +19,14 @@ from datetime import datetime
 
 import matplotlib
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-sys.path.append(SOURCE_CODE_ROOT)
+from experiment_graph.data_storage import StorageManagerFactory
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
+    HeuristicsMaterializer, AllMaterializer, HelixMaterializer
+from experiment_graph.storage_managers.storage_profiler import get_profile
 from experiment_graph.workload import Workload
+from paper.experiment_helper import Parser
 
 matplotlib.use('ps')
 
@@ -405,7 +406,7 @@ class start_here_a_gentle_introduction(Workload):
         score = log_reg.score(test,
                               test_labels['TARGET'],
                               score_type='auc').data(verbose)
-        print 'Logistic Regression with AUC score: {}'.format(score)
+        print('Logistic Regression with AUC score: {}'.format(score))
 
         from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
@@ -421,7 +422,7 @@ class start_here_a_gentle_introduction(Workload):
         score = random_forest.score(test,
                                     test_labels['TARGET'],
                                     score_type='auc').data(verbose)
-        print 'Random Forest Simple Data with AUC score: {}'.format(score)
+        print('Random Forest Simple Data with AUC score: {}'.format(score))
 
         poly_features_names = list(app_train_poly.data(verbose).columns)
 
@@ -445,7 +446,7 @@ class start_here_a_gentle_introduction(Workload):
         score = random_forest_poly.score(app_test_poly,
                                          test_labels['TARGET'],
                                          score_type='auc').data(verbose)
-        print 'Random Forest Poly Data with AUC score: {}'.format(score)
+        print('Random Forest Poly Data with AUC score: {}'.format(score))
 
         app_train_domain = app_train_domain.drop(columns='TARGET')
 
@@ -473,7 +474,7 @@ class start_here_a_gentle_introduction(Workload):
         score = random_forest_domain.score(domain_features_test,
                                            test_labels['TARGET'],
                                            score_type='auc').data(verbose)
-        print 'Random Forest Domain Data with AUC score: {}'.format(score)
+        print('Random Forest Domain Data with AUC score: {}'.format(score))
 
         def plot_feature_importances(df):
             """
@@ -627,7 +628,7 @@ class start_here_a_gentle_introduction(Workload):
                                 test_labels['TARGET'],
                                 score_type='auc',
                                 custom_args={'num_iteration': best_iteration}).data(verbose)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
             feature_importances = model.feature_importances(feature_names)
 
@@ -646,26 +647,10 @@ class start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) > 1:
-        SOURCE_CODE_ROOT = sys.argv[1]
-    else:
-        SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                           '-optimizer/ '
-    sys.path.append(SOURCE_CODE_ROOT)
-    from paper.experiment_helper import Parser
-    from experiment_graph.data_storage import StorageManagerFactory
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.storage_managers import storage_profiler
-
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
-        StorageAwareMaterializer, HeuristicsMaterializer, HelixMaterializer
 
     parser = Parser(sys.argv)
     verbose = parser.get('verbose', 0)
-    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     ROOT = parser.get('root', DEFAULT_ROOT)
     ROOT_DATA_DIRECTORY = ROOT + '/data'
     mat_budget = float(parser.get('mat_budget', '10.0')) * 1024.0 * 1024.0
@@ -683,7 +668,7 @@ if __name__ == "__main__":
         raise Exception('invalid materializer: {}'.format(materializer_type))
 
     storage_manager = StorageManagerFactory.get_storage(parser.get('storage_type', 'dedup'))
-    profile = storage_profiler.get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
+    profile = get_profile(parser.get('profile', ROOT_DATA_DIRECTORY + '/profiles/local-dedup'))
     workload = start_here_a_gentle_introduction()
 
     ee = ExecutionEnvironment(storage_manager, reuse_type='linear')

@@ -1,21 +1,13 @@
 import errno
-import os
-import sys
-
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-
-sys.path.append(SOURCE_CODE_ROOT)
-from experiment_graph.graph.graph_representations import ExperimentGraph
-from datetime import datetime
 import json
+import os
+from datetime import datetime
+
+from experiment_graph.graph.graph_representations import ExperimentGraph
 
 
 def get_profile(profile_location):
-    #print open(profile_location, 'rb').read()
+    # print open(profile_location, 'rb').read()
     return json.loads(open(profile_location, 'rb').read())
 
 

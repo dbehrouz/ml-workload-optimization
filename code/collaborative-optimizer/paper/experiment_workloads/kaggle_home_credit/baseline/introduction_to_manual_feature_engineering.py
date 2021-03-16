@@ -63,14 +63,14 @@ class introduction_to_manual_feature_engineering(Workload):
             corr = df['TARGET'].corr(df[var_name])
 
             # Calculate medians for repaid vs not repaid
-            avg_repaid = df.ix[df['TARGET'] == 0, var_name].median()
-            avg_not_repaid = df.ix[df['TARGET'] == 1, var_name].median()
+            avg_repaid = df.loc[df['TARGET'] == 0, var_name].median()
+            avg_not_repaid = df.loc[df['TARGET'] == 1, var_name].median()
 
             plt.figure(figsize=(12, 6))
 
             # Plot the distribution for target == 0 and target == 1
-            sns.kdeplot(df.ix[df['TARGET'] == 0, var_name].dropna(), label='TARGET == 0')
-            sns.kdeplot(df.ix[df['TARGET'] == 1, var_name].dropna(), label='TARGET == 1')
+            sns.kdeplot(df.loc[df['TARGET'] == 0, var_name].dropna(), label='TARGET == 0')
+            sns.kdeplot(df.loc[df['TARGET'] == 1, var_name].dropna(), label='TARGET == 1')
 
             # label the plot
             plt.xlabel(var_name)
@@ -391,7 +391,7 @@ class introduction_to_manual_feature_engineering(Workload):
                 '% of Total Values', ascending=False).round(1)
 
             # Print some summary information
-            print ("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
+            print("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
                                                                        "There are " + str(
                 mis_val_table_ren_columns.shape[0]) +
                    " columns that have missing values.")
@@ -608,7 +608,7 @@ class introduction_to_manual_feature_engineering(Workload):
             best_iteration = model.best_iteration_
             predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
             score = roc_auc_score(test_labels['TARGET'], predictions)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
             # Record the feature importances
             feature_importance_values = model.feature_importances_
 
@@ -682,12 +682,8 @@ class introduction_to_manual_feature_engineering(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
 
     executor = BaselineExecutor()
     execution_start = datetime.now()

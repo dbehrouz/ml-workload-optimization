@@ -11,7 +11,6 @@ Original notebook is located here:
 Number of artifacts: 406
 Total artifact size: 25 GB
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
@@ -19,6 +18,10 @@ from datetime import datetime
 import matplotlib
 import pandas as pd
 
+from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -547,7 +550,7 @@ class introduction_to_manual_feature_engineering(Workload):
                                 score_type='auc',
                                 custom_args={'num_iteration': best_iteration}).data()
 
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
             # test_predictions = test_predictions.setname('TARGET')
             # # Make the submission dataframe
@@ -624,16 +627,8 @@ class introduction_to_manual_feature_engineering(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = introduction_to_manual_feature_engineering()
 
@@ -642,7 +637,6 @@ if __name__ == "__main__":
 
     ee = ExecutionEnvironment(DedupedStorageManager())
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
     # if os.path.exists(database_path):

@@ -10,9 +10,13 @@ import warnings
 from datetime import datetime
 
 import matplotlib
-import pandas as pd
 
+from Reuse import LinearTimeReuse
+from data_storage import DedupedStorageManager
+from execution_environment import ExecutionEnvironment
+from executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
+from materialization_methods import StorageAwareMaterializer
 
 matplotlib.use('ps')
 # numpy and pandas for data manipulation
@@ -162,26 +166,14 @@ class fork_introduction_to_manual_feature_engineering(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
-
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
     workload = fork_introduction_to_manual_feature_engineering()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
-
-    root_data = ROOT + '/data'
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
     # if os.path.exists(database_path):

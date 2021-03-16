@@ -33,12 +33,6 @@ from datetime import datetime
 
 from openml import config
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-sys.path.append(SOURCE_CODE_ROOT)
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
@@ -88,7 +82,7 @@ if not os.path.exists(os.path.dirname(result_file)):
 method = parser.get('method', 'optimized')
 should_warmstart = bool(int(parser.get('warmstart', 1)))
 
-print ('running experiment {} with warmstarting: {}'.format(method, should_warmstart))
+print('running experiment {} with warmstarting: {}'.format(method, should_warmstart))
 
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)

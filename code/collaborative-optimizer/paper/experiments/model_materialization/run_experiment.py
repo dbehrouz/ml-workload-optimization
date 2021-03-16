@@ -33,12 +33,6 @@ from datetime import datetime
 
 from openml import config
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-sys.path.append(SOURCE_CODE_ROOT)
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
@@ -47,8 +41,7 @@ from paper.experiment_helper import Parser
 from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageManager
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
-from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer, \
-    TopNModelMaterializer
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
 from experiment_graph.workloads.openml_optimized import OpenMLOptimizedWorkload
@@ -60,7 +53,7 @@ EXPERIMENT_TIMESTAMP = datetime.now()
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
 
-DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 

@@ -274,7 +274,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
         print('Testing data shape: ', app_test.shape)
         app_test.head()
 
-        print app_train['TARGET'].value_counts()
+        print(app_train['TARGET'].value_counts())
 
         plt.figure(figsize=(10, 5))
         sns.set(style="whitegrid", font_scale=1)
@@ -313,7 +313,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
             return mis_val_table_ren_columns
 
         missing_values = missing_values_table(app_train)
-        print missing_values.head(20)
+        print(missing_values.head(20))
 
         app_train.dtypes.value_counts()
 
@@ -666,12 +666,8 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
 
     executor = BaselineExecutor()
     execution_start = datetime.now()

@@ -7,14 +7,18 @@ This script is the optimized version of the workload 'introduction_to_manual_fea
 which utilizes our Experiment Graph for optimizing the workload
 
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
 
+from Reuse import LinearTimeReuse
+from data_storage import DedupedStorageManager
+from execution_environment import ExecutionEnvironment
+from executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
+from materialization_methods import StorageAwareMaterializer
 
 matplotlib.use('ps')
 import matplotlib.pyplot as plt
@@ -281,7 +285,8 @@ class introduction_to_manual_feature_engineering_p2(Workload):
         cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
         cash_by_client.head()
 
-        print 'Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose))
+        print
+        'Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose))
         train = train.merge(cash_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(cash_by_client, on='SK_ID_CURR', how='left')
 
@@ -293,17 +298,8 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import LinearTimeReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = introduction_to_manual_feature_engineering_p2()
 
@@ -311,8 +307,6 @@ if __name__ == "__main__":
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
-
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering_p2/sa_16'
     # if os.path.exists(database_path):

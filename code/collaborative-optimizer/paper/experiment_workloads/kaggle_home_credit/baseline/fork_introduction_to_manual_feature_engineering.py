@@ -220,8 +220,7 @@ class fork_introduction_to_manual_feature_engineering(Workload):
                 '% of Total Values', ascending=False).round(1)
 
             # Print some summary information
-            print ("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
-                                                                       "There are " + str(
+            print("Your selected dataframe has " + str(df.shape[1]) + " columns. There are " + str(
                 mis_val_table_ren_columns.shape[0]) +
                    " columns that have missing values.")
 
@@ -400,7 +399,7 @@ class fork_introduction_to_manual_feature_engineering(Workload):
             best_iteration = model.best_iteration_
             predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
             score = roc_auc_score(test_labels['TARGET'], predictions)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
         train_control = pd.read_csv(root_data + '/kaggle_home_credit/application_train.csv')
         test_control = pd.read_csv(root_data + '/kaggle_home_credit/application_test.csv')
@@ -415,12 +414,8 @@ class fork_introduction_to_manual_feature_engineering(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
 
     executor = BaselineExecutor()
     execution_start = datetime.now()

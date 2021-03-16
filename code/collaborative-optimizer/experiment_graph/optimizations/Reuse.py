@@ -1,5 +1,4 @@
 import copy
-import uuid
 from abc import abstractmethod
 from collections import deque
 
@@ -198,8 +197,8 @@ class LinearTimeReuse(Reuse):
 
         warmstarting_candidates = self.check_for_warmstarting(history.graph, workload_subgraph, to_warmstart)
         if verbose == 1:
-            print ('materialized_vertices: {}'.format(materialized_vertices))
-            print ('warmstarting_candidates: {}'.format(warmstarting_candidates))
+            print('materialized_vertices: {}'.format(materialized_vertices))
+            print('warmstarting_candidates: {}'.format(warmstarting_candidates))
         return materialized_vertices, execution_vertices, warmstarting_candidates
 
     @staticmethod

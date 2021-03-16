@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle
 import errno
 import os
 

@@ -4,12 +4,10 @@ and the only way of getting the score is to send the submission file.
 Here, we split the training data into train/test so we can compute the ROC curve without submission
 """
 
-from sklearn.model_selection import train_test_split
-import pandas as pd
 import sys
 
-SOURCE_CODE_ROOT = sys.argv[1]
-sys.path.append(SOURCE_CODE_ROOT)
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from paper.experiment_helper import Parser
 
@@ -32,5 +30,5 @@ def split_and_store(root_data, test_size=0.2):
 
 if __name__ == "__main__":
     parser = Parser(sys.argv)
-    root_data = parser.get('root', '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization') + '/data'
+    root_data = parser.get('root', '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization') + '/data'
     split_and_store(root_data)

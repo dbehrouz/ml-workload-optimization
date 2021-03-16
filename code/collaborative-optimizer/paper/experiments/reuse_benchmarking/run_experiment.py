@@ -5,19 +5,13 @@
 Run a list of workloads in sequence and report the execution time for each one
 
 """
-import cPickle as pickle
 import errno
 import os
 import random
 import sys
+
+import pickle
 import networkx as nx
-
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
-
-sys.path.append(SOURCE_CODE_ROOT)
 
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:

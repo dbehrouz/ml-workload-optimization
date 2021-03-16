@@ -17,6 +17,10 @@ from datetime import datetime
 
 import matplotlib
 
+from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -435,7 +439,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
                               test_labels['TARGET'],
                               score_type='auc').data(verbose)
 
-        print 'Logistic Regression with AUC score: {}'.format(score)
+        print('Logistic Regression with AUC score: {}'.format(score))
 
         from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
@@ -453,7 +457,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
                                     test_labels['TARGET'],
                                     score_type='auc').data(verbose)
 
-        print 'Random Forest Simple Data with AUC score: {}'.format(score)
+        print('Random Forest Simple Data with AUC score: {}'.format(score))
 
         poly_features_names = list(app_train_poly.data(verbose).columns)
 
@@ -477,7 +481,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         score = random_forest_poly.score(app_test_poly,
                                          test_labels['TARGET'],
                                          score_type='auc').data(verbose)
-        print 'Random Forest Poly Data with AUC score: {}'.format(score)
+        print('Random Forest Poly Data with AUC score: {}'.format(score))
 
         # CHANGE
         # app_train_domain = app_train_domain.drop(columns='TARGET')
@@ -556,22 +560,14 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
                           score_type='auc',
                           custom_args={'num_iteration': best_iteration}).data(verbose)
 
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
         return True
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = fork_cridata_start_here_a_gentle_introduction()
 
@@ -580,7 +576,6 @@ if __name__ == "__main__":
 
     ee = ExecutionEnvironment(DedupedStorageManager())
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat'
     # if os.path.exists(database_path):

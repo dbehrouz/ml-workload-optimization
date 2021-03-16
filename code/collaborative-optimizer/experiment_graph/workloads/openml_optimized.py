@@ -57,14 +57,6 @@ class OpenMLOptimizedWorkload(Workload):
 
 
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) > 1:
-        SOURCE_CODE_ROOT = sys.argv[1]
-    else:
-        SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                           '-optimizer/ '
-    sys.path.append(SOURCE_CODE_ROOT)
     from paper.experiment_helper import Parser
     from experiment_graph.data_storage import StorageManagerFactory
     from experiment_graph.executor import CollaborativeExecutor
@@ -74,7 +66,7 @@ if __name__ == "__main__":
 
     parser = Parser(sys.argv)
     verbose = parser.get('verbose', 0)
-    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+    DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     ROOT = parser.get('root', DEFAULT_ROOT)
     ROOT_DATA_DIRECTORY = ROOT + '/data'
     mat_budget = float(parser.get('mat_budget', '1.0')) * 1024.0 * 1024.0
@@ -112,7 +104,7 @@ if __name__ == "__main__":
         execution_start = datetime.now()
         workload = OpenMLOptimizedWorkload(setup, pipeline, task_id=openml_task)
         executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=0)
-        print workload.get_score()
+        print(workload.get_score())
         total += (datetime.now() - execution_start).total_seconds()
         executor.local_process()
         executor.global_process()

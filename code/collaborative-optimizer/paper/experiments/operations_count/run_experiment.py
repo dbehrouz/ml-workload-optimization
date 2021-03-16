@@ -33,26 +33,19 @@ from datetime import datetime
 
 from openml import config
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-sys.path.append(SOURCE_CODE_ROOT)
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
 
 from paper.experiment_helper import Parser
 from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageManager
-from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor
+from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
 from experiment_graph.optimizations.Reuse import LinearTimeReuse, AllComputeReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
 from experiment_graph.workloads.openml_optimized import OpenMLOptimizedWorkload
-from experiment_graph.workloads.openml_baseline import OpenMLBaselineWorkload
 
 e_id = uuid.uuid4().hex.upper()[0:8]
 EXPERIMENT_TIMESTAMP = datetime.now()
@@ -88,7 +81,7 @@ if not os.path.exists(os.path.dirname(result_file)):
 method = parser.get('method', 'optimized')
 should_warmstart = bool(int(parser.get('warmstart', 1)))
 
-print 'running experiment {} with warmstarting: {}'.format(method, should_warmstart)
+print('running experiment {} with warmstarting: {}'.format(method, should_warmstart))
 
 OPENML_DIR = ROOT_DATA_DIRECTORY + '/openml/'
 OPENML_TASK = ROOT_DATA_DIRECTORY + '/openml/task_id={}'.format(openml_task)
@@ -130,7 +123,7 @@ for setup, pipeline in setup_and_pipelines:
     executor.cleanup()
     i += 1
     if i % 50 == 0:
-        print 'run {} out of {} completed'.format(i, limit)
+        print('run {} out of {} completed'.format(i, limit))
     if not success:
         elapsed = 'Failed!'
 

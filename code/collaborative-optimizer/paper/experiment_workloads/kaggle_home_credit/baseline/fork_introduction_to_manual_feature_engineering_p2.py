@@ -256,7 +256,7 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
         cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
         cash_by_client.head()
 
-        print 'Cash by Client Shape: '.format(cash_by_client.shape)
+        print('Cash by Client Shape: '.format(cash_by_client.shape))
         train = train.merge(cash_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(cash_by_client, on='SK_ID_CURR', how='left')
 
@@ -269,7 +269,7 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
                                             df_names=['credit', 'client'])
         credit_by_client.head()
 
-        print 'Credit by client shape: '.format(credit_by_client.shape)
+        print('Credit by client shape: '.format(credit_by_client.shape))
 
         train = train.merge(credit_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(credit_by_client, on='SK_ID_CURR', how='left')
@@ -283,15 +283,15 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
                                                   df_names=['installments', 'client'])
         installments_by_client.head()
 
-        print 'Installments by client shape: '.format(installments_by_client.shape)
+        print('Installments by client shape: '.format(installments_by_client.shape))
 
         train = train.merge(installments_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(installments_by_client, on='SK_ID_CURR', how='left')
 
         train, test = remove_missing_columns(train, test)
 
-        print 'Final Training Shape: {}'.format(train.shape)
-        print 'Final Testing Shape: {}'.format(test.shape)
+        print('Final Training Shape: {}'.format(train.shape))
+        print('Final Testing Shape: {}'.format(test.shape))
 
         def model(features, test_features, encoding='ohe'):
 
@@ -387,7 +387,7 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
             best_iteration = model.best_iteration_
             predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
             score = roc_auc_score(test_labels['TARGET'], predictions)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
         model(train, test)
 
@@ -395,12 +395,8 @@ class fork_introduction_to_manual_feature_engineering_p2(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
 
     executor = BaselineExecutor()
     execution_start = datetime.now()

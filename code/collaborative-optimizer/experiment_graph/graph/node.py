@@ -907,17 +907,16 @@ class Feature(Node):
     def p___rmul__(self, other):
         return self.hash_and_return_dataseries('__rmul__{}'.format(other), other * self.get_materialized_data())
 
-    # TODO: When switching to python 3 this has to change to __floordiv__ and __truediv__
-    def __div__(self, other):
-        return self.math('__div__', other)
+    def __truediv__(self, other):
+        return self.math('__truediv__', other)
 
-    def p___div__(self, other):
-        return self.hash_and_return_dataseries('__div__{}'.format(other), self.get_materialized_data() / other)
+    def p___truediv__(self, other):
+        return self.hash_and_return_dataseries('__truediv__{}'.format(other), self.get_materialized_data() / other)
 
-    def __rdiv__(self, other):
+    def __rtruediv__(self, other):
         return self.math('__rdiv__', other)
 
-    def p___rdiv__(self, other):
+    def p___rtruediv__(self, other):
         return self.hash_and_return_dataseries('__rdiv__{}'.format(other), other / self.get_materialized_data())
 
     def __add__(self, other):

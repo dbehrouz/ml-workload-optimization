@@ -12,13 +12,17 @@ Original notebook is located here:
 Number of artifacts: 146
 Total artifact size: 83.5 GB
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
 
+from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -286,7 +290,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
         cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
         cash_by_client.head()
 
-        print 'Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose))
+        print('Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose)))
         train = train.merge(cash_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(cash_by_client, on='SK_ID_CURR', how='left')
 
@@ -299,7 +303,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                             df_names=['credit', 'client'])
         credit_by_client.head()
 
-        print 'Credit by client shape: {}'.format(credit_by_client.shape().data(verbose=verbose))
+        print('Credit by client shape: {}'.format(credit_by_client.shape().data(verbose=verbose)))
 
         train = train.merge(credit_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(credit_by_client, on='SK_ID_CURR', how='left')
@@ -313,18 +317,18 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                                   df_names=['installments', 'client'])
         installments_by_client.head()
 
-        print 'Installments by client shape: {}'.format(installments_by_client.shape().data(verbose=verbose))
+        print('Installments by client shape: {}'.format(installments_by_client.shape().data(verbose=verbose)))
 
         train = train.merge(installments_by_client, on='SK_ID_CURR', how='left')
         test = test.merge(installments_by_client, on='SK_ID_CURR', how='left')
 
         train, test = remove_missing_columns(train, test)
 
-        print 'Final Training Shape: {}'.format(train.shape().data(verbose=verbose))
-        print 'Final Testing Shape: {}'.format(test.shape().data(verbose=verbose))
+        print('Final Training Shape: {}'.format(train.shape().data(verbose=verbose)))
+        print('Final Testing Shape: {}'.format(test.shape().data(verbose=verbose)))
 
-        print 'Final training size: {}'.format(return_size(train))
-        print 'Final testing size: {}'.format(return_size(test))
+        print('Final training size: {}'.format(return_size(train)))
+        print('Final testing size: {}'.format(return_size(test)))
 
         from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
@@ -432,7 +436,7 @@ class introduction_to_manual_feature_engineering_p2(Workload):
                                 test_labels['TARGET'],
                                 score_type='auc',
                                 custom_args={'num_iteration': best_iteration}).data(verbose=verbose)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
             feature_importances = model.feature_importances(feature_names)
 
@@ -444,26 +448,16 @@ class introduction_to_manual_feature_engineering_p2(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = introduction_to_manual_feature_engineering_p2()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering_p2/sa_16'
     # if os.path.exists(database_path):

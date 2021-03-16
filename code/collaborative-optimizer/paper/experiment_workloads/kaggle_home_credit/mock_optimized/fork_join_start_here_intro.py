@@ -12,7 +12,12 @@ from datetime import datetime
 
 import matplotlib
 
+from Reuse import LinearTimeReuse
+from data_storage import DedupedStorageManager
+from execution_environment import ExecutionEnvironment
+from executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
+from materialization_methods import AllMaterializer
 
 matplotlib.use('ps')
 
@@ -20,7 +25,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 # numpy and pandas for data manipulation
 import pandas as pd
-import seaborn as sns
 
 # Experiment Graph
 
@@ -142,26 +146,16 @@ class fork_join_start_here_intro(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = fork_join_start_here_intro()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
-    sa_materializer = AllMaterializer(storage_budget=mat_budget)
+    sa_materializer = AllMaterializer()
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat'
     # if os.path.exists(database_path):

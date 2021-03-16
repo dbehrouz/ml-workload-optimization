@@ -5,15 +5,18 @@
 This script is the optimized version of the workload 'introduction_to_manual_feature_engineering'
 which utilizes our Experiment Graph for optimizing the workload
 """
-import os
 import warnings
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
-import pandas as pd
 
+from Reuse import LinearTimeReuse
+from data_storage import DedupedStorageManager
+from execution_environment import ExecutionEnvironment
+from executor import CollaborativeExecutor
 from experiment_graph.workload import Workload
+from materialization_methods import StorageAwareMaterializer
 
 matplotlib.use('ps')
 import matplotlib.pyplot as plt
@@ -115,17 +118,8 @@ class introduction_to_manual_feature_engineering(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import LinearTimeReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = introduction_to_manual_feature_engineering()
 
@@ -134,7 +128,6 @@ if __name__ == "__main__":
 
     ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
     # if os.path.exists(database_path):

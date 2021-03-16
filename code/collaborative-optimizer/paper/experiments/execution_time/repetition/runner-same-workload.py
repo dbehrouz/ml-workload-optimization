@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 """Repetition Experiments Runner script
 
 Run the same workloads 2 times. The first time no experiment experiment_graphs exists so both baseline and optimized
@@ -15,12 +13,6 @@ import sys
 import uuid
 from datetime import datetime
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
-
-sys.path.append(SOURCE_CODE_ROOT)
 from paper.experiment_helper import ExperimentWorkloadFactory
 from experiment_graph.executor import CollaborativeExecutor, BaselineExecutor, HelixExecutor
 from experiment_graph.data_storage import DedupedStorageManager
@@ -29,7 +21,7 @@ from experiment_graph.optimizations.Reuse import LinearTimeReuse
 
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
-DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 
 # Experiment Graph

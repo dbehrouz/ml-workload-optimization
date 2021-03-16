@@ -25,7 +25,7 @@ def get_scenario(scenario_type):
 
 def get_mock_scenario(scenario=None):
     scenario = MOCK_SCENARIO if scenario is None else scenario
-    print scenario
+    print(scenario)
     experiment_name = 'mock'
     method = 'baseline'
 

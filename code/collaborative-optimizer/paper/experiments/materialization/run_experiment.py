@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+
 
 """Execution Time Experiment
 
@@ -12,13 +12,6 @@ import os
 import sys
 import uuid
 from datetime import datetime
-
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
-
-sys.path.append(SOURCE_CODE_ROOT)
 
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:

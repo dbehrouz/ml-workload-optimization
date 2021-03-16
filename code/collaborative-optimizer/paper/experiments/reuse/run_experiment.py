@@ -11,13 +11,6 @@ import sys
 import uuid
 from datetime import datetime
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer/'
-
-sys.path.append(SOURCE_CODE_ROOT)
-
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
@@ -81,11 +74,11 @@ workloads = get_kaggle_optimized_scenario(package=method)
 for workload in workloads:
     workload_name = workload.__class__.__name__
     start = datetime.now()
-    print '{} Start-workload: {}, reuse_type: {}, mat_type: {}'.format(start, workload_name, reuse_type,
-                                                                       materializer_type)
+    print('{} Start-workload: {}, reuse_type: {}, mat_type: {}'.format(start, workload_name, reuse_type,
+                                                                 materializer_type))
     success = executor.run_workload(workload=workload, root_data=ROOT_DATA_DIRECTORY, verbose=verbose)
     end = datetime.now()
-    print '{} End-workload: {}, reuse_type: {}: mat_type: {}'.format(end, workload_name, reuse_type, materializer_type)
+    print('{} End-workload: {}, reuse_type: {}: mat_type: {}'.format(end, workload_name, reuse_type, materializer_type))
 
     elapsed = (end - start).total_seconds()
 

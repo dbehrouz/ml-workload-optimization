@@ -164,17 +164,10 @@ class start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor, HelixExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import LinearTimeReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, HelixMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
+    from experiment_graph.executor import HelixExecutor
+    from experiment_graph.materialization_algorithms.materialization_methods import HelixMaterializer
 
     workload = start_here_a_gentle_introduction()
 
@@ -183,7 +176,6 @@ if __name__ == "__main__":
 
     # ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat'
     # if os.path.exists(database_path):

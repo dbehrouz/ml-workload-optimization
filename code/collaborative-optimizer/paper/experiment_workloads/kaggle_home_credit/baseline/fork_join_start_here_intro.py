@@ -383,7 +383,7 @@ class fork_join_start_here_intro(Workload):
             best_iteration = model.best_iteration_
             predictions = model.predict_proba(test_features, num_iteration=best_iteration)[:, 1]
             score = roc_auc_score(test_labels['TARGET'], predictions)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
             # Record the feature importances
 
         def agg_numeric(df, group_var, df_name):
@@ -548,7 +548,7 @@ class fork_join_start_here_intro(Workload):
                 '% of Total Values', ascending=False).round(1)
 
             # Print some summary information
-            print ("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
+            print("Your selected dataframe has " + str(df.shape[1]) + " columns.\n"
                                                                        "There are " + str(
                 mis_val_table_ren_columns.shape[0]) +
                    " columns that have missing values.")
@@ -672,12 +672,8 @@ class fork_join_start_here_intro(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
 
     executor = BaselineExecutor()
     execution_start = datetime.now()

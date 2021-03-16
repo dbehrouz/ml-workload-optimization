@@ -15,6 +15,11 @@ from datetime import datetime
 
 import matplotlib
 
+from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
 from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
@@ -369,7 +374,7 @@ class fork_join_start_here_intro(Workload):
                                 test_labels['TARGET'],
                                 score_type='auc',
                                 custom_args={'num_iteration': best_iteration}).data(verbose)
-            print 'LGBMClassifier with AUC score: {}'.format(score)
+            print('LGBMClassifier with AUC score: {}'.format(score))
 
 
         def count_categorical(df, group_var, df_name):
@@ -630,27 +635,15 @@ class fork_join_start_here_intro(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import AllMaterializer, \
-    StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = fork_join_start_here_intro()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
-
-    root_data = ROOT + '/data'
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/start_here_a_gentle_introduction/all_mat'
     # if os.path.exists(database_path):

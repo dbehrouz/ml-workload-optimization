@@ -13,18 +13,23 @@ Total artifact size: 13.8 GB
 """
 import os
 import warnings
-import pandas as pd
 # matplotlib and seaborn for plotting
 from datetime import datetime
 
 import matplotlib
+import pandas as pd
+
+from experiment_graph.data_storage import DedupedStorageManager
+from experiment_graph.execution_environment import ExecutionEnvironment
+from experiment_graph.executor import CollaborativeExecutor
+from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+from experiment_graph.optimizations.Reuse import LinearTimeReuse
+from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
-
-from experiment_graph.workload import Workload
 
 matplotlib.use('ps')
 
@@ -70,7 +75,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
                             test_labels['TARGET'],
                             score_type='auc').data(verbose=verbose)
 
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
         def objective(hyperparameters, iteration):
             if 'n_estimators' in hyperparameters.keys():
@@ -80,7 +85,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
             score = model.score(test_features,
                                 test_labels['TARGET'],
                                 score_type='auc').data(verbose=verbose)
-            return [score, hyperparameters, iteration]
+            return [score['auc'], hyperparameters, iteration]
 
         score, params, iteration = objective(default_params, 1)
 
@@ -132,8 +137,8 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
             return results
 
         grid_results = grid_search(param_grid)
-        print 'The best validation score was {}'.format(grid_results.loc[0, 'score'])
-        print '\nThe best hyperparameters were:'
+        print('The best validation score was {}'.format(grid_results.loc[0, 'score']))
+        print('\nThe best hyperparameters were:')
         import pprint
         pprint.pprint(grid_results.loc[0, 'params'])
 
@@ -146,7 +151,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
                             test_labels['TARGET'],
                             score_type='auc').data(verbose=verbose)
 
-        print 'The best model from grid search scores {} ROC AUC on the test set.'.format(score)
+        print('The best model from grid search scores {} ROC AUC on the test set.'.format(score))
 
         random.seed(50)
 
@@ -201,7 +206,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
                             test_labels['TARGET'],
                             score_type='auc').data(verbose=verbose)
 
-        print 'The best model from random search scores {} ROC AUC on the test set.'.format(score)
+        print('The best model from random search scores {} ROC AUC on the test set.'.format(score))
 
         train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
         test = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
@@ -264,7 +269,7 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
         print('Training data shape: ', app_test.shape().data(verbose=verbose))
         app_test.head().data(verbose=verbose)
 
-        print app_train['TARGET'].value_counts()
+        print(app_train['TARGET'].value_counts())
 
         plt.figure(figsize=(10, 5))
         sns.set(style="whitegrid", font_scale=1)
@@ -675,26 +680,16 @@ class fork_taozhongxiao_start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
-
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-    from experiment_graph.data_storage import DedupedStorageManager
-    from experiment_graph.executor import CollaborativeExecutor
-    from experiment_graph.execution_environment import ExecutionEnvironment
-    from experiment_graph.optimizations.Reuse import FastBottomUpReuse
-    from experiment_graph.materialization_algorithms.materialization_methods import StorageAwareMaterializer
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
+    root_data = ROOT + '/data'
 
     workload = fork_taozhongxiao_start_here_a_gentle_introduction()
 
     mat_budget = 16.0 * 1024.0 * 1024.0
     sa_materializer = StorageAwareMaterializer(storage_budget=mat_budget)
 
-    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=FastBottomUpReuse.NAME)
+    ee = ExecutionEnvironment(DedupedStorageManager(), reuse_type=LinearTimeReuse.NAME)
 
-    root_data = ROOT + '/data'
     # database_path = \
     #     root_data + '/experiment_graphs/kaggle_home_credit/introduction_to_manual_feature_engineering/sa_16'
     # if os.path.exists(database_path):

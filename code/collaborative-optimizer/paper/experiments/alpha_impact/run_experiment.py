@@ -33,12 +33,6 @@ from datetime import datetime
 
 from openml import config
 
-if len(sys.argv) > 1:
-    SOURCE_CODE_ROOT = sys.argv[1]
-else:
-    SOURCE_CODE_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative' \
-                       '-optimizer/ '
-sys.path.append(SOURCE_CODE_ROOT)
 # Somehow someone hard codes this to be on top of the sys path and I cannot get rid of it
 if '/home/zeuchste/git/scikit-learn' in sys.path:
     sys.path.remove('/home/zeuchste/git/scikit-learn')
@@ -48,7 +42,7 @@ from experiment_graph.data_storage import StorageManagerFactory, DedupedStorageM
 from experiment_graph.executor import CollaborativeExecutor
 from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.materialization_algorithms.materialization_methods import TopNModelMaterializer, \
-    AllMaterializer, OracleBestModelMaterializer
+    OracleBestModelMaterializer
 from experiment_graph.optimizations.Reuse import AllMaterializedReuse
 from experiment_graph.storage_managers import storage_profiler
 from experiment_graph.openml_helper.openml_connectors import get_setup_and_pipeline
@@ -60,7 +54,7 @@ EXPERIMENT_TIMESTAMP = datetime.now()
 parser = Parser(sys.argv)
 verbose = parser.get('verbose', 0)
 
-DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
+DEFAULT_ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
 ROOT = parser.get('root', DEFAULT_ROOT)
 ROOT_DATA_DIRECTORY = ROOT + '/data'
 
@@ -144,7 +138,7 @@ best_score = -1
 best_setup = -1
 best_pipeline = -1
 i = 0
-print 'experiment with materializer: {}, alpha: {}'.format(mat_type, alpha)
+print('experiment with materializer: {}, alpha: {}'.format(mat_type, alpha))
 for setup, pipeline in setup_and_pipelines:
     workload = get_workload(setup, pipeline)
     start = datetime.now()
@@ -180,7 +174,7 @@ for setup, pipeline in setup_and_pipelines:
     # print 'mat: {}'.format(get_mat_model(executor))
     i += 1
     if i % 50 == 0:
-        print 'run {} out of {} completed'.format(i, limit)
+        print('run {} out of {} completed'.format(i, limit))
     if not success:
         elapsed = 'Failed!'
 

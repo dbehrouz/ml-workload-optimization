@@ -21,9 +21,9 @@ import os
 # File system management
 # Suppress warnings
 import warnings
-
 # plotting libraries
 from datetime import datetime
+
 import matplotlib
 
 from experiment_graph.executor import BaselineExecutor
@@ -407,7 +407,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         # Make sure to select the second column only
         log_reg_pred = log_reg.predict_proba(test)[:, 1]
         score = roc_auc_score(test_labels['TARGET'], log_reg_pred)
-        print 'Logistic Regression with AUC score: {}'.format(score)
+        print('Logistic Regression with AUC score: {}'.format(score))
 
         from sklearn.ensemble import RandomForestClassifier
 
@@ -428,7 +428,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         # Score = 0.678
         # Make a submission dataframe
         score = roc_auc_score(test_labels['TARGET'], predictions)
-        print 'Random Forest Simple Data with AUC score: {}'.format(score)
+        print('Random Forest Simple Data with AUC score: {}'.format(score))
 
         poly_features_names = list(app_train_poly.columns)
 
@@ -453,7 +453,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         # Score = 0.678
         # Make a submission dataframe
         score = roc_auc_score(test_labels['TARGET'], predictions)
-        print 'Random Forest Poly Data with AUC score: {}'.format(score)
+        print('Random Forest Poly Data with AUC score: {}'.format(score))
 
         # CHANGE
         # app_train_domain = app_train_domain.drop(columns='TARGET')
@@ -622,7 +622,7 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
         best_iteration = clf.best_iteration_
         predictions = clf.predict_proba(test, num_iteration=best_iteration)[:, 1]
         score = roc_auc_score(test_labels['TARGET'], predictions)
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
         # Record the feature importances
         # feature_importance_values = model.feature_importances_
         #
@@ -641,13 +641,8 @@ class fork_cridata_start_here_a_gentle_introduction(Workload):
 
 
 if __name__ == "__main__":
-    ROOT = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization'
-    ROOT_PACKAGE = '/Users/bede01/Documents/work/phd-papers/ml-workload-optimization/code/collaborative-optimizer'
+    ROOT = '/Users/bede01/Documents/work/phd-papers/published/ml-workload-optimization'
     root_data = ROOT + '/data'
-    import sys
-
-    sys.path.append(ROOT_PACKAGE)
-
     executor = BaselineExecutor()
     execution_start = datetime.now()
     workload = fork_cridata_start_here_a_gentle_introduction()
