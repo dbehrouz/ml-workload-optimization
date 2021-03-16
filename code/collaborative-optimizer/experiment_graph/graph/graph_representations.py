@@ -27,7 +27,7 @@ class BaseGraph(object):
 
     def set_environment(self, env):
         for node in self.graph.nodes(data='data'):
-            print node
+            print(node)
             node[1].execution_environment = env
 
     def is_empty(self):
@@ -331,7 +331,7 @@ class WorkloadDag(BaseGraph):
                 if not cur_node['data'].computed:
                     # print the path while executing
                     if verbose == 1:
-                        print str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1])
+                        print(str(pair[0]) + '--' + edge['hash'] + '->' + str(pair[1]))
                     # TODO: Data Storage only stores the data for Dataset and Feature for now
                     # TODO: Later on maybe we want to consider storing models and aggregates on the data storage as well
                     if cur_node['type'] == 'Dataset' or cur_node['type'] == 'Feature':
@@ -449,18 +449,18 @@ class ExperimentGraph(BaseGraph):
             raise Exception('Node not present in the Experiment Graph')
         else:
             if not artifact.computed:
-                print 'warning: artifact {} is never computed in the workload dag'.format(node_id)
+                print('warning: artifact {} is never computed in the workload dag'.format(node_id))
                 return
             node = self.graph.nodes[node_id]
             if node['type'] == 'Dataset':
-                assert isinstance(artifact, Dataset)
+                # assert isinstance(artifact, Dataset)
                 # or node['type'] == 'Feature':
                 self.data_storage.put(node_id, artifact.underlying_data)
                 # artifact.underlying_data.pandas_df = None
                 node['data'] = copy.copy(artifact)
 
             elif node['type'] == 'Feature':
-                assert isinstance(artifact, Feature)
+                # assert isinstance(artifact, Feature)
                 self.data_storage.put(node_id, artifact.underlying_data)
                 # artifact.underlying_data.pandas_series = None
                 node['data'] = copy.copy(artifact)

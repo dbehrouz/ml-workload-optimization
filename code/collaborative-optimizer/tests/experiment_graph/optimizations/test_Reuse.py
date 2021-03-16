@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-from Reuse import HelixReuse
-from execution_environment import ExecutionEnvironment
 from executor import HelixExecutor
 from workload import Workload
 

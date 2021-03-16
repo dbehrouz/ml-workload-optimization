@@ -112,7 +112,7 @@ class DedupedStorageManager(StorageManager):
 
             self.update_size(key, artifact)
         else:
-            print 'warning: key exists, abort put!!!'
+            print('warning: key exists, abort put!!!')
 
     def get(self, key):
         column_hashes = self.key_value[key]
@@ -199,7 +199,7 @@ class SimpleStorageManager(StorageManager):
             self.key_value[key] = data
             self.key_value_size[key] = artifact.get_size()
         else:
-            print 'warning: key exists, abort put!!!'
+            print('warning: key exists, abort put!!!')
 
     def delete(self, key):
         del self.key_value[key]

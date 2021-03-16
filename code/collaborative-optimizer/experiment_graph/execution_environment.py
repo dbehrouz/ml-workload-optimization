@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle
 import copy
 
 import os
@@ -148,7 +148,7 @@ class ExecutionEnvironment(object):
             self.workload_dag.add_node(root_hash, **root)
             return root['data']
         else:
-            print 'creating a new root node'
+            print('creating a new root node')
             start = datetime.now()
             initial_data = pd.read_csv(loc, dtype=dtype, nrows=nrows)
             end = datetime.now()

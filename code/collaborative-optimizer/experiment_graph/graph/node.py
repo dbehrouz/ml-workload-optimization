@@ -92,7 +92,7 @@ class Node(object):
     def vertex_hash(prev, edge_hash):
         # TODO what are the chances that this cause a collision?
         # we should implement a collision strategy as well
-        return hashlib.md5(prev + edge_hash).hexdigest().upper()
+        return hashlib.md5((prev + edge_hash).encode('utf-8')).hexdigest().upper()
 
     @staticmethod
     def generate_uuid():
@@ -100,7 +100,7 @@ class Node(object):
 
     @staticmethod
     def md5(val):
-        return hashlib.md5(val).hexdigest()
+        return hashlib.md5(val.encode('utf-8')).hexdigest()
 
     @staticmethod
     def get_not_none(nextnode, exist):
@@ -1314,7 +1314,7 @@ class SK_Model(Node):
                 # pympler returns the wrong size by a large margin for random forest
                 # default random forest size is in the order 100s MBs where pympler returns
                 # KBs
-                import cPickle as pickle
+                import pickle
                 import os
                 with open(self.id, 'wb') as output:
                     pickle.dump(self.underlying_data, output, protocol=pickle.HIGHEST_PROTOCOL)
