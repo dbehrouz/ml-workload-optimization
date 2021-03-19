@@ -914,10 +914,16 @@ class Feature(Node):
         return self.hash_and_return_dataseries('__truediv__{}'.format(other), self.get_materialized_data() / other)
 
     def __rtruediv__(self, other):
-        return self.math('__rdiv__', other)
+        return self.math('__rtruediv__', other)
 
     def p___rtruediv__(self, other):
-        return self.hash_and_return_dataseries('__rdiv__{}'.format(other), other / self.get_materialized_data())
+        return self.hash_and_return_dataseries('__rtruediv__{}'.format(other), other / self.get_materialized_data())
+
+    def __itruediv__(self, other):
+        return self.math('__itruediv__', other)
+
+    def p___itruediv__(self, other):
+        return self.hash_and_return_dataseries('__itruediv__{}'.format(other), other / self.get_materialized_data())
 
     def __add__(self, other):
         return self.math('__add__', other)
