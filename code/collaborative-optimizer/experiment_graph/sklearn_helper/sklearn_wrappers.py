@@ -57,3 +57,15 @@ class LGBMClassifier(PredictiveModel):
 
     def best_iteration(self):
         return self.trained_node.data().best_iteration_
+
+
+class MixtureModel:
+    def __init__(self, underlying_sk_model):
+        self.underlying_sk_model = underlying_sk_model
+        self.trained_node = None
+
+    def fit(self, train):
+        self.trained_node = train.fit_sk_model(self.underlying_sk_model)
+
+    def predict(self, test):
+        return self.trained_node.predict(test)

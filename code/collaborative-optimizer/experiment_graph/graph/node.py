@@ -1382,6 +1382,10 @@ class SK_Model(Node):
         supernode = self.generate_super_node([self, test], {'c_oper': 'predict_proba'})
         return self.generate_dataset_node('predict_proba', args={'custom_args': custom_args}, v_id=supernode.id)
 
+    def predict(self, test, custom_args=None):
+        supernode = self.generate_super_node([self, test], {'c_oper': 'predict'})
+        return self.generate_dataset_node('predict', args={'custom_args': custom_args}, v_id=supernode.id)
+
     def score(self, test, true_labels, score_type='accuracy', custom_args=None):
         supernode = self.generate_super_node([self, test, true_labels], {'c_oper': 'score'})
         return self.generate_evaluation_node('score', args={'score_type': score_type, 'custom_args': custom_args},
@@ -1455,6 +1459,28 @@ class SuperNode(Node):
             c_hash = [self.md5(self.generate_uuid()) for c in c_name]
         else:
             c_name = [i for i in range(df.shape[1])]
+            c_hash = [self.md5(self.generate_uuid()) for c in c_name]
+
+        # self.execution_environment.data_storage.store_dataset(c_hash, d)
+        return DataFrame(column_names=c_name,
+                         column_hashes=c_hash,
+                         pandas_df=pd.DataFrame(df, columns=c_name))
+
+    def p_predict(self, custom_args):
+        if custom_args is None:
+            df = self.nodes[0].get_materialized_data().predict(self.nodes[1].get_materialized_data())
+        else:
+            df = self.nodes[0].get_materialized_data().predict(self.nodes[1].get_materialized_data(),
+                                                               **custom_args)
+        if hasattr(df, 'columns'):
+            c_name = list(df.columns)
+            c_hash = [self.md5(self.generate_uuid()) for c in c_name]
+        else:
+            if len(df.shape) > 1:
+                column_counts = df.shape[1]
+            else:
+                column_counts = 1
+            c_name = [i for i in range(column_counts)]
             c_hash = [self.md5(self.generate_uuid()) for c in c_name]
 
         # self.execution_environment.data_storage.store_dataset(c_hash, d)

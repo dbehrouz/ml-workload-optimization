@@ -1,6 +1,6 @@
 from sklearn import linear_model
 
-from sklearn_wrappers import PredictiveModel
+from experiment_graph.sklearn_helper.sklearn_wrappers import PredictiveModel
 
 
 class LogisticRegression(PredictiveModel):

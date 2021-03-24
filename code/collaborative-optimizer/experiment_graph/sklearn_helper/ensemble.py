@@ -1,6 +1,6 @@
 from sklearn import ensemble
 
-from sklearn_wrappers import PredictiveModel
+from experiment_graph.sklearn_helper.sklearn_wrappers import PredictiveModel
 
 
 class RandomForestClassifier(PredictiveModel):
