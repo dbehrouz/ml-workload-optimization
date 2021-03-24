@@ -731,12 +731,12 @@ class Dataset(Node):
         return [df, new_key_columns, new_key_hashes, new_group_columns, new_group_hashes]
 
     # combined node
-    def concat(self, nodes):
+    def concat(self, nodes, axis=1):
         if type(nodes) == list:
-            supernode = self.generate_super_node([self] + nodes, {'c_oper': 'concat'})
+            supernode = self.generate_super_node(nodes=[self] + nodes, args={'c_oper': 'concat', 'axis': axis})
         else:
-            supernode = self.generate_super_node([self] + [nodes], {'c_oper': 'concat'})
-        return self.generate_dataset_node('concat', v_id=supernode.id)
+            supernode = self.generate_super_node(nodes=[self] + [nodes], args={'c_oper': 'concat', 'axis': axis})
+        return self.generate_dataset_node('concat', v_id=supernode.id, args={'axis': axis})
 
     # removes the columns that do not exist in the other dataframe
     def align(self, other):
@@ -833,9 +833,6 @@ class Evaluation(Node):
 class Feature(Node):
     """ Feature class representing one (and only one) column of a data.
     This class is analogous to pandas.core.series.Series
-
-    Todo:
-        * Support for Python 3.x
 
     """
 
@@ -988,16 +985,22 @@ class Feature(Node):
         return self.hash_and_return_dataseries('__ne__{}'.format(other), self.get_materialized_data() != other)
 
     def __gt__(self, other):
-        return self.math('__qt__', other)
+        return self.math('__gt__', other)
 
     def p___gt__(self, other):
         return self.hash_and_return_dataseries('__gt__{}'.format(other), self.get_materialized_data() > other)
 
     def __ge__(self, other):
-        return self.math('__qe__', other)
+        return self.math('__ge__', other)
 
     def p___ge__(self, other):
         return self.hash_and_return_dataseries('__ge__{}'.format(other), self.get_materialized_data() >= other)
+
+    def __and__(self, other):
+        return self.math('__and__', other)
+
+    def p___and__(self, other):
+        return self.hash_and_return_dataseries('__and__{}'.format(other), self.get_materialized_data() & other)
 
     # End of overridden methods
 
@@ -1544,10 +1547,21 @@ class SuperNode(Node):
     def p_corr_with(self):
         return self.nodes[0].get_materialized_data().corr(self.nodes[1].get_materialized_data())
 
-    def p_concat(self):
+    def p_concat(self, axis):
         c_name = []
         c_hash = []
-        for d in self.nodes:
+        if axis == 1:
+            for d in self.nodes:
+                if isinstance(d, Feature):
+                    c_name = c_name + [d.get_column()]
+                    c_hash = c_hash + [d.get_column_hash()]
+                elif isinstance(d, Dataset):
+                    c_name = c_name + d.get_column()
+                    c_hash = c_hash + d.get_column_hash()
+                else:
+                    raise 'Cannot concatane object of type: {}'.format(type(d))
+        elif axis == 0:
+            d = self.nodes[0]
             if isinstance(d, Feature):
                 c_name = c_name + [d.get_column()]
                 c_hash = c_hash + [d.get_column_hash()]
@@ -1556,7 +1570,8 @@ class SuperNode(Node):
                 c_hash = c_hash + d.get_column_hash()
             else:
                 raise 'Cannot concatane object of type: {}'.format(type(d))
-        data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=1)
+
+        data = pd.concat([self.nodes[0].get_materialized_data(), self.nodes[1].get_materialized_data()], axis=axis)
         # self.execution_environment.data_storage.store_dataset(c_hash, data)
         return DataFrame(column_names=c_name,
                          column_hashes=c_hash,
@@ -1705,16 +1720,22 @@ class SuperNode(Node):
         return self.hash_and_return_dataseries('__ne__', self.nodes[0].get_materialized_data() != self.nodes[
             1].get_materialized_data(), c_name, c_hash)
 
-    def p___qt__(self):
-        c_name = '__qt__'
+    def p___gt__(self):
+        c_name = '__gt__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_return_dataseries('__qt__',
+        return self.hash_and_return_dataseries('__gt__',
                                                self.nodes[0].get_materialized_data() > self.nodes[
                                                    1].get_materialized_data(),
                                                c_name, c_hash)
 
-    def p___qe__(self):
-        c_name = '__qe__'
+    def p___ge__(self):
+        c_name = '__ge__'
         c_hash = self.md5(self.generate_uuid())
-        return self.hash_and_return_dataseries('__qe__', self.nodes[0].get_materialized_data() >= self.nodes[
+        return self.hash_and_return_dataseries('__ge__', self.nodes[0].get_materialized_data() >= self.nodes[
+            1].get_materialized_data(), c_name, c_hash)
+
+    def p___and__(self):
+        c_name = '__and__'
+        c_hash = self.md5(self.generate_uuid())
+        return self.hash_and_return_dataseries('__and__', self.nodes[0].get_materialized_data() & self.nodes[
             1].get_materialized_data(), c_name, c_hash)
