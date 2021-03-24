@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-from experiment_graph.graph.auxilary import DataFrame, DataSeries
 # from experiment_graph.execution_environment import ExecutionEnvironment
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
+from experiment_graph.graph.auxilary import DataFrame, DataSeries
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -437,6 +437,12 @@ class Dataset(Node):
         return self.hash_and_return_dataframe('sample{}{}'.format(n, random_state),
                                               self.get_materialized_data().sample(n=n, random_state=random_state))
 
+    def ffill(self):
+        return self.generate_dataset_node('ffill')
+
+    def p_ffill(self):
+        return self.hash_and_return_dataframe('ffill', self.get_materialized_data().ffill())
+
     def project(self, columns):
         if type(columns) in [str, int]:
             return self.generate_feature_node('project', {'columns': columns})
@@ -481,6 +487,14 @@ class Dataset(Node):
 
         else:
             raise Exception('Unsupported operation. Only project (column index) is supported')
+
+    # TODO uncomment this after adding support for indices
+    # def set_index(self, keys):
+    #     return self.generate_dataset_node('set_index', {'keys': keys})
+    #
+    # def p_set_index(self, keys):
+    #     return self.hash_and_return_dataframe('set_index{}'.format(keys),
+    #                                           self.get_materialized_data().set_index(keys=keys))
 
     def reset_index(self):
         return self.generate_dataset_node('reset_index')

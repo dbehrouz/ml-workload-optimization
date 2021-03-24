@@ -1,6 +1,6 @@
 from sklearn import preprocessing
 
-from sklearn_wrappers import SimpleModel
+from experiment_graph.sklearn_helper.sklearn_wrappers import SimpleModel
 
 
 class Imputer(SimpleModel):

@@ -1,9 +1,7 @@
-import pickle
-import copy
-
 import os
+import pickle
 
-from data_storage import SimpleStorageManager
+from experiment_graph.data_storage import SimpleStorageManager
 from experiment_graph.graph.graph_representations import WorkloadDag, ExperimentGraph
 # Reserved word for representing super graph.
 # Do not use combine as an operation name
@@ -128,12 +126,16 @@ class ExecutionEnvironment(object):
         else:
             return self.experiment_graph.get_artifact_sizes()
 
-    def load(self, loc, dtype=None, nrows=None):
+    def load(self, loc, dtype=None, nrows=None, parse_dates=False, date_parser=None):
         extra_params = dict()
         if dtype is not None:
             extra_params['dtype'] = dtype
         if nrows is not None:
             extra_params['nrows'] = nrows
+        if not parse_dates:
+            extra_params['parse_dates'] = parse_dates
+        if date_parser is not None:
+            extra_params['date_parser'] = date_parser
 
         root_hash = self.construct_readable_root_hash(loc, extra_params)
         if self.workload_dag.has_node(root_hash):
@@ -150,7 +152,7 @@ class ExecutionEnvironment(object):
         else:
             print('creating a new root node')
             start = datetime.now()
-            initial_data = pd.read_csv(loc, dtype=dtype, nrows=nrows)
+            initial_data = pd.read_csv(loc, dtype=dtype, nrows=nrows, parse_dates=parse_dates, date_parser=date_parser)
             end = datetime.now()
             self.update_time(BenchmarkMetrics.LOAD_DATASET, (end - start).total_seconds())
             c_name = []

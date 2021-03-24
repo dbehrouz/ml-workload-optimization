@@ -6,7 +6,7 @@ optimizes the workload execution graph and returns the scheduled execution path
 from abc import abstractmethod
 from datetime import datetime
 
-from Reuse import Reuse
+from experiment_graph.optimizations.Reuse import Reuse
 from experiment_graph.graph.graph_representations import ExperimentGraph
 from experiment_graph.graph.graph_representations import WorkloadDag
 
