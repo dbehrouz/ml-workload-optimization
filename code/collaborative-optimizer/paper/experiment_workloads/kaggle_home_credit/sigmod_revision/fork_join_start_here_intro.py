@@ -375,7 +375,7 @@ def workload_8(execution_environment, root_data, verbose=0):
                             test_labels['TARGET'],
                             score_type='auc',
                             custom_args={'num_iteration': best_iteration}).data(verbose)
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
     def count_categorical(df, group_var, df_name):
         """Computes counts and normalized counts for each observation

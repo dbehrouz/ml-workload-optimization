@@ -551,7 +551,7 @@ def workload_2(execution_environment, root_data, verbose=0):
                             score_type='auc',
                             custom_args={'num_iteration': best_iteration}).data()
 
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
         # test_predictions = test_predictions.setname('TARGET')
         # # Make the submission dataframe

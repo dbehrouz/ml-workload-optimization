@@ -384,7 +384,7 @@ def workload_6(execution_environment, root_data, verbose=0):
                             score_type='auc',
                             custom_args={'num_iteration': best_iteration}).data()
 
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
     train_control = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
     test_control = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')

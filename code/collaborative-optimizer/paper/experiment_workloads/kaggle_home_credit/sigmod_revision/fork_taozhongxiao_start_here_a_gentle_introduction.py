@@ -79,7 +79,7 @@ def workload_5(execution_environment, root_data, verbose=0):
                         test_labels['TARGET'],
                         score_type='auc').data(verbose=verbose)
 
-    print 'LGBMClassifier with AUC score: {}'.format(score)
+    print('LGBMClassifier with AUC score: {}'.format(score))
 
     def objective(hyperparameters, iteration):
         if 'n_estimators' in hyperparameters.keys():
@@ -141,8 +141,8 @@ def workload_5(execution_environment, root_data, verbose=0):
         return results
 
     grid_results = grid_search(param_grid)
-    print 'The best validation score was {}'.format(grid_results.loc[0, 'score'])
-    print '\nThe best hyperparameters were:'
+    print('The best validation score was {}'.format(grid_results.loc[0, 'score']))
+    print('\nThe best hyperparameters were:')
     import pprint
     pprint.pprint(grid_results.loc[0, 'params'])
 
@@ -155,7 +155,7 @@ def workload_5(execution_environment, root_data, verbose=0):
                         test_labels['TARGET'],
                         score_type='auc').data(verbose=verbose)
 
-    print 'The best model from grid search scores {} ROC AUC on the test set.'.format(score)
+    print('The best model from grid search scores {} ROC AUC on the test set.'.format(score))
 
     random.seed(50)
 
@@ -210,7 +210,7 @@ def workload_5(execution_environment, root_data, verbose=0):
                         test_labels['TARGET'],
                         score_type='auc').data(verbose=verbose)
 
-    print 'The best model from random search scores {} ROC AUC on the test set.'.format(score)
+    print('The best model from random search scores {} ROC AUC on the test set.'.format(score))
 
     train = execution_environment.load(root_data + '/kaggle_home_credit/application_train.csv')
     test = execution_environment.load(root_data + '/kaggle_home_credit/application_test.csv')
@@ -273,7 +273,7 @@ def workload_5(execution_environment, root_data, verbose=0):
     print('Training data shape: ', app_test.shape().data(verbose=verbose))
     app_test.head().data(verbose=verbose)
 
-    print app_train['TARGET'].value_counts()
+    print(app_train['TARGET'].value_counts())
 
     plt.figure(figsize=(10, 5))
     sns.set(style="whitegrid", font_scale=1)

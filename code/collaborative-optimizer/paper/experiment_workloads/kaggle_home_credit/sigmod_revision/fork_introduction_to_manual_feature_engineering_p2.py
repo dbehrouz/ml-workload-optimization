@@ -224,7 +224,7 @@ def workload_7(execution_environment, root_data, verbose=0):
     cash_by_client = aggregate_client(cash, group_vars=['SK_ID_PREV', 'SK_ID_CURR'], df_names=['cash', 'client'])
     cash_by_client.head()
 
-    print 'Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose))
+    print('Cash by Client Shape: {}'.format(cash_by_client.shape().data(verbose=verbose)))
     train = train.merge(cash_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(cash_by_client, on='SK_ID_CURR', how='left')
 
@@ -237,7 +237,7 @@ def workload_7(execution_environment, root_data, verbose=0):
                                         df_names=['credit', 'client'])
     credit_by_client.head()
 
-    print 'Credit by client shape: {}'.format(credit_by_client.shape().data(verbose=verbose))
+    print('Credit by client shape: {}'.format(credit_by_client.shape().data(verbose=verbose)))
 
     train = train.merge(credit_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(credit_by_client, on='SK_ID_CURR', how='left')
@@ -251,15 +251,15 @@ def workload_7(execution_environment, root_data, verbose=0):
                                               df_names=['installments', 'client'])
     installments_by_client.head()
 
-    print 'Installments by client shape: {}'.format(installments_by_client.shape().data(verbose=verbose))
+    print('Installments by client shape: {}'.format(installments_by_client.shape().data(verbose=verbose)))
 
     train = train.merge(installments_by_client, on='SK_ID_CURR', how='left')
     test = test.merge(installments_by_client, on='SK_ID_CURR', how='left')
 
     train, test = remove_missing_columns(train, test)
 
-    print 'Final Training Shape: {}'.format(train.shape().data(verbose=verbose))
-    print 'Final Testing Shape: {}'.format(test.shape().data(verbose=verbose))
+    print('Final Training Shape: {}'.format(train.shape().data(verbose=verbose)))
+    print('Final Testing Shape: {}'.format(test.shape().data(verbose=verbose)))
 
     from experiment_graph.sklearn_helper.sklearn_wrappers import LGBMClassifier
 
@@ -343,7 +343,7 @@ def workload_7(execution_environment, root_data, verbose=0):
                             test_labels['TARGET'],
                             score_type='auc',
                             custom_args={'num_iteration': best_iteration}).data(verbose=verbose)
-        print 'LGBMClassifier with AUC score: {}'.format(score)
+        print('LGBMClassifier with AUC score: {}'.format(score))
 
     model(train, test)
     # LGBMClassifier with AUC score: {'auc': 0.77630698005361221}

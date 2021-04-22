@@ -440,7 +440,7 @@ def workload_4(execution_environment, root_data, verbose=0):
                           test_labels['TARGET'],
                           score_type='auc').data(verbose)
 
-    print 'Logistic Regression with AUC score: {}'.format(score)
+    print('Logistic Regression with AUC score: {}'.format(score))
 
     from experiment_graph.sklearn_helper.ensemble import RandomForestClassifier
 
@@ -458,7 +458,7 @@ def workload_4(execution_environment, root_data, verbose=0):
                                 test_labels['TARGET'],
                                 score_type='auc').data(verbose)
 
-    print 'Random Forest Simple Data with AUC score: {}'.format(score)
+    print('Random Forest Simple Data with AUC score: {}'.format(score))
 
     poly_features_names = list(app_train_poly.data(verbose).columns)
 
@@ -482,7 +482,7 @@ def workload_4(execution_environment, root_data, verbose=0):
     score = random_forest_poly.score(app_test_poly,
                                      test_labels['TARGET'],
                                      score_type='auc').data(verbose)
-    print 'Random Forest Poly Data with AUC score: {}'.format(score)
+    print('Random Forest Poly Data with AUC score: {}'.format(score))
 
     # CHANGE
     # app_train_domain = app_train_domain.drop(columns='TARGET')
@@ -561,4 +561,4 @@ def workload_4(execution_environment, root_data, verbose=0):
                       score_type='auc',
                       custom_args={'num_iteration': best_iteration}).data(verbose)
 
-    print 'LGBMClassifier with AUC score: {}'.format(score)
+    print('LGBMClassifier with AUC score: {}'.format(score))
