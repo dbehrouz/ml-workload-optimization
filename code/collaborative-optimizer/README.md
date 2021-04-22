@@ -62,7 +62,7 @@ score = trained_random_forest.score(test_data, test_labels)
 print(score.data())
 ``` 
 
-Check [node.py](experiment_graph/graph/node.py) for a full list of available methods for the following entities:
+Check [node.py](experiment_graph/graph/node.py) for a full list of available methods for the following objects:
 ```
 Dataset: equivalent to the pandas DataFrame, execution_environment.load returns a Dataset
 Feature: equivalent to the pandas DataSeries
@@ -70,6 +70,10 @@ SK_Model: wrapper for models. the resut of Dataset.fit_sk_model_with_labels or D
 Agg: result of aggregate operations such as sum, nunique, min, and max on Dataset and Feature
 SuperNode: Special nodes for representing multi-input operators such as merge and concat    
 ```
+All the methods that do not start with "p_" are logical, i.e., they do not perform an operation rather they just update
+the computation graph.
+When .data() is called on an object (e.g., Dataset.data() for Feature.data()), the computation begin. Every logical operations
+has a matching physical operation has the same name and the prefix "p_".
 
 
 
