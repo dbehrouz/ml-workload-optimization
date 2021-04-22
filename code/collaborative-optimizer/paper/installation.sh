@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # install packages
-pip2 install -U pandas --user
-pip2 install -U "scikit-learn==0.20.2" --user
-pip2 install -U networkx --user
-pip2 install -U kaggle --user
-pip2 install -U matplotlib --user
-pip2 install -U seaborn --user
-pip2 install -U pympler --user
-pip2.7 install -U lightgbm --user
-pip2 install -U 'openml==0.8.0' --user
+pip install -U pandas --user
+pip install -U scikit-learn --user
+pip install -U networkx --user
+pip install -U kaggle --user
+pip install -U matplotlib --user
+pip install -U seaborn --user
+pip install -U pympler --user
+pip install -U lightgbm --user
+pip install -U 'openml==0.8.0' --user
 # copy scripts
 rsync -rav -e ssh --include='*.py' ./code/ behrouz@cloud-41.dima.tu-berlin.de:/home/behrouz/collaborative-optimization/code/
 
