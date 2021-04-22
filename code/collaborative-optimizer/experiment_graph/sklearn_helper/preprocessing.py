@@ -1,11 +1,12 @@
 from sklearn import preprocessing
+from sklearn.impute import SimpleImputer
 
 from experiment_graph.sklearn_helper.sklearn_wrappers import SimpleModel
 
 
 class Imputer(SimpleModel):
     def __init__(self, **args):
-        SimpleModel.__init__(self, preprocessing.Imputer(**args))
+        SimpleModel.__init__(self, SimpleImputer(**args))
 
 
 class PolynomialFeatures(SimpleModel):

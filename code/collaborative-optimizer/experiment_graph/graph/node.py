@@ -1672,16 +1672,16 @@ class SuperNode(Node):
 
     # TODO: There may be a better way of hashing these so if the columns are copied and same operations are applied
     # we save storage space
-    def p___div__(self):
-        c_name = '__div__'
+    def p___truediv__(self):
+        c_name = '__truediv__'
         c_hash = self.md5(self.generate_uuid())
         return self.hash_and_return_dataseries('__div__',
                                                self.nodes[0].get_materialized_data() / self.nodes[
                                                    1].get_materialized_data(),
                                                c_name, c_hash)
 
-    def p___rdiv__(self):
-        c_name = '__rdiv__'
+    def p___rtruediv__(self):
+        c_name = '__rtruediv__'
         c_hash = self.md5(self.generate_uuid())
         return self.hash_and_return_dataseries('__rdiv__',
                                                self.nodes[1].get_materialized_data() / self.nodes[
