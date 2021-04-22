@@ -72,7 +72,7 @@ SuperNode: Special nodes for representing multi-input operators such as merge an
 ```
 All the methods that do not start with "p_" are logical, i.e., they do not perform an operation rather they just update
 the computation graph.
-When .data() is called on an object (e.g., Dataset.data() for Feature.data()), the computation begin. Every logical operations
+When .data() is called on an object (e.g., Dataset.data() for Feature.data()), the computation begins. Every logical operations
 has a matching physical operation has the same name and the prefix "p_".
 
 
