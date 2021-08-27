@@ -12,6 +12,7 @@ from sklearn.metrics import roc_auc_score
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
 from experiment_graph.graph.auxilary import DataFrame, DataSeries
+from experiment_graph.graph.operations import UserDefinedFunction
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -256,24 +257,35 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_operation(self, operation):
+    def run_udf(self, operation: UserDefinedFunction):
         """
 
-        :type operation: Operation
+        :type operation: UserDefinedFunction
         """
         return_type = operation.return_type
-        if return_type == 'Dataset':
-            self.generate_dataset_node(operation.name, operation.params)
-        elif return_type == 'Feature':
-            self.generate_feature_node(operation.name, operation.params)
-        elif return_type == 'Agg':
-            self.generate_agg_node(operation.name, operation.params)
+        if return_type == Dataset.__name__:
+            return self.generate_dataset_node('udf', args={'operation': operation})
+        elif return_type == Feature.__name__:
+            return self.generate_feature_node('udf', args={'operation': operation})
+        elif return_type == Agg.__name__:
+            return self.generate_agg_node('udf', args={'operation': operation})
+        elif return_type == SK_Model.__name__:
+            return self.generate_sklearn_node('udf', args={'operation': operation})
         else:
-            raise Exception('Invalid return type: {}'.format(return_type))
+            raise TypeError('Invalid return type: {}'.format(return_type))
 
-    def p_run_operation(self, operation):
-        data = self.get_materialized_data()
-        return operation.run(data)
+    def p_udf(self, operation: UserDefinedFunction):
+        result = operation.run(self.get_materialized_data())
+        return_type = operation.return_type
+        if return_type == Dataset.__name__:
+            new_hashes = [(self.md5(v + str(operation))) for v in result.columns]
+            return self.hash_and_return_dataframe(str(operation), result, column_names=result.columns,
+                                                  column_hashes=new_hashes)
+        elif return_type == Feature.__name__:
+            new_c_hash = self.md5(result.name + str(operation))
+            return self.hash_and_return_dataseries(str(operation), result, c_name=result.name, c_hash=new_c_hash)
+        else:
+            return operation.run(self.get_materialized_data())
 
     def store_dataframe(self, columns, df):
         self.execution_environment.data_storage.store_dataframe(columns, df)
