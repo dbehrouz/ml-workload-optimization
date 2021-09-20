@@ -8,3 +8,6 @@ class UserDefinedFunction(ABC):
     @abstractmethod
     def run(self, underlying_data):
         pass
+
+    def __repr__(self):
+        return self.__class__.__module__ + '.' + self.__class__.__qualname__ + str(self.__dict__)
