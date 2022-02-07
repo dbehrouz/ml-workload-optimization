@@ -30,9 +30,12 @@ execution_environment = ExecutionEnvironment()
 data = execution_environment.load('path-to-data/data.csv')
 ```
 
+### User Defined Functions
+
+
 There is support for several sklearn operators and models which can be found [here](experiment_graph/sklearn_helper)
 
-You can find a simple end-to-end example notebook [here](examples/).
+You can find more examples [here](examples/).
 
 There are several other scripts [here](paper/experiment_workloads/kaggle_home_credit/optimized) as well.
 

@@ -1,12 +1,13 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 
-class Operation(object):
-    def __init__(self, name, return_type, params):
-        self.name = name
+class UserDefinedFunction(ABC):
+    def __init__(self, return_type):
         self.return_type = return_type
-        self.params = params
 
     @abstractmethod
-    def run(self, node):
+    def run(self, underlying_data):
         pass
+
+    def __repr__(self):
+        return self.__class__.__module__ + '.' + self.__class__.__qualname__ + str(self.__dict__)
