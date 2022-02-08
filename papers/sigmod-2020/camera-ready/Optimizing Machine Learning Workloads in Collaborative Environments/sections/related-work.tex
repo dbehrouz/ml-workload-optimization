@@ -1,0 +1,39 @@
+\section{Related Work} \label{sec-related-work}
+Our system lies at the intersection of 3 categories of existing work.
+The first category consists of data science platforms that enable collaboration between users.
+The second category is data management and provenance systems that capture the relationship between data artifacts.
+The last category contains ML and database systems that optimize workloads through materialization and reuse.
+
+\textbf{Collaborative Data Science Platforms.}
+Cloud-based systems, such AzureML \cite{team2016azureml}, Google's AI platform \cite{googleai}, Kaggle \cite{kagglewebsite}, and Google Colaboratory \cite{googlecolab} provide the necessary tools for users to write ML workloads in Jupyter notebooks.
+Furthermore, users can publish and share their notebooks with others, which could result in higher quality workloads.
+However, none of these systems manage the generated ML artifacts and do not utilize them to optimize the execution of the workloads.
+Our system manages the ML artifacts and offers reuse and warmstarting methods to decrease the execution time of the future workloads.
+
+OpenML \cite{vanschoren2014openml}, ModelDB \cite{vartak2016m}, and MLflow \cite{zaharia2018accelerating} are platforms that store ML artifacts, such as models and intermediate datasets, in a database \cite{schelter2017automatically, Vanschoren2012}.
+These platforms provide APIs for users to query the details of the ML artifacts.
+Contrary to our systems, none of these platforms offer automatic materialization and reuse of the ML artifacts.
+
+\textbf{Data Management and Provenance.}
+DataHub \cite{bhardwaj2014datahub, bhattacherjee2015principles}, Context \cite{garcia2018context}, Ground \cite{hellerstein2017ground}, ProvDB \cite{miao2018provdb}, Aurum \cite{fernandez2018aurum}, and JuNEAU \cite{ives2019dataset} are data management and provenance systems that efficiently store fine-grained lineage information about the data artifacts and operations.
+% Furthermore, some of these systems provide primitives for querying lineage and discovering datasets.
+We design our Experiment Graph by utilizing the approaches discussed in these systems.
+Specifically, we follow DataHub's graph representation.
+However, contrary to these systems, we utilize the stored information to optimize the execution of the workloads.
+Our materialization algorithm extends the materialization approach of Bhattacherjee et al. \cite{bhattacherjee2015principles} to tailor it to ML workloads by considering the quality of the model artifacts.
+
+\textbf{Materialization and Reuse in ML and Databases.}
+View selection is a long-studied problem in databases, which concerns itself with finding an appropriate set of views to materialize to speed up the execution of queries \cite{mami2012survey}.
+Several ML systems utilize such techniques to optimize the execution of workloads. 
+Helix \cite{xin2018h, xin2018helix}, DeepDive \cite{zhang2015deepdive}, Columbus \cite{zhang2016materialization}, KeystoneML \cite{sparks2017keystoneml}, and Mistique \cite{vartak2018mistique} are ML systems which optimize workloads by materializing intermediate data for reuse.
+These systems have three fundamental differences with our system.
+First, the workload DAGs are typically small as these systems work with small ML pipelines.
+Therefore, these systems do not need to tackle the problem of searching for reuse opportunities in a large graph.
+Helix is the only system that offers a polynomial-time reuse algorithm, which has a higher overhead when compared to our linear-time reuse algorithm.
+Second, the materialization decisions in these systems only utilize run-time and size and do not take into account the model quality.
+Third, our system operates in a collaborative and multi-tenant environment.
+Whereas, the scope of optimization in these systems, except for Mistique, is limited to a single session.
+However, Mistique is a model diagnosis tool, which enables users to query intermediate artifacts from an artifact store efficiently.
+Whereas, we focus on generating optimal execution plans for future workloads by reusing the artifacts in EG.
+Nectar \cite{gunda2010nectar} and ReStore \cite{elghandour2012restore} offer materialization and reuse of intermediate data generated in DryadLINQ \cite{fetterly2009dryadlinq} and MapReduce jobs.
+However, Both of these systems only support simple data processing pipelines and do not offer any optimizations for ML workloads.

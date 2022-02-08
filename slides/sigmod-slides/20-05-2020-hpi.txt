@@ -1,0 +1,43 @@
+1. Hi Everyone and welcome to this talk. My name is Behrouz and I'm going introduce our recent work on Optimizing Machine Learning Workloads in Collaborative Environments. (15 seconds)
+
+2. Data science and Machine learning are interdiciplinary fields requiring experties in many different areas such as math and statistics, computer science, and domain knowledge. On top of that, there are 10s if not 100s of tools and softwares to enable rich and efficient data processing and model training. Becoming an expert in all of these is difficult if not impossible. Therefore, in order to develop high quality data science and machine learning applications, we need effective collaboration between users. (40 seconds = 55)
+
+3. To that end, there have been several breakthroughs in recent years. For example, Jupyter notebooks enable sharing of code and results in an intuitive manner. Containerized environments enable execution and deployment of the notebooks on the cloud. and Several platforms such as Google colab and kaggle build infrastracture around these tools to enable better collaboration. (30 seconds = 1:25)
+
+4. However, there is a problem with the existing collaborative environment and that is the lack of management around the generated data artifacts. These scritps and notebooks contain hundreds of intermediate data artifacts. If a user is interested in one intermediate artifact of a notebook, they typically have to re-execute the notebook in order to recreate the artifact. 
+We analyzed a kaggle competition and looked into the top three notebooks. These notebooks generate more than a 100 GB of data and were copied 10000 times. Therefore, this lack data management leads to 1000s of hours of redundant data processing and model training (60 seconds: 2:25)
+
+5. To address this issue, we developed a collaborative ML optimizer that can integrate into the existing platforms. On the client side, which can be inside the containers, we parse the workload scripts into DAGs. And on the server side, we optimize the workload through materialization and reuse of the intermediate data. Specificially, are contributions are: The experiment graph, which is a union of all the workload DAGs, a materializer component that decides what artifacts to store, and an optimizer that offers a reuse algorithm for generating the optimal execution DAG (60 seconds = 3:30)
+
+6. Before we discuss the materialization and reuse approaches, let's have a look at the DAG construction process. Here, on the left, we see a script and its DAG representation on the right where every vertex represents an artifacts and every edge represents an operation in the script. After we execute a DAG, we annotate it with some information such as the size of the artifacts, exeuction time of the edges, and the quality of the models. (30 seconds = 4:00)
+
+7. Now, as stated earlier the size of the artifacts are large, therefore, given a budget, we would like to select artifacts to materialize with the goal of minimizing the execution cost.  
+However, there are several challenges here: 1. future workloads are not know and even if they are known, the problem is shown to be NP-hard, and the solution must accomodate large graphs and fast number of incoming workloads which are typilca in collaborative environments. (45 seconds = 4:45)
+
+8. Our solution is a materialization algorithm that computes a utility value for every data artifact. The utility has inverse relationship with size to penalize larger artifacts, and has a direct relationship and encourages the materialization of run-time heavy, high-frequency, and high potential artifacts, which are the artifacts that can lead to high quality model. Once the utility of all the artifacts are computed, we start materializing the artifacts sorted by their utility until the storage budget is reached.(50 seconds = 5:35) 
+
+
+9. While implementing our materialization algorithm, we realized that the intermedaite data artifacts of ML workloads tend to have duplicated columns. For example, consider feature selection or generation operations where many of the existing data columns also appear in the resulting artifacts. Therefore, storing them wastes storage. We extend our original algorithm by iteratively dedplicating the materialized set until the storage budget is exhausted, we refer to this as the storage-aware materialization. In our experiment we show that this improves the storage utilization and run-time. (45 seconds = 6:20)
+
+10. Now, given the experiment graph, for a new workload, we need to find out what artifacts we should compute in the client and what artifacts we should load from the experiment graph. 
+Here, there are also several challenges. The search space is large and exhaustive search has exponential time complexity. And similar to the materialization problem, the solution must accomodate large graph and fast incoming workloads. Just to point out, state-of-the-art solution has polynomial time-complexity and in our experiment, we show that is not suitable for collabroative environments.(50 seconds = 7:10)
+
+11. Our solution is a linear time reuse algorithm, which computes the optimial execution plan with a forward and a backward pass on the workload DAG. Let's assume we have a new workload that has some of the artifacts of the DAG we showed earlier and some new aritfacts. The yellow artifacts are the ones that are already materialized in the experiment graph. 
+During the forward pass, we start traversing the graph from the root vertices and accumulate the run-times. For every vertex that we encounter, we compare its load cost and compute cost. If it has a smalelr load cost then we load it from the experiment graph, otherwise, we compute the vertex in the client. 
+In the backward pass, we traverse from the leaf nodes, and prune any unnecessary loaded vertices to further decrease the cost. For example, here, these 2 nodes can be pruned since two nodes can be pruned. 
+The actual algorithm is a bit more complex than this and I encourage you to read the paper for more information. (65 seconds = 8:15)
+
+12. We evaulated our system on a kaggle competition by extracting 5 real scripts and designing 3 of our own and we compared our system with Helix, which is a state-of-the-art iterative ML framework which optimizes ML workloads through materialization and reuse. We also show the result for a naive implementation with no optimization. (30 seconds = 8:45)
+
+13. Here, we see the repeated executions of the three workloads. In the first run, the experiment graph is empty and all three approaches have similar run times. However, in the second run, our approach and Helix they both materialize and reuse some artifacts and grealy improve the run time. 
+And here we see the run time of all the 8 workloads executed sequentially. Our approach outperforms both helix and naive. Since the materialization budget is small (only 16 GB), Our materialization algorithm selects better artifacts for storage and can outperform Helix which has a very simple materialization algorithm.
+This experiment shows that optimizing ml workloads can improve the run-time by an order of magnitude for repeated executions and 50% for different workloads. (60 seconds = 9:45)
+
+14. Here, we show the total run time of all the workloads under different materialization algorithms and budgets. Our approach, colab-mat, outperforms Helix by 20% and once we consider the storage aware algorithm it further reduces the run time. Even with a small budget of 8 GB, the storage aware manages to reach a run time similar to the case where all the artifacts are materialized, shown by the dashed red line.
+This experiment shows that exploting the artifact utility and duplicated columns can improve the run-time by 50%. (45 seconds = 10:30)
+
+15. To examine the overhead the reuse algorithm, we synthetically generated 10000 workloads which have similar DAGs to the Kaggle workloads. We see that after the execution of all the workloads, the overhead of our algorithm, which has linear-time complexity, is around 80 seconds. This is 40 times smaller than Helix, which has polynomial-time complexity.
+This shows that our linear time reuse algorithm is suitable for collaborative environments where 1000s of workloads are executed.
+(40 seconds = 11:10)
+
+16. With that, I'd like to end the talk with a quick summary of our work. We offer optimization of ML workloads in collaborative environment through Materialization and Reuse, which improves the run-time up to 10x. We store artifacts with high-likelihood of future reuse and deduplicate ML artifacts. And we offer a linear-time reuse algorithm that outperforms the state-of-the-art by a factor of 40. (35 seconds = 11:45) 

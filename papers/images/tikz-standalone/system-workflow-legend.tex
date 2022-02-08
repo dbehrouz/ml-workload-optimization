@@ -1,0 +1,19 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc, shapes, positioning,patterns}
+\usegdlibrary{trees}
+\begin{document}
+\begin{tikzpicture}
+%\draw[help lines]  (-2,0) grid (6,6);
+\tikzstyle{every node}=[inner sep=0.1cm]
+\node (source) [circle, draw, fill=black] at (0.01,0) {};
+\node[] at (0.8,0.) {Loaded};
+\node (previous) [circle, pattern=north west lines, pattern color=blue,draw]  at (2,0){};
+\node[] at (3,0.0) {Computed};
+\node (materialized) [circle, draw, pattern=crosshatch, pattern color = green] at (4.4,0) {};
+\node[] at (5.6, 0) {Materialized};
+\node(not_computed) [circle, draw]  at (7.0,0){};
+\node[] at (8, 0){Null} ;
+
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,45 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{graphdrawing, graphs, quotes, positioning,arrows, backgrounds, math, calc, shapes, positioning}
+\usegdlibrary{trees}
+\begin{document}
+\begin{tikzpicture}
+%\draw[help lines]  (-2,0) grid (6,6);
+\tikzstyle{every node}=[inner sep=0.02cm]
+\node (train) [ellipse, draw] at (3,8) { $train$};
+% layer 1
+\node (ad) [ellipse, draw]  at (0,7){$ad\_desc$};
+\node (forselection) [ellipse, draw] at (3.5,7.3) {$t\_subset$};
+\node (y) [ellipse, draw] at (6, 7){$y$};
+% layer 2
+\node (cv) [ellipse, draw] at (1.8,6.5) {$cnt\_vect$};
+\node(sk) [ellipse, draw]  at (4.2,6.5){ $top\_feats$};
+% layer 3
+%\node (merged1) [circle, draw] at (1.5, 3.5) {$v_6$};
+\node (cvsk) [ellipse, draw] at (3.5,5.9) {$X$};
+% layer 4
+%\node(merged2) [circle, draw] at (3, 2.8) {$v_8$};
+% layer 5
+\node(model) [ellipse, draw, fill=green!20] at (5, 5.7)  {$model$};
+
+\graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\normalsize}]{
+(train) [label=train]
+->  (ad)
+-> (cv)
+%-> [anchor=east,align=center,"m"](merged1) 
+->(cvsk) 
+%-> [anchor=south, align=center,"m"](merged2) ;
+-> (model);
+
+(train) 
+-> (forselection)
+-> (sk)
+-> (cvsk) ;
+
+(train) 
+->    (y)
+%-> [anchor=west, align=center,"m"](merged2) 
+->  (model);
+};
+\end{tikzpicture}
+\end{document}

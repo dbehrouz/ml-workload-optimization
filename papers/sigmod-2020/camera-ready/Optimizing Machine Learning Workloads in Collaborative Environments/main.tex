@@ -1,0 +1,128 @@
+\documentclass[sigconf,10pt]{acmart}
+
+\copyrightyear{2020}
+\acmYear{2020}
+\setcopyright{acmlicensed}\acmConference[SIGMOD'20]{Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data}{June 14--19, 2020}{Portland, OR, USA}
+\acmBooktitle{Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data (SIGMOD'20), June 14--19, 2020, Portland, OR, USA}
+\acmPrice{15.00}
+\acmDOI{10.1145/3318464.3389715}
+\acmISBN{978-1-4503-6735-6/20/06}
+% Authors, replace the red X's with your assigned DOI string during the rightsreview eform process.
+
+\settopmatter{printacmref=true}
+
+
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+             \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}
+
+\acmConference[SIGMOD'20]{ACM Conference}{June 14 - June 19, 2020}{Portland, Oregon, USA}%
+
+\usepackage{mathtools}
+\usepackage{url}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage[outdir=./figures/]{epstopdf}
+\usepackage{listings, lstautogobble}
+\usepackage{setspace}
+\usepackage{makecell}
+\usepackage{subcaption}
+\usepackage{scalefnt}
+\captionsetup[table]{skip=0pt}
+\captionsetup[figure]{skip=0pt}
+\captionsetup[subfigure]{aboveskip=0pt}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\SetKwInput{KwData}{Input}
+\SetKwInput{KwResult}{Output}
+\newcommand\mycommfont[1]{\footnotesize\ttfamily\textcolor{black}{#1}}
+\SetCommentSty{mycommfont}
+
+% command for drawing a circle around text  
+\newcommand{\circledtext} [1] {\raisebox{.5pt}{\
+
+textcircled{\raisebox{-.9pt} {#1}}}}
+
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\lstdefinestyle{pythonstle}{
+language=Python,
+basicstyle=\scriptsize\ttfamily,
+columns=fullflexible,
+numbers=left,
+stepnumber=1,
+numbersep=5pt,
+xleftmargin=10pt,
+frame=single,
+framexleftmargin=3pt,
+otherkeywords={self},             % Add keywords here
+keywordstyle=\color{forestgreen},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\color{red},    % Custom highlighting style
+stringstyle=\color{blue},
+frame=tb,                         % Any extra options here
+showstringspaces=false
+}
+\lstset{style=pythonstle}
+
+\PassOptionsToPackage{table}{colorx}
+\DeclareMathOperator*{\argmax}{argmax}
+
+
+
+\begin{document}
+\fancyhead{}
+\title{Optimizing Machine Learning Workloads in Collaborative Environments}
+
+
+
+\author{Behrouz Derakhshan}
+\affiliation{%
+  \institution{DFKI GmbH}
+}
+\email{behrouz.derakhshan@dfki.de}
+
+\author{Alireza Rezaei Mahdiraji}
+\affiliation{%
+  \institution{DFKI GmbH}
+}
+\email{alireza.rm@dfki.de}
+
+\author{Ziawasch Abedjan}
+\affiliation{%
+  \institution{TU Berlin}
+}
+\email{abedjan@tu-berlin.de}
+
+\author{Tilmann Rabl}
+\authornote{Work was partially done while author was at TU Berlin.}
+\affiliation{%
+  \institution{Hasso Plattner Institute}
+  \institution{University of Potsdam}
+}
+\email{tilmann.rabl@hpi.de}
+
+\author{Volker Markl}
+\affiliation{%
+  \institution{DFKI GmbH}
+  \institution{TU Berlin}
+}
+\email{volker.markl@tu-berlin.de}
+
+\renewcommand{\shortauthors}{Derakhshan, et al.}
+
+\input{sections/abstract}
+%\keywords{Data management for ML; Collaborative ML}
+\maketitle
+\input{sections/introduction}
+\input{sections/background}
+\input{sections/ml-workload}
+\input{sections/representation-implementation}
+\input{sections/materialization}
+\input{sections/reuse-and-warmstarting}
+\input{sections/evaluation}
+\input{sections/related-work}
+\input{sections/conclusion}
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+\end{document}
+\endinput

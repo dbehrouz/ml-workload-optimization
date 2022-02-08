@@ -1,0 +1,50 @@
+\begin{tikzpicture}
+%\draw[help lines]  (-2,0) grid (6,6);
+\tikzstyle{every node}=[inner sep=0.02cm]
+\tikzstyle{new} = [fill=blue!25]
+\node (train) [circle, draw] at (2,6) {$v_0$};
+% layer 1
+\node (ad) [circle, draw] at (1,5.2) {$v_1$};
+\node (forselection) [circle, draw] at (2,5.2) {$v_2$};
+\node (y) [circle, draw] at (4,5.2) {$v_3$};
+% layer 2
+\node (cv) [circle, draw] at (1, 4.3) {$v_4$};
+\node(sk) [circle, draw] at (2, 4.3) {$v_5$};
+\node(merged3) [new][circle, draw] at (3, 4.5) {$v_x$};
+% layer 3
+\node (merged1) [circle, draw] at (1.5, 3.5) {$v_6$};
+\node(model2) [new][circle, draw] at (3, 3.7) {$v_y$};
+\node (cvsk) [circle, draw] at (2, 2.8) {$v_7$};
+% layer 4
+\node(merged2) [circle, draw] at (3.7, 2) {$v_8$};
+% layer 5
+\node(model) [circle, draw] at (3.7,1.1) {$v_9$};
+
+\graph [grow down,edge quotes ={inner sep=1pt}, edges ={thick},radius=.2cm, nodes={circle, draw,font =\small}]{
+(train) [label=train]
+-> [anchor=east, align=center,"p1"] (ad)
+-> [anchor=east,align=center,"v1"] (cv)
+-> [anchor=east,align=center,"m"](merged1) 
+-> [anchor=east,align=center,"c1"](cvsk) 
+-> [anchor=south, align=center,"m"](merged2) ;
+
+(sk) 
+-> [anchor=south,align=center,near start,"m"](merged3)
+-> [anchor=west,auto=false,align=center,near start, "f"] (model2);
+
+(y)
+-> [anchor=south, align=center,"m"](merged3);
+
+
+
+(train) 
+-> [anchor=east,align=center, "p2"] (forselection)
+-> [anchor=east,auto=false,align=center,"s1"] (sk)
+-> [anchor=west,align=center,"m"](merged1) ;
+
+(train) 
+-> [anchor=west, align=center,"p3"]   (y)
+-> [anchor=west, align=center,"m"](merged2) 
+-> [anchor=east,auto=false,align=center,"f"] (model);
+};
+\end{tikzpicture}

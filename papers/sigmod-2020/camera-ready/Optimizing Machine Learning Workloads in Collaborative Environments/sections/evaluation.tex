@@ -1,0 +1,325 @@
+\section{Evaluation} \label{sec-evaluation} 
+In this section, we evaluate the performance of our collaborative optimizer.
+We first describe the setup of the experiment.
+Then, we show the end-to-end run-time improvement of our optimizer.
+Finally, we investigate the effect of the individual contributions, i.e., materialization and reuse algorithms, on the run-time and storage cost.
+\begin{table*}[ht]
+\begin{tabular}{lp{0.84\textwidth}rr}
+\hline
+\textbf{$ID$} & \textbf{$Description$}& \textbf{$N$}& \textbf{$S$}   \\
+\hline
+1 &  \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real Kaggle script. It includes several feature engineering operations before training logistic regression, random forest, and gradient boosted tree models \cite{start-here-a-gentle-intro}.} & 397 & 14.5\\[0.4cm]
+
+2 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real Kaggle script. It joins multiple datasets, preprocesses the datasets to generate features, and trains gradient boosted tree models on the generated features \cite{introduction-to-manual-feature-engineering}.} & 406 & 25\\[0.4cm]
+
+3 &   \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real Kaggle script. It is similar to Workload 2, with the resulting preprocessed datasets having more features \cite{introduction-to-manual-feature-engineering-p2}.} & 146 & 83.5\\[0.4cm]
+
+4 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real Kaggle script that modifies Workload 1 and trains a gradient boosted tree with a different set of hyperparameters \cite{start-here-a-gentle-intro-carlos}.} & 280 & 10\\[0.4cm]
+
+5 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A real Kaggle script that modifies Workload 1 and performs random and grid search for gradient boosted tree model using generated features of Workload 1 \cite{begining-with-lightgbm-in-detail}.} & 402 & 13.8\\[0.4cm]
+
+6 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script based on Workloads 2 and 4. It trains a gradient boosted tree on the generated features of Workload 2.} & 121 & 21\\[0.15cm]
+
+7 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script based on Workload 3 and 4. It trains a gradient boosted tree on the generated features of Workload 3.} & 145 & 83\\[0.15cm]
+
+8 & \parbox[t]{0.84\textwidth}{\linespread{0.5}\selectfont \small A custom script that joins the features of Workloads 1 and 2. Then, similar to Workload 4, it trains a gradient boosted tree on the joined dataset.} & 341 & 21.1\\
+\hline
+\end{tabular}
+\caption{Description of Kaggle workloads. $N$ is number of the artifacts and $S$ is the total size of the artifacts in GB.}
+\label{kaggle-workload}
+\vspace{-4mm}
+\end{table*}
+\subsection{Setup}
+We execute the experiments on a Linux Ubuntu machine with 128 GB of RAM.
+We implement a prototype of our system in python 2.7.12.
+We implement EG using NetworkX 2.2 \cite{hagberg2008exploring}.
+We run every experiment 3 times and report the average.
+
+\textbf{Baseline and other System.}
+We compare our system with a naive baseline, i.e., executing all the workloads without any optimization, and Helix \cite{xin2018helix}.
+Helix is a system for optimizing ML workloads, where users \textit{iterate} on workloads by testing out small modifications until achieving the desired solution.
+Helix utilizes materialization and reuse of the intermediate artifacts to speed up the execution of ML workloads within a single session.
+Helix materializes an artifact when its recreation cost is greater than twice its load cost (Algorithm 2 of the Helix paper \cite{xin2018helix}).
+To find the optimal reuse plan, Helix reduces the workload DAG into an instance of the project selection problem (PSP) and solve it via the Max-Flow algorithm \cite{algodesign}.
+In our implementation of Helix reuse, we consulted the authors and followed Algorithm 1 of the Helix paper to transform the workload DAG into PSP.
+Similar to Helix, we utilized the Edmonds-Karp Max-Flow algorithm \cite{edmonds1972theoretical}, which runs in polynomial time ($\mathcal{O}(|V|.|E|^2)$).
+
+\textbf{Kaggle workloads.} 
+In the Kaggle workloads, we recreate the use case in Section \ref{sec-background}.
+We use eight workloads, which generate 130 GB of artifacts.
+There are five real and three custom workloads.
+Table \ref{kaggle-workload} shows details of the workloads.
+There are 9 source datasets with a total size of 2.5 GB.
+Unless specified otherwise, we use storage-aware materialization with a budget of 16 GB and $\alpha=0.5$.
+For Helix, we also set the materialization budget to 16 GB.
+
+\textbf{OpenML workloads.} 
+In the OpenML workloads, we extracted 2000 runs of scikit-learn pipelines for Task 31 from the OpenML platform \cite{openml-31}.
+The dataset is small, and the total size of the artifacts after executing the 2000 runs is 1.5 GB.
+We use the OpenML workloads to show the effects of the model quality on materialization and model warmstarting on run-time.
+Unless specified otherwise, we use storage-aware materialization with a budget of 100 MB and $\alpha=0.5$.
+
+\subsection{End-to-end Optimization}
+In this experiment, we evaluate the impact of our optimizer on the Kaggle workloads.
+In our motivating example, we describe three workloads (Workloads 1-3 of Table \ref{kaggle-workload}), that are copied and modified 7,000 times by different users.
+Therefore, at the very least, users execute these workloads 7000 times.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=1.0\columnwidth]{images/experiment-results/kaggle_home_credit/execution_time/repeated_workloads}
+\caption{Repeated executions of Kaggle workloads}
+\label{exp-execution-repeated-kaggle-workload}
+\vspace{-4mm}
+\end{figure}
+
+Figure \ref{exp-execution-repeated-kaggle-workload} shows the result of repeating the execution of each workload twice.
+Before the first run, EG is empty. 
+Therefore, the default baseline (KG), Helix (HL), and our collaborative optimizer (CO) must execute all the operations in the workloads.
+In Workload 1, the run-time of CO and HL is slightly larger than KG in the first run.
+Workload 1 executes two alignment operations.
+An alignment operation receives two datasets, removes all the columns that do not appear in both datasets, and returns the resulting two datasets.
+In CO, we need to measure the precise compute-cost of every artifact.
+This is not possible for operations that return multiple artifacts.
+Thus, we re-implemented the alignment operation, which is less optimized than the baseline implementation.
+In Workloads 2 and 3, CO and HL outperform KG even in the first run.
+Both Workloads 2 and 3 contain many redundant operations.
+The local pruning step of our optimizer identifies the redundancies and only execute such operations once.
+
+In the second run of the workloads, CO reduces the run-time by an order of magnitude for Workloads 2 and 3.
+Workload 1 executes an external and compute-intensive visualization command that computes a bivariate kernel density estimate.
+Since our optimizer does not materialize such external information, it must re-execute the operation; thus, resulting in a smaller run-time reduction.
+
+HL has similar performance to CO in Workloads 1 and 2.
+However, CO outperforms HL in Workload 3. 
+The total size of the artifacts in Workloads 1 and 2 is small.
+As a result, a large number of artifacts for both HL and CO are materialized.
+Our reuse algorithm finds the same reuse plan as Helix, therefore, the run-times for Workloads 1 and 2 are similar.
+However, the size of the artifacts in Workload 3 is larger than the budget (i.e., 83.5 GB).
+The materialization algorithm of HL does not consider the benefit of materializing one artifact over the others and starts materializing the artifacts from the root node until the budget is exhausted.
+As a result, many of the high-utility artifacts that appear towards the end of the workloads are not materialized.
+The side-effect of the materialization algorithm of HL is visible for Workload 3, where only a handful of the initial artifacts are materialized.
+Therefore, HL has to re-execute many of the operations at the end of Workload 3, which results in an overhead of around 70 seconds when compared to CO.
+\begin{figure}[t]
+\centering
+\includegraphics[width=1.0\columnwidth]{images/experiment-results/kaggle_home_credit/execution_time/different_workloads}
+\caption{Execution of Kaggle workloads in sequence}
+\label{exp-execution-different-kaggle-workload}
+\vspace{-4mm}
+\end{figure}
+
+Figure \ref{exp-execution-different-kaggle-workload} shows the cumulative run-time of executing the Kaggle workloads consecutively.
+Workloads 4-8 operate on the artifacts generated in Workloads 1-3; thus, instead of recomputing those artifacts, CO reuses the artifacts.
+As a result, the cumulative run-time of running the 8 workloads decreases by 50\%.
+HL also improves run-time when compared to KG. 
+However, HL only materializes the initial artifacts of the workloads and has a smaller improvement over KG when compared to CO.
+
+This experiment shows that optimizing a single execution of each workload improves the run-time.
+In a real collaborative environment, there are hundreds of modified scripts and possibly thousands of repeated execution of such scripts, resulting in 1000s of hours of improvement in run-time.
+
+\subsection{Materialization}
+In this set of experiments, we investigate the impact of different materialization algorithms on storage and run-time.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=1.0\columnwidth]{images/experiment-results/kaggle_home_credit/materialization/mat_sizes}
+\caption{Real size of the materialized artifact}
+\label{exp-sa-vs-simple-size}
+\vspace{-4mm}
+\end{figure}
+\textbf{Effect of Materialization on Storage.}
+In a real collaborative environment, deciding on a reasonable materialization budget requires knowledge of the expected size of the artifacts, the number of users, and the rate of incoming workloads.
+In this experiment, we show that even with a small budget, our materialization algorithms, particularly our storage-aware algorithm, store a large portion of the artifacts that reappear in future workloads.
+We hypothesize that there is considerable overlap between columns of different datasets in ML workloads.
+Therefore, the actual total size of the artifacts that our storage-aware algorithm materializes is larger than the specified budget.
+
+We run the Kaggle workloads under different materialization budgets and strategies.
+Figures \ref{exp-sa-vs-simple-size}(a)-(d) show the real size of the stored artifacts for the heuristics-based (HM), storage-aware (SA), and Helix (HL) algorithms.
+To show the total size of the materialized artifacts, we also implement a strategy that materializes every artifact in EG (represented by ALL in the figure).
+In HM, the maximum real size is always equal to the budget.
+This is similar for HL since it does not perform any compression or deduplication of the columns.
+However, in SA, the real size of the stored artifacts reaches up to 8 times the budget.
+With a materialization budget of 8 GB and 16 GB, SA materializes nearly 50\% and 80\% of all the artifacts.
+For budgets larger than 16 GB, SA materializes nearly all of the artifacts.
+This indicates that there is considerable overlap between the artifacts of ML workloads.
+By deduplicating the artifacts, SA can materialize more artifacts.
+
+Note that when a high-utility artifact has no overlap with other artifacts, SA still prioritizes it over other artifacts.
+As a result, it is likely that when materializing an artifact that has no overlap with other artifacts, the total size of the materialized data decreases.
+Figure \ref{exp-sa-vs-simple-size}(a) shows such an example.
+After executing Workload 2, SA materializes several artifacts that overlap with each other.
+However, in Workload 3, SA materializes a new artifact with a high utility, which represents a large dataset with many features (i.e., 1133 columns and around 3 GB).
+Since the new artifact is large, SA removes many of the existing artifacts.
+As a result, the total size of the materialized artifacts decreases after Workload 3.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=1.0\columnwidth]{images/experiment-results/kaggle_home_credit/materialization/run-time-budget-speedup}
+\caption{Total run-time and speedup (vs baseline)}
+\label{run-time-vs-mat}
+\vspace{-4mm}
+\end{figure}
+\textbf{Effect of Materialization on Run-time.}
+Figure \ref{run-time-vs-mat}(a) shows the total run-time of different materialization algorithms and budgets.
+ALL represents the scenario where all the artifacts are materialized.
+Even with a materialization budget of 8 GB, SA has comparable performance to ALL (i.e., a difference of 100 seconds in run-time).
+When the budget is larger than 8 GB, SA performs similarly to ALL.
+For small materialization budgets ($\leq 16$ GB), HM performs 50\% worse than SA.
+However, HM performs slightly better for larger materialization budgets.
+The difference between HM and SA is because many of the artifacts are large, e.g., in Workload 3, some artifacts are more than 3 GB.
+Most of these artifacts contain overlapping columns and SA compresses them.
+However, HM is unable to exploit this similarity and chooses not to materialize any of the large artifacts.
+Recomputing these artifacts is costly, which results in a larger run-time for HM.
+
+HL does not prioritize the artifacts based on their cost or potential.
+Thus, HL quickly exhausts the budget by materializing initial artifacts.
+The impact of such behavior is more visible for smaller budgets ($\leq 16 GB$), where HL performs 20\% and 90\% worse than HM and SA, respectively.
+For larger budgets, HL has similar performance to HM, since a larger fraction of all the artifacts is materialized.
+
+In Figure \ref{run-time-vs-mat}(b), we plot the cumulative speedup (vs the KG baseline) of different materialization algorithms and budgets.
+We plot the speedup of SA and HL with budgets of 8 GB and 16 GB (SA-8, SA-16, HL-8, and HL-16 in the figure) as the rest of the algorithms and budgets show similar behavior.
+ALL achieves a speedup of 2 after executing all the workloads.
+SA has a comparable speedup with ALL reaching speedups of 1.77 and 1.97 with budgets of 8 GB and 16 GB, respectively.
+Since HL only materializes the initial artifacts, it only provides a small speedup over the KG baseline.
+After executing all the workloads, HL reaches speedups of 1.11 and 1.18 with budgets of 8 GB and 16 GB.
+For larger budgets (i.e., 32 GB and 64 GB), HL reaches a maximum speedup of 1.31.
+Whereas, SA has a speedup of 2.0, similar to ALL.
+
+\textbf{Effect of Model Quality on Materialization.}
+In many collaborative ML use cases, users tend to utilize existing high-quality models.
+In our materialization algorithm, we consider model quality when materializing an artifact.
+In this experiment, we show the impact of materializing high-quality models on run-time and show that our materialization algorithm quickly detects high-quality models.
+
+We design a model-benchmarking scenario, where users compare the score of their models with the score of the best performing model in the collaborative environment.
+Such a scenario is common in collaborative environments, where users constantly attempt to improve the best current model.
+We use the OpenML workloads for the model-benchmarking scenario.
+The implementation of the scenario is as follows.
+First, we execute the OpenML workloads one by one and keep track of the workload with the best performing model, which we refer to as the \textit{gold standard workload}.
+Then, we compare every new workload with the gold standard.
+
+Figure \ref{exp-model-materialization}(a) shows the cumulative run-time of the model-benchmarking scenario using our collaborative optimizer (CO) with default configuration (i.e., storage-aware materializer with budget 100 MB and $\alpha=0.5$) against the OpenML baseline (OML).
+For every new workload, OML has to re-run the gold standard workload.
+When CO encounters a gold standard workload, the materialization algorithm assigns a higher potential value to the artifacts of the workload.
+As a result, such artifacts have higher materialization likelihood.
+In the subsequent workloads, CO reuses the materialized artifacts of the gold standard from EG instead of re-running them, resulting in 5 times improvement in the run-time over OML.
+Re-executing the gold standard workload results in an overhead of 2000 seconds, which contributes to the large run-time of OML.
+In comparison, reusing the artifacts of the gold standard has an overhead of 65 seconds for CO.
+
+We also investigate the impact of $\alpha$, which controls the importance of model quality in our materialization, on the run-time of the model-benchmarking scenario.
+If $\alpha$ is close to 1, the materializer aggressively stores high-quality models.
+If $\alpha$ is close to 0, the materializer prioritizes the recreation time and size over quality.
+The materialization budget for the OpenML workloads is 100 MB.
+However, the models in OpenML are typically small (less than 100 KB).
+Therefore, regardless of the $\alpha$ value, the materializer stores the majority of the artifacts, which makes it difficult to accurately study the effect of the $\alpha$ value.
+Therefore, in this experiment, we set the budget to one artifact (i.e., the materializer is only allowed to store one artifact).
+An ideal materializer always selects the gold standard model.
+This highlights the impact of $\alpha$ on materialization more clear.
+
+We run the model-benchmarking scenario and vary the value of $\alpha$ from 0 to 1.
+When $\alpha$ is 1, the materializer always materializes the gold standard model, as it only considers model quality.
+Therefore, $\alpha=1$ incurs the smallest cumulative run-time in the model-benchmarking scenario.
+
+In Figure \ref{exp-model-materialization}(b), we report the difference in cumulative run-time between $\alpha=1$ and other values of $\alpha$ (i.e., y-axis corresponds to the delta in cumulative run-time when compared to $\alpha=1$).
+In the scenario, we repeatedly execute the gold standard; thus, the faster we materialize the gold standard model, the smaller the cumulative run-time would become.
+Once we materialize the gold standard model, the delta in cumulative run-time reaches a plateau.
+This is because the overhead of reusing the gold standard is negligible; thus, cumulative run-time becomes similar to when $\alpha=1$.
+In workload 14, we encounter a gold standard that remains the best model until nearly the end of the experiment.
+Smaller $\alpha$ values ($\alpha \leq 0.25$) materialize this model after more than 100 executions.
+As a result, their delta in run-time reaches a plateau later than large $\alpha$ values ($\alpha\geq 0.5$).
+The long delay in the materialization of the gold standard contributes to the higher cumulative run-time for smaller values of $\alpha$.
+
+The default value of $\alpha$ in our system is 0.5. 
+This value provides a good balance between workloads that have the goal of training high-quality models (e.g., the model-benchmarking scenario) and workloads that are more exploratory in nature.
+When we have prior knowledge of the nature of the workloads, then we can set $\alpha$ accordingly.
+We recommend $\alpha>0.5$ for workloads with the goal of training high-quality models and $\alpha<0.5$ for workloads with exploratory data analysis.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{images/experiment-results/openml/model_materialization/model-materialization}
+\caption{Effect of quality-based materialization}
+\label{exp-model-materialization}
+\end{figure}
+
+\subsection{Reuse}
+In this experiment, we compare our linear time reuse algorithm (LN) with Helix (HL) and two other baselines (ALL\_M and ALL\_C).
+ALL\_M reuses every materialized artifact.
+ALL\_C recomputes every artifact (i.e., no reuse).
+
+Figures \ref{reuse-experiment}(a) and (b) show the run-time of the Kaggle workloads with different materialization algorithms.
+ALL\_C, independent of the materialization algorithm, finishes the execution of the workloads in around 2000 seconds.
+For the heuristics-based materialization, all four reuse algorithms have similar performance until Workload 6.
+This is because Workload 3 has large artifacts and the heuristics-based materialization exhausts its budget by materializing them.
+Furthermore, Workloads 4, 5, and 6 are modified versions of Workloads 1 and 2 (Table \ref{kaggle-workload}).
+As a result, there are not many reuse opportunities until Workload 7, which is a modified version of Workload 3.
+\begin{figure}[t]
+\centering
+\includegraphics[width=1.0\columnwidth]{images/experiment-results/kaggle_home_credit/reuse/reuse-times-perworkload-speedups-annotated}
+\caption{Run-time and overhead of reuse methods}
+\label{reuse-experiment}
+\vspace{-4mm}
+\end{figure}
+
+The storage-aware materialization (Figure \ref{reuse-experiment}(b)) has better budget utilization and materializes some of the artifacts of the Workloads 1 and 2.
+ALL\_M, LN, and HL reuse these artifacts in Workloads 4, 5, and 6; thus, improving the run-time from Workload 4.
+To better show the impact of the reuse algorithms, we plot the cumulative speedup of LN, HL, and ALL\_M over ALL\_C for the storage-aware materialization in Figure \ref{reuse-experiment}(c).
+Since the first three workloads do not share many similar artifacts, the speedup is 1.
+However, after the third workload, all the reuse algorithms have speedups of larger than 1.
+After executing all workloads, LN and HL reach a speedup of around 2.1 with LN slightly outperforming HL.
+
+For both materialization strategies, ALL\_M has a similar performance to LN and HL until Workload 6.
+Many of the artifacts of Workload 7 incur larger load costs than compute costs.
+As a result, LN and HL recompute these artifacts and result in a smaller cumulative run-time than ALL\_M, i.e., around 200-300 seconds.
+In this experiment, since EG is inside the memory of the machine, load times are generally low.
+LN and HL outperform ALL\_M with a larger margin in scenarios where EG is on disk.
+
+\textbf{Reuse Overhead.} 
+The polynomial-time reuse algorithm of Helix generates the same plan as our linear-time reuse.
+For the Kaggle workloads, since the number and the size of workloads are relatively small, we only observe a small difference of 5 seconds in the reuse overhead. 
+
+To show the impact of our linear-time reuse algorithm, we perform an experiment with 10,000 synthetic workloads.
+We design the synthetic workloads to have similar characteristics to the real workloads in Table \ref{kaggle-workload}.
+We consider the following 5 attributes of the real workload DAGs: (1) indegree distribution (i.e., join and concat operators), (2) outdegree distribution, (3) ratio of the materialized nodes, (4) distribution of the compute costs, and (5) distribution of the load costs.
+A node with outdegree more than 1 represents a scenario were the node is input to different operations (e.g., training different ML models on one dataset node).
+To generate the workloads, we first randomly select the number of nodes inside the workload DAG from the [500, 2000] interval, which represents many of the Kaggle workloads.
+Then, for every node, we sample its attributes from the distributions of attributes of the real workloads.
+
+Figure \ref{reuse-experiment}(d) shows the cumulative overhead of LN and HL on 10,000 generated workloads.
+The overhead of LN increases linearly and after the 10,000s workloads, LN incurs a total overhead of 80 seconds.
+In comparison, HL has an overhead of 3500 seconds, 40 times more than LN.
+In a real collaborative environment, where hundreds of users are executing workloads, a large reuse overhead leads to slower response time and may cause a bottleneck during the optimization.
+\begin{figure}[t]
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{images/experiment-results/openml/warmstarting/warmstarting.pgf}%
+}
+\caption{Run Time}
+\end{subfigure}%
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+ \resizebox{\columnwidth}{!}{%
+\input{images/experiment-results/openml/warmstarting/accuracy.pgf}%
+}
+\caption{Difference in Accuracy}
+\end{subfigure}
+\caption{Warmstarting of OpenML workloads}
+\label{exp-model-warmstarting}
+\vspace{-8mm}
+\end{figure}
+
+\subsection{Warmstarting}
+In this experiment, we evaluate the effect of our warmstarting method.
+Figure \ref{exp-model-warmstarting} shows the effect of warmstarting on run-time and accuracy for the OpenML workloads.
+In Figure \ref{exp-model-warmstarting}(a), we observe that the cumulative run-time of the baseline (OML) and our optimizer without warmstarting (CO-W) are similar.
+In the OpenML workloads, because of the small size of the datasets, the run-time of the data transformations is only a few milliseconds.
+As a result, CO-W only improves the average run-time by 5 milliseconds when compared to OML.
+The model training operations are the main contributors to the total run-time.
+Warmstarting the training operations has a large impact on run-time.
+As a result, warmstarting (CO+W) improves the total run-time by a factor of 3.
+
+In Figure \ref{exp-model-warmstarting}(b), we show the cumulative difference between the accuracy ($\Delta$ Accuracy) of the workloads with and without warmstarting.
+For example, for a hundred workloads, if warmstarting improves the accuracy of each workload by 0.02, then the cumulative $\Delta$ accuracy is 2.0.
+The figure shows that warmstarting can also lead to an improvement in model accuracy.
+This is mainly due to the configuration of the OpenML workloads.
+Apart from the convergence criteria (i.e., model parameters do not change), most of the workloads in OpenML have termination criteria as well.
+For example, in the logistic regression model, users set the maximum number of iterations.
+In such cases, warmstarting can improve model accuracy since training starts from a point closer to the convergence.
+As a result, warmstarting finds a better solution when reaching the maximum number of iterations.
+For the OpenML workloads, warmstarting leads to an average $\Delta$ accuracy of 0.014.

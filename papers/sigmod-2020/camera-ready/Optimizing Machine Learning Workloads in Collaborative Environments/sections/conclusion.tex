@@ -1,0 +1,20 @@
+\section{Conclusions} \label{sec-conclusion}
+We present a system for optimizing machine learning workloads in collaborative environments.
+We propose a graph representation of the artifacts of ML workloads, which we refer to as the Experiment Graph.
+Using EG, we offer materialization and reuse algorithms.
+We propose two materialization algorithms.
+The heuristics-based algorithm stores artifacts of the graph based on their likelihood of reappearing in future workloads.
+The storage-aware algorithm takes deduplication information of the artifacts into account when materializing them.
+Given the set of materialized artifacts, for a new workload, our reuse algorithm finds the optimal execution plan in linear time.
+
+We show that our collaborative optimizer improves the execution time of ML workloads by more than one order of magnitude for repeated executions and by 50\% for modified workloads.
+We also show that our storage-aware materialization can store up to 8 times more artifacts than the heuristics-based materialization algorithm.
+Our reuse algorithm finds the optimal execution plan in linear-time and outperforms the state-of-the-art polynomial-time reuse algorithm.
+
+\textbf{Future work.}
+EG contains valuable information about the meta-data and hyperparameters of the feature engineering and model training operations.
+In future work, we plan to utilize this information to automatically construct ML pipelines and tune hyperparameters \cite{Feurer15, thornton2013auto, shang2019democratizing}; thus, fully or partially automating the process of designing ML pipelines.
+
+\begin{acks}
+This work was funded by the German Ministry for Education and Research as BIFOLD - Berlin Institute for the Foundations of Learning and Data (ref. 01IS18025A and ref. 01IS18037A) and German Federal Ministry for Economic Affairs and Energy, Project ”ExDRa” (01MD19002B).
+\end{acks}

@@ -1,0 +1,115 @@
+\section{Representation and Programming Interface}\label{representation-and-api}
+In this section, we first introduce our graph data model and then present the APIs of our system.
+
+\subsection{Graph Data Model}
+We represent an ML workload as a directed acyclic graph (DAG).
+Here, we describe the details of the DAG components (nodes and edges), the construction process, and our approach for representing conditional and iterative programs. 
+
+\textbf{Nodes.}
+Nodes in the graph represent data.
+We support three types of data: (1) \textit{Dataset}, which has one or more columns of data, analogous to dataframe objects \cite{mckinney-proc-scipy-2010}, (2) \textit{Aggregate}, which contains a scalar or a collection, and (3) \textit{Model}, which represents a machine learning model.
+
+\textbf{Edges.}
+An edge $(v_1,v_2)$ represents the operation that generates node $v_2$ using node $v_1$ as input.
+There are two types of operations. 
+(1) \textit{Data preprocessing operations}, which include data transformation and feature engineering operations that generate either a Dataset (e.g., map, filter, or one-hot encoding)  or an Aggregate (e.g., reduce). 
+(2) \textit{Model training operations}, which generate a Model.
+A Model is used either in other feature engineering operations, e.g., PCA model, or to perform predictions on a test dataset.
+
+\textbf{Multi-input Operations.}
+To represent operations that have multiple inputs (e.g., join), we use a special node type, which we refer to as a \textit{Supernode}.
+Supernodes do not contain underlying data and only have incoming edges from the input nodes.
+% Incoming edges connected to supernodes are also labeled with special keywords to inform the system to skip them during the optimization phase.
+The outgoing edge from a supernode represents the multi-input operations.
+
+\textbf{DAG Construction.}
+The DAG construction starts with a source vertex (or multiple source vertices) representing the raw data.
+For every operation, the system computes a hash based on the operation name and its parameters.
+In interactive workloads (i.e., Jupyter Notebooks), the DAG can continue to grow after an execution.
+
+\textbf{Conditional Control Flows.}
+To enable support for conditional control flows, we require the condition statement of the iteration or if-statement to be computed before the control flow begins.
+This is similar to how Spark RDDs \cite{zaharia2010spark} handles conditional control flows.
+% Furthermore, we represent an iterative ML training operation as one operation (edge) inside the DAG and do not materialize fine-grained model iteration data (i.e., the model parameters after every iteration). 
+% Such a materialization strategy is useful for model diagnosis queries \cite{vartak2018mistique}, where users need to analyze the parameters of a model after each iteration.
+% However, such scenarios are not the focus of our work.
+
+\subsection{Parser and API}\label{subsec-parser-api}
+We use Python as the language of the platform.
+This allows seamless integration to third-party Python libraries.
+
+\textbf{Parser and Extensibility.}
+Our platform provides two levels of abstraction for writing ML workloads.
+The code in Listing \ref{listing-simple-workload} (Section \ref{sec-ml-workloads}) shows the high-level abstraction, which exposes an identical API to the pandas and scikit-learn models.
+The parser translates the code to the lower level abstraction, which directly operates on the nodes of the graph and creates the DAG components.
+
+In the lower level abstraction, every node has an \texttt{add} method, which receives an operation.
+There are two types of operations, i.e., DataOperation and TrainOperation.
+% Listing \ref{base-operation-class} shows the abstraction of base Operation as well as the DataOp and TrainOp classes.
+To define new data preprocessing or model training operations, users must extend the DataOperation or TrainOperation classes.
+When defining new operations, users must indicate the name, return type, and the parameters of the operation. 
+Users must also implement a \texttt{run} method, which contains the main data processing or model training code.
+
+% The return type of a TrainOperation is always a Model; thus, users do not need to specify it for the training operations.
+
+% \begin{lstlisting}[language=Python, caption=\hladd{Base Operation Classes},captionpos=b,label = {base-operation-class}]
+% class Operation(object):
+%     def __init__(self, name, return_type, params):
+%       self.name = name
+%       self.return_type = return_type
+%       self.params = params
+%     ...
+    
+% class DataOp(Operation):
+%     def __init__(self, name, return_type, params):
+%         Operation.__init__(name, return_type, params)
+
+%     @abstractmethod
+%     def run(self, underlying_data):
+%         pass
+
+% class TrainOp(Operation):
+%     def __init__(self, name, warmstarting, params):
+%         Operation.__init__(name, Types.Model, params)
+%         self.warmstarting = warmstarting
+        
+%     @abstractmethod
+%     def run(self, underlying_data, warmstarting_candidate=None):
+%         pass
+        
+% \end{lstlisting}
+Listing \ref{adding-new-operations} shows an example of implementing a sampling operation.
+Users extend the DataOperation class (Line 1) and specify the name and return type (Line 3).
+An instance of the operation with different parameters can then be created (Line 9).
+Inside the run, users have access to the underlying data and can perform the actual data processing.
+The parser generates a DAG with the following components: (1) a node, which represents \texttt{data\_node} on Line 10, (2) an outgoing edge from \texttt{data\_node} representing the \texttt{sample\_op} on Line 11, and (3) another node representing \texttt{sampled\_data\_node}, the result of the sampling operation.
+Once the optimizer returns the optimized DAG, the code inside the run of the Sample class is executed.
+The type of the \texttt{underlying\_data} argument in the \texttt{run} method (Line 5) depends on the type of the input node of the operation.
+For example, in Listing \ref{adding-new-operations}, the user is applying the sampling operation to the Dataset node loaded from disk (Line 10); thus, the type of the \texttt{underlying\_data} is dataframe.
+For \textit{multi-input operations}, the \texttt{underlying\_data} argument is an array of data objects, where each item represents one of the input nodes to the multi-input operation.
+Lastly, since the sample operation must return a Dataset, the parser encapsulates the result of the \texttt{run} method inside a Dataset node.
+The process of extending a model training operation is similar.
+However, users must specify whether the training operation can be warmstarted or not.
+
+\textbf{Program Optimization.}
+To find the optimal reuse plan, our optimizer only requires information about the size of the nodes and the execution cost of the operations.
+The system captures the execution costs and size of the nodes after executing a workload.
+As a result, when implementing new operations, users do not need to concern themselves with providing extra information for the optimizer.
+
+\textbf{Integration Limitations.}
+Our APIs allow integration with other feature engineering packages, such as FeatureTools \cite{kanter2015deep}, and ML frameworks, such as TensorFlow \cite{abadi2016tensorflow}.
+However, our optimizer is oblivious to the intermediate data that are generated inside the third-party system.
+As a result, our optimizer only offers materialization and reuse of the final output of the integrated system. 
+\begin{lstlisting}[language=Python, caption=Defining and using a new operation,captionpos=b,label = {adding-new-operations}]
+class Sample(DataOperation):
+    def __init__(self, params):
+        Operation.__init__('sample', Types.Dataset, params)
+        
+    def run(self, underlying_data):
+        return underlying_data.sample(n=self.params['n'],
+                             random_state=self.params['r_state'])
+                    
+sample_op = Sample(params={'n':1000, 'r_state':42}) 
+data_node = Dataset.load('path')
+sampled_data_node = data_node.add(sample_op)
+\end{lstlisting}
