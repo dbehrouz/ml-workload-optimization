@@ -214,8 +214,16 @@ class ExecutionEnvironment(object):
             return self.workload_dag.get_node(identifier)['data']
 
         if node_type == 'Dataset':
-            return Dataset(identifier, self)
+            nextnode = Dataset(identifier, self, underlying_data=DataFrame([], [], pd.DataFrame()))
         elif node_type == 'Feature':
-            return Feature(identifier, self)
+            nextnode = Feature(identifier, self, underlying_data=DataSeries('', '', pd.Series()))
         else:
             raise TypeError(f'Unknown Data Type: {node_type}')
+
+        self.workload_dag.roots.append(identifier)
+        self.workload_dag.add_node(identifier,
+                                   **{'root': True, 'type': node_type, 'data': nextnode,
+                                      'loc': identifier,
+                                      'extra_params': 'empty_node',
+                                      'size': None})
+        return nextnode
