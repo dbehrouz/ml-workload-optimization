@@ -208,3 +208,14 @@ class ExecutionEnvironment(object):
                                           'extra_params': 'load_from_memory',
                                           'size': None})
             return nextnode
+
+    def empty_node(self, node_type='Dataset', identifier='empty_root'):
+        if self.workload_dag.has_node(identifier):
+            return self.workload_dag.get_node(identifier)['data']
+
+        if node_type == 'Dataset':
+            return Dataset(identifier, self)
+        elif node_type == 'Feature':
+            return Feature(identifier, self)
+        else:
+            raise TypeError(f'Unknown Data Type: {node_type}')
