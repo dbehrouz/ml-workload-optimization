@@ -210,6 +210,13 @@ class ExecutionEnvironment(object):
             return nextnode
 
     def empty_node(self, node_type='Dataset', identifier='empty_root'):
+        """
+
+        :param node_type: type of the node object (currently, only supports Dataset and Feature)
+        :param identifier: unique identifier used for looking up the node in graph. Use this if you want to create
+                           multiple empty nodes to differentiate between them.  
+        :return:
+        """
         if self.workload_dag.has_node(identifier):
             return self.workload_dag.get_node(identifier)['data']
 
