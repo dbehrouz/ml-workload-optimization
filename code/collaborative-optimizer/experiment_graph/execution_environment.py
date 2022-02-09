@@ -126,17 +126,7 @@ class ExecutionEnvironment(object):
         else:
             return self.experiment_graph.get_artifact_sizes()
 
-    def load(self, loc, dtype=None, nrows=None, parse_dates=False, date_parser=None):
-        extra_params = dict()
-        if dtype is not None:
-            extra_params['dtype'] = dtype
-        if nrows is not None:
-            extra_params['nrows'] = nrows
-        if not parse_dates:
-            extra_params['parse_dates'] = parse_dates
-        if date_parser is not None:
-            extra_params['date_parser'] = date_parser
-
+    def load(self, loc, **extra_params):
         root_hash = self.construct_readable_root_hash(loc, extra_params)
         if self.workload_dag.has_node(root_hash):
             # print 'loading root node {} from workload graph'.format(root_hash)
@@ -152,7 +142,7 @@ class ExecutionEnvironment(object):
         else:
             print('creating a new root node')
             start = datetime.now()
-            initial_data = pd.read_csv(loc, dtype=dtype, nrows=nrows, parse_dates=parse_dates, date_parser=date_parser)
+            initial_data = pd.read_csv(loc, **extra_params)
             end = datetime.now()
             self.update_time(BenchmarkMetrics.LOAD_DATASET, (end - start).total_seconds())
             c_name = []
@@ -214,7 +204,7 @@ class ExecutionEnvironment(object):
 
         :param node_type: type of the node object (currently, only supports Dataset and Feature)
         :param identifier: unique identifier used for looking up the node in graph. Use this if you want to create
-                           multiple empty nodes to differentiate between them.  
+                           multiple empty nodes to differentiate between them.
         :return:
         """
         if self.workload_dag.has_node(identifier):

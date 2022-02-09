@@ -22,3 +22,8 @@ class TestExecutionEnvironment(TestCase):
         print(loaded_data.data().head())
         print(f'columns: {loaded_data.get_column()}')
         print(f'column hashes: {loaded_data.get_column_hash()}')
+
+    def test_load_csv_with_options(self):
+        execution_environment = ExecutionEnvironment()
+        data_with_option = execution_environment.load('data/openml/task_id=31/datasets/train.csv', nrows=100)
+        print(data_with_option.data())
