@@ -1792,7 +1792,7 @@ class SuperNode(Node):
             1].get_materialized_data(), c_name, c_hash)
 
     def p_udf(self, operation: UserDefinedFunction):
-        result = operation.run([underlying_data.get_materialized_data() for underlying_data in self.nodes])
+        result = operation.run(*[underlying_data.get_materialized_data() for underlying_data in self.nodes])
         return_type = operation.return_type
         if return_type == Dataset.__name__:
             new_hashes = [(self.md5(v + str(operation))) for v in result.columns]
