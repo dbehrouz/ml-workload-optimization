@@ -258,11 +258,11 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"]):
+    def run_udf(self, operation: UserDefinedFunction, other_inputs: None or "Node" or List["Node"]):
         """
 
         :param operation:
-        :param other_inputs: For multi-input operators
+        :param other_inputs: For multi-input operators, this argument must be passed.
         :return:
         """
         super_node_id = None
