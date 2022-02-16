@@ -268,7 +268,7 @@ class Node(object):
         super_node_id = None
         if other_inputs is not None:
             multi_input_nodes = [self]
-            if other_inputs is list:
+            if isinstance(other_inputs, list):
                 multi_input_nodes.extend(other_inputs)
             else:
                 multi_input_nodes.append(other_inputs)
