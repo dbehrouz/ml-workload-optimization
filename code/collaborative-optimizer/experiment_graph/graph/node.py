@@ -3,6 +3,7 @@ import hashlib
 import uuid
 from abc import abstractmethod
 from datetime import datetime
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -257,20 +258,32 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_udf(self, operation: UserDefinedFunction):
+    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"] = None):
         """
 
-        :type operation: UserDefinedFunction
+        :param operation:
+        :param other_inputs: For multi-input operators, this argument must be passed.
+        :return:
         """
+        super_node_id = None
+        if other_inputs is not None:
+            multi_input_nodes = [self]
+            if isinstance(other_inputs, list):
+                multi_input_nodes.extend(other_inputs)
+            else:
+                multi_input_nodes.append(other_inputs)
+            super_node = self.generate_super_node(multi_input_nodes, args={'c_oper': 'udf'})
+            super_node_id = super_node.id
+
         return_type = operation.return_type
         if return_type == Dataset.__name__:
-            return self.generate_dataset_node('udf', args={'operation': operation})
+            return self.generate_dataset_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == Feature.__name__:
-            return self.generate_feature_node('udf', args={'operation': operation})
+            return self.generate_feature_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == Agg.__name__:
-            return self.generate_agg_node('udf', args={'operation': operation})
+            return self.generate_agg_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == SK_Model.__name__:
-            return self.generate_sklearn_node('udf', args={'operation': operation})
+            return self.generate_sklearn_node('udf', args={'operation': operation}, v_id=super_node_id)
         else:
             raise TypeError('Invalid return type: {}'.format(return_type))
 
@@ -1777,3 +1790,16 @@ class SuperNode(Node):
         c_hash = self.md5(self.generate_uuid())
         return self.hash_and_return_dataseries('__and__', self.nodes[0].get_materialized_data() & self.nodes[
             1].get_materialized_data(), c_name, c_hash)
+
+    def p_udf(self, operation: UserDefinedFunction):
+        result = operation.run(*[underlying_data.get_materialized_data() for underlying_data in self.nodes])
+        return_type = operation.return_type
+        if return_type == Dataset.__name__:
+            new_hashes = [(self.md5(v + str(operation))) for v in result.columns]
+            return self.hash_and_return_dataframe(str(operation), result, column_names=result.columns,
+                                                  column_hashes=new_hashes)
+        elif return_type == Feature.__name__:
+            new_c_hash = self.md5(result.name + str(operation))
+            return self.hash_and_return_dataseries(str(operation), result, c_name=result.name, c_hash=new_c_hash)
+        else:
+            return result
