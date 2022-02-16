@@ -258,7 +258,7 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_udf(self, operation: UserDefinedFunction, other_inputs: None or "Node" or List["Node"]):
+    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"] = None):
         """
 
         :param operation:
