@@ -8,7 +8,7 @@ class UserDefinedFunction(ABC):
     @abstractmethod
     def run(self, underlying_data):
         """
-        For MultiInputUserDefinedFunction, underlying_data is a list of underlying_data coming from every input. Order
+        For multi input operations, underlying_data is a list of underlying_data coming from every input. Order
         is the same as the order passed to the run_udf function.
         :param underlying_data:
         :return:
