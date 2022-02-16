@@ -3,6 +3,7 @@ import hashlib
 import uuid
 from abc import abstractmethod
 from datetime import datetime
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from sklearn.metrics import roc_auc_score
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
 from experiment_graph.graph.auxilary import DataFrame, DataSeries
-from experiment_graph.graph.operations import UserDefinedFunction, MultiInputUserDefinedFunction
+from experiment_graph.graph.operations import UserDefinedFunction
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -257,18 +258,20 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_udf(self, operation: UserDefinedFunction):
+    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"]):
         """
-        :type operation: UserDefinedFunction
+
+        :param operation:
+        :param other_inputs: For multi-input operators
+        :return:
         """
         super_node_id = None
-        if isinstance(operation, MultiInputUserDefinedFunction):
-            others = operation.other_inputs
+        if other_inputs is not None:
             multi_input_nodes = [self]
-            if others is list:
-                multi_input_nodes.extend(others)
+            if other_inputs is list:
+                multi_input_nodes.extend(other_inputs)
             else:
-                multi_input_nodes.append(others)
+                multi_input_nodes.append(other_inputs)
             super_node = self.generate_super_node(multi_input_nodes, args={'c_oper': 'udf'})
             super_node_id = super_node.id
 
@@ -1788,7 +1791,7 @@ class SuperNode(Node):
         return self.hash_and_return_dataseries('__and__', self.nodes[0].get_materialized_data() & self.nodes[
             1].get_materialized_data(), c_name, c_hash)
 
-    def p_udf(self, operation: MultiInputUserDefinedFunction):
+    def p_udf(self, operation: UserDefinedFunction):
         result = operation.run([underlying_data.get_materialized_data() for underlying_data in self.nodes])
         return_type = operation.return_type
         if return_type == Dataset.__name__:
