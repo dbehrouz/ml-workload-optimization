@@ -22,12 +22,11 @@ class MultiInputUserDefinedFunction(UserDefinedFunction):
         self.other_inputs = others
 
     @abstractmethod
-    def run(self, this_underlying_data, others_underlying_data):
+    def run(self, underlying_data):
         """
-
-        :param this_underlying_data: underlying data of the calling node
-        :param others_underlying_data: underlying data of the other nodes, if more than one other node is passed, the
-               order is the same as the order of the node in others argument of set_other_inputs
+        For MultiInputUserDefinedFunction, underlying_data is a list of underlying_data coming from every input. Order
+        is preserved.
+        :param underlying_data:
         :return:
         """
         pass
