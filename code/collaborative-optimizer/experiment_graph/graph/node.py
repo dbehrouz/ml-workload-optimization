@@ -12,7 +12,7 @@ from sklearn.metrics import roc_auc_score
 from experiment_graph.benchmark_helper import BenchmarkMetrics
 from experiment_graph.globals import COMBINE_OPERATION_IDENTIFIER
 from experiment_graph.graph.auxilary import DataFrame, DataSeries
-from experiment_graph.graph.operations import UserDefinedFunction
+from experiment_graph.graph.operations import UserDefinedFunction, MultiInputUserDefinedFunction
 
 DEFAULT_RANDOM_STATE = 15071989
 AS_KB = 1024.0
@@ -259,18 +259,31 @@ class Node(object):
 
     def run_udf(self, operation: UserDefinedFunction):
         """
-
         :type operation: UserDefinedFunction
         """
+        super_node_id = None
+        if isinstance(operation, MultiInputUserDefinedFunction):
+            others = operation.other_inputs
+            if others is None:
+                raise ValueError('The other_inputs argument for the MultiInputUserDefinedFunction is not set.\n'
+                                 'Set other inputs via set_other_inputs method.')
+            multi_input_nodes = [self]
+            if others is list:
+                multi_input_nodes.extend(others)
+            else:
+                multi_input_nodes.append(others)
+            super_node = self.generate_super_node(multi_input_nodes, args={'c_oper': 'run_udf'})
+            super_node_id = super_node.id
+
         return_type = operation.return_type
         if return_type == Dataset.__name__:
-            return self.generate_dataset_node('udf', args={'operation': operation})
+            return self.generate_dataset_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == Feature.__name__:
-            return self.generate_feature_node('udf', args={'operation': operation})
+            return self.generate_feature_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == Agg.__name__:
-            return self.generate_agg_node('udf', args={'operation': operation})
+            return self.generate_agg_node('udf', args={'operation': operation}, v_id=super_node_id)
         elif return_type == SK_Model.__name__:
-            return self.generate_sklearn_node('udf', args={'operation': operation})
+            return self.generate_sklearn_node('udf', args={'operation': operation}, v_id=super_node_id)
         else:
             raise TypeError('Invalid return type: {}'.format(return_type))
 
