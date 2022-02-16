@@ -264,9 +264,6 @@ class Node(object):
         super_node_id = None
         if isinstance(operation, MultiInputUserDefinedFunction):
             others = operation.other_inputs
-            if others is None:
-                raise ValueError('The other_inputs argument for the MultiInputUserDefinedFunction is not set.\n'
-                                 'Set other inputs via set_other_inputs method.')
             multi_input_nodes = [self]
             if others is list:
                 multi_input_nodes.extend(others)

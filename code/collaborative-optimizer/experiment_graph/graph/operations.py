@@ -14,12 +14,9 @@ class UserDefinedFunction(ABC):
 
 
 class MultiInputUserDefinedFunction(UserDefinedFunction):
-    def __init__(self, return_type):
+    def __init__(self, return_type, other_inputs):
         super().__init__(return_type)
-        self.other_inputs = None
-
-    def set_other_inputs(self, others):
-        self.other_inputs = others
+        self.other_inputs = other_inputs
 
     @abstractmethod
     def run(self, underlying_data):
