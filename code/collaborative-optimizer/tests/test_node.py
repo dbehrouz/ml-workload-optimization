@@ -1,7 +1,5 @@
 from unittest import TestCase
 
-import pandas as pd
-
 from execution_environment import ExecutionEnvironment, UserDefinedFunction, SuperNode, GroupBy
 
 
@@ -9,7 +7,7 @@ class TestNode(TestCase):
     def setUp(self) -> None:
         self.execution_environment = ExecutionEnvironment()
 
-    def test_set_super_node_as_materializable(self):
+    def test_set_super_node_cannot_be_materializable(self):
         super_node = SuperNode('id', self.execution_environment, [])
         with self.assertRaises(ValueError):
             super_node.unmaterializable = False
@@ -17,7 +15,6 @@ class TestNode(TestCase):
         groupby_node = GroupBy('group-id', self.execution_environment)
         with self.assertRaises(ValueError):
             groupby_node.unmaterializable = False
-
 
     def test_unmaterializable_nodes(self):
         class IdentityFunction(UserDefinedFunction):
@@ -34,5 +31,3 @@ class TestNode(TestCase):
         unmaterializable_dataset = data.run_udf(operation=identity_function, unmaterializable_result=True)
 
         unmaterializable_dataset.data()
-
-
