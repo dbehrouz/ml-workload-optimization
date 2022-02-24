@@ -61,7 +61,7 @@ class TestReuse(TestCase):
         self.min_max_reuse = ReuseMinMaxWorkload()
         self.executor = HelixExecutor()
         self.base_workload = BaseWorkload()
-        self.root_data = '../../data'
+        self.root_data = 'data'
 
     def test_run_helix(self):
         self.executor.end_to_end_run(self.base_workload, root_data=self.root_data, verbose=1)

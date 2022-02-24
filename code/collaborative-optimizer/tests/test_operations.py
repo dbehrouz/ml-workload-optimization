@@ -34,7 +34,7 @@ class TestExecutionEnvironment(TestCase):
             def __init__(self):
                 super().__init__(return_type='Dataset')
 
-            def run(self, underlying_data):
+            def run(self, *underlying_data):
                 """
                 Here, we assume underlying_data is a list of only 2 dataframes
                 :param underlying_data:
@@ -57,7 +57,7 @@ class TestExecutionEnvironment(TestCase):
             def __init__(self):
                 super().__init__(return_type='Dataset')
 
-            def run(self, underlying_data):
+            def run(self, *underlying_data):
                 """
                 Here, we assume underlying_data is a list of multiple dataframes
                 :param underlying_data:
