@@ -28,7 +28,17 @@ class Node(object):
         self.size = size
         self.underlying_data = underlying_data
         self.computed = False if underlying_data is None else True
-        self.unmaterializable = unmaterializable
+        self._unmaterializable = unmaterializable
+
+    @property
+    def unmaterializable(self):
+        return self._unmaterializable
+
+    @unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError('Unmaterializable can only be a boolean')
+        self._unmaterializable = value
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -1203,7 +1213,13 @@ class Feature(Node):
 class GroupBy(Node):
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, underlying_data, size)
+        Node.__init__(self, node_id, execution_environment, underlying_data, size, unmaterializable=True)
+
+    @Node.unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not value:
+            raise ValueError('Cannot set unmaterializable = False for SuperNodes')
+        self._unmaterializable = value
 
     def clear_content(self):
         del self.underlying_data
@@ -1431,8 +1447,14 @@ class SuperNode(Node):
     """
 
     def __init__(self, node_id, execution_environment, nodes):
-        Node.__init__(self, node_id, execution_environment, underlying_data=None, size=0.0)
+        Node.__init__(self, node_id, execution_environment, underlying_data=None, size=0.0, unmaterializable=True)
         self.nodes = nodes
+
+    @Node.unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not value:
+            raise ValueError('Cannot set unmaterializable = False for SuperNodes')
+        self._unmaterializable = value
 
     def clear_content(self):
         pass
