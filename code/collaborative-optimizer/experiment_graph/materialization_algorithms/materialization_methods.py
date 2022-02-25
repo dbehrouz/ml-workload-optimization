@@ -21,12 +21,8 @@ class Materializer(object):
             if node[1]['root']:
                 rho = float('inf')
 
-            elif node[1]['type'] == 'SuperNode':
+            elif node[1]['data'].unmaterializable:
                 rho = 0
-            elif node[1]['type'] == 'GroupBy':
-                # we are not materializing group by nodes at any cost
-                rho = 0
-                # node[1]['data'].clear_content()
             elif node[1]['load_cost'] > node[1]['recreation_cost']:
                 # print 'skipping node since the load cost is greater than the recreation cost: {}'.format(node[0])
                 rho = 0
@@ -112,7 +108,7 @@ class Materializer(object):
 
 class AllMaterializer(Materializer):
     """
-    This class materializes everything (except for SuperNode which cannot be materialized)
+    This class materializes everything (except for unmaterializable nodes)
     We will use this as a baseline
     """
 
@@ -121,7 +117,7 @@ class AllMaterializer(Materializer):
 
     def run(self, experiment_graph, workload_dag, verbose=0):
         return list(set([n for n, d in workload_dag.graph.nodes(data=True) if
-                         d['type'] != 'SuperNode' and d['type'] != 'GroupBy' and d['data'].computed] +
+                         not d['data'].unmaterializable and d['data'].computed] +
                         [n for n, d in experiment_graph.graph.nodes(data='mat') if d]))
 
 
@@ -335,9 +331,7 @@ class HelixMaterializer(Materializer):
         for n_id in nx.topological_sort(graph):
             if n_id in materialization_candidates:
                 continue
-            if graph.nodes[n_id]['type'] == 'SuperNode':
-                continue
-            if graph.nodes[n_id]['type'] == 'GroupBy':
+            if graph.nodes[n_id]['data'].unmaterializable:
                 continue
             elif graph.nodes[n_id]['load_cost'] > graph.nodes[n_id]['recreation_cost']:
                 continue

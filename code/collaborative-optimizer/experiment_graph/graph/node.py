@@ -20,7 +20,7 @@ AS_KB = 1024.0
 
 
 class Node(object):
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None, unmaterializable=False):
         self.id = node_id
         self.computed = False
         self.access_freq = 0
@@ -28,6 +28,17 @@ class Node(object):
         self.size = size
         self.underlying_data = underlying_data
         self.computed = False if underlying_data is None else True
+        self._unmaterializable = unmaterializable
+
+    @property
+    def unmaterializable(self):
+        return self._unmaterializable
+
+    @unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError('Unmaterializable can only be a boolean')
+        self._unmaterializable = value
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -112,13 +123,13 @@ class Node(object):
             return nextnode
 
     # TODO: need to implement eager_mode when needed
-    def generate_agg_node(self, oper, args=None, v_id=None, eager_mode=0):
+    def generate_agg_node(self, oper, args=None, v_id=None, unmaterializable=False):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         # nextid = self.generate_uuid()
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = Agg(nextid, self.execution_environment)
+        nextnode = Agg(nextid, self.execution_environment, unmaterializable=unmaterializable)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
@@ -146,7 +157,7 @@ class Node(object):
                                                                  ntype=GroupBy.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_sklearn_node(self, oper, args=None, v_id=None, should_warmstart=False):
+    def generate_sklearn_node(self, oper, args=None, v_id=None, should_warmstart=False, unmaterializable=False):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         edge_arguments = dict()
@@ -161,7 +172,7 @@ class Node(object):
                 edge_arguments['no_random_state_model'] = str(no_random_state_model)
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = SK_Model(nextid, self.execution_environment)
+        nextnode = SK_Model(nextid, self.execution_environment, unmaterializable=unmaterializable)
         edge_arguments['name'] = type(args['model']).__name__
         edge_arguments['oper'] = 'p_' + oper
         edge_arguments['args'] = args
@@ -173,7 +184,7 @@ class Node(object):
                                                                  ntype=SK_Model.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_dataset_node(self, oper, args=None, v_id=None):
+    def generate_dataset_node(self, oper, args=None, v_id=None, unmaterializable=False):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         # c_name = [] if c_name is None else c_name
@@ -181,7 +192,7 @@ class Node(object):
         # nextid = self.generate_uuid()
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = Dataset(nextid, self.execution_environment)
+        nextnode = Dataset(nextid, self.execution_environment, unmaterializable=unmaterializable)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'oper': 'p_' + oper,
@@ -192,13 +203,13 @@ class Node(object):
                                                                  ntype=Dataset.__name__)
         return self.get_not_none(nextnode, exist)
 
-    def generate_feature_node(self, oper, args=None, v_id=None):
+    def generate_feature_node(self, oper, args=None, v_id=None, unmaterializable=False):
         v_id = self.id if v_id is None else v_id
         args = {} if args is None else args
         # nextid = self.generate_uuid()
         edge_hash = self.edge_hash(oper, args)
         nextid = self.vertex_hash(v_id, edge_hash)
-        nextnode = Feature(nextid, self.execution_environment)
+        nextnode = Feature(nextid, self.execution_environment, unmaterializable=unmaterializable)
         exist = self.execution_environment.workload_dag.add_edge(v_id, nextid, nextnode,
                                                                  {'name': oper,
                                                                   'execution_time': -1,
@@ -258,11 +269,13 @@ class Node(object):
             # TODO: add the update rule (even though it has no effect)
             return self.execution_environment.workload_dag.graph.nodes[nextid]['data']
 
-    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"] = None):
+    def run_udf(self, operation: UserDefinedFunction, other_inputs: "Node" or List["Node"] = None,
+                unmaterializable_result=False):
         """
 
         :param operation:
         :param other_inputs: For multi-input operators, this argument must be passed.
+        :param unmaterializable_result: set True if the result of running this operation should not be materialized
         :return:
         """
         super_node_id = None
@@ -277,13 +290,17 @@ class Node(object):
 
         return_type = operation.return_type
         if return_type == Dataset.__name__:
-            return self.generate_dataset_node('udf', args={'operation': operation}, v_id=super_node_id)
+            return self.generate_dataset_node('udf', args={'operation': operation}, v_id=super_node_id,
+                                              unmaterializable=unmaterializable_result)
         elif return_type == Feature.__name__:
-            return self.generate_feature_node('udf', args={'operation': operation}, v_id=super_node_id)
+            return self.generate_feature_node('udf', args={'operation': operation}, v_id=super_node_id,
+                                              unmaterializable=unmaterializable_result)
         elif return_type == Agg.__name__:
-            return self.generate_agg_node('udf', args={'operation': operation}, v_id=super_node_id)
+            return self.generate_agg_node('udf', args={'operation': operation}, v_id=super_node_id,
+                                          unmaterializable=unmaterializable_result)
         elif return_type == SK_Model.__name__:
-            return self.generate_sklearn_node('udf', args={'operation': operation}, v_id=super_node_id)
+            return self.generate_sklearn_node('udf', args={'operation': operation}, v_id=super_node_id,
+                                              unmaterializable=unmaterializable_result)
         else:
             raise TypeError('Invalid return type: {}'.format(return_type))
 
@@ -341,7 +358,7 @@ class Node(object):
 
 class Agg(Node):
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None, unmaterializable=False):
         Node.__init__(self, node_id, execution_environment, underlying_data, size)
 
     def clear_content(self):
@@ -388,12 +405,12 @@ class Dataset(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None, unmaterializable=False):
         """
 
         :type underlying_data: DataFrame
         """
-        Node.__init__(self, node_id, execution_environment, underlying_data, size)
+        Node.__init__(self, node_id, execution_environment, underlying_data, size, unmaterializable)
 
     def clear_content(self):
         del self.underlying_data
@@ -861,12 +878,12 @@ class Feature(Node):
 
     """
 
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None, unmaterializable=False):
         """
 
         :type underlying_data: DataSeries
         """
-        Node.__init__(self, node_id, execution_environment, underlying_data, size)
+        Node.__init__(self, node_id, execution_environment, underlying_data, size, unmaterializable)
 
     def clear_content(self):
         self.underlying_data = None
@@ -1196,7 +1213,13 @@ class Feature(Node):
 class GroupBy(Node):
 
     def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
-        Node.__init__(self, node_id, execution_environment, underlying_data, size)
+        Node.__init__(self, node_id, execution_environment, underlying_data, size, unmaterializable=True)
+
+    @Node.unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not value:
+            raise ValueError('Cannot set unmaterializable = False for SuperNodes')
+        self._unmaterializable = value
 
     def clear_content(self):
         del self.underlying_data
@@ -1322,7 +1345,7 @@ class GroupBy(Node):
 
 
 class SK_Model(Node):
-    def __init__(self, node_id, execution_environment, underlying_data=None, size=None):
+    def __init__(self, node_id, execution_environment, underlying_data=None, size=None, unmaterializable=False):
         Node.__init__(self, node_id, execution_environment, underlying_data, size)
         self.model_score = 0.0
 
@@ -1424,8 +1447,14 @@ class SuperNode(Node):
     """
 
     def __init__(self, node_id, execution_environment, nodes):
-        Node.__init__(self, node_id, execution_environment, underlying_data=None, size=0.0)
+        Node.__init__(self, node_id, execution_environment, underlying_data=None, size=0.0, unmaterializable=True)
         self.nodes = nodes
+
+    @Node.unmaterializable.setter
+    def unmaterializable(self, value: bool):
+        if not value:
+            raise ValueError('Cannot set unmaterializable = False for SuperNodes')
+        self._unmaterializable = value
 
     def clear_content(self):
         pass
